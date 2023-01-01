@@ -42,9 +42,7 @@ real_halves = floats(allow_nan=False, allow_infinity=False, width=16)
 @given(
     value=real_halves,
     input_range=tuples(real_halves, real_halves).filter(lambda x: x[0] != x[1]),
-    output_range=tuples(real_halves, real_halves)
-    .filter(lambda x: x[0] != x[1])
-    .map(sorted),
+    output_range=tuples(real_halves, real_halves).filter(lambda x: x[0] != x[1])
 )
 def test_scale_value(
     value: float, input_range: Tuple[float, float], output_range: Tuple[float, float]
@@ -53,7 +51,7 @@ def test_scale_value(
     output_lower, output_upper = output_range
     assume(min(input_lower, input_upper) <= value <= max(input_lower, input_upper))
     result = scale_value(value, input_lower, input_upper, output_lower, output_upper)
-    assert output_lower <= result <= output_upper
+    assert min(output_range) <= result <= max(output_range)
     if value == input_lower:
         assert result == output_lower
     elif value == input_upper:

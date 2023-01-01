@@ -35,7 +35,7 @@ def rate_limit_2d(
     return ChassisSpeeds(cur.vx + change[0], cur.vy + change[1], target.omega)
 
 
-def clamp_2d(val: Tuple[float], radius: float):
+def clamp_2d(val: Tuple[float, float], radius: float):
     """
     Constrains a vector to be within the unit circle
     """
