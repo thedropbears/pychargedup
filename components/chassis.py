@@ -15,7 +15,7 @@ from wpimath.controller import SimpleMotorFeedforwardMeters
 from wpimath.filter import SlewRateLimiter
 
 from utilities.functions import constrain_angle, rate_limit_2d
-from utilities.ctre import FALCON_CPR
+from utilities.ctre import FALCON_CPR, FALCON_FREE_RPS
 from ids import CanIds
 
 
@@ -148,14 +148,16 @@ class Chassis:
     WIDTH = 0.6167  # meters between modules from CAD
     WHEEL_DIST = math.sqrt(2) * WIDTH / 2
     # maxiumum speed for any wheel
-    max_wheel_speed = 13 * 0.3048  # ft/s to m/s
-    # maximum acceleration beyond which will result in significant wheel slip
+    max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
+    # limit the acceleration of the robot to what is actually achiveable
+    # without the drive wheels slipping to improve odometry
     # TODO: measure this empirically
-    accel_limit = 10
+    accel_limit = 15
 
     control_loop_wait_time: float
 
-    chassis_speeds = magicbot.will_reset_to(ChassisSpeeds(0, 0, 0))
+    # the speeds we want to be at, will be smoothed to the speeds that are commanded
+    desired_chassis_speeds = magicbot.will_reset_to(ChassisSpeeds(0, 0, 0))
     field: wpilib.Field2d
     logger: Logger
 
@@ -165,6 +167,8 @@ class Chassis:
         self.translation_velocity = Translation2d()
         self.rotation_velocity = Rotation2d()
         self.last_time = time.monotonic()
+        # actual speeds that are commanded
+        self.commanded_chassis_speeds = ChassisSpeeds(0, 0, 0)
 
     def setup(self) -> None:
         self.imu = navx.AHRS.create_spi()
@@ -233,23 +237,21 @@ class Chassis:
 
     def drive_local(self, vx: float, vy: float, omega: float, smooth=True) -> None:
         """Robot oriented drive commands"""
-        self._drive(ChassisSpeeds(vx, vy, omega), smooth)
+        speeds = ChassisSpeeds(vx, vy, omega)
+        self._drive(speeds, smooth)
 
     def _drive(self, speeds: ChassisSpeeds, smooth: bool) -> None:
-        """
-        Smooth: limit the acceleration of the robot to what is actually achiveable
-            with the traction we have, this is to reduce wheel slip and improve
-            odometry, additional smoothing can be applied to result in smoother driving
-        """
-        if smooth:
-            self.chassis_speeds = rate_limit_2d(
-                self.chassis_speeds, speeds, self.accel_limit
-            )
-        else:
-            self.chassis_speeds = speeds
+        if not smooth:
+            self.commanded_chassis_speeds = speeds
+        self.desired_chassis_speeds = speeds
 
     def execute(self) -> None:
-        desired_states = self.kinematics.toSwerveModuleStates(self.chassis_speeds)
+        # since the point of this smoothing is to improve odometry it dosent limit rotation
+        # beacuse the gyro is unaffected by wheel slip
+        self.commanded_chassis_speeds = rate_limit_2d(
+            self.commanded_chassis_speeds, self.desired_chassis_speeds, self.accel_limit
+        )
+        desired_states = self.kinematics.toSwerveModuleStates(self.commanded_chassis_speeds)
         desired_states = self.kinematics.desaturateWheelSpeeds(
             desired_states, attainableMaxSpeed=self.max_wheel_speed
         )

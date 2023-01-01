@@ -1,0 +1,9 @@
+numpy ~= 1.22.1
+robotpy-ctre ~= 2022.1.0
+robotpy-navx ~= 2022.0.1
+robotpy-rev ~= 2022.0.1
+robotpy-wpilib-utilities ~= 2022.0.5
+robotpy-wpimath ~= 2022.4.1.1
+robotpy-wpiutil ~= 2022.4.1.1
+wpilib ~= 2022.4.1.5
+robotpy-photonvision ~= 2022.1.0

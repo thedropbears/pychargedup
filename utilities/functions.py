@@ -27,10 +27,11 @@ def rate_limit_2d(
     mag = math.hypot(*err)
     if mag == 0:
         return target
-    err_norm = (err[0] / mag, err[1] / mag)
-    change = (err_norm[0] * rate_limit * dt, err_norm[1] * rate_limit * dt)
-    print(cur, target, err, err_norm, change)
-
+    if mag < rate_limit * dt:
+        change = err
+    else:
+        err_norm = (err[0] / mag, err[1] / mag)
+        change = (err_norm[0] * rate_limit * dt, err_norm[1] * rate_limit * dt)
     return ChassisSpeeds(cur.vx + change[0], cur.vy + change[1], target.omega)
 
 

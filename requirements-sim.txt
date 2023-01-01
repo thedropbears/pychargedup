@@ -1,0 +1,3 @@
+pyfrc ~= 2022.1.2
+robotpy-halsim-gui ~= 2022.4.1
+-r requirements.txt
