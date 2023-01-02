@@ -38,6 +38,7 @@ class Movement(StateMachine):
         ...
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
+        """Sets teleoperated drive inputs"""
         # clamp to inputs to be achiveable
         self.inputs = (*clamp_2d((vx, vy), Chassis.max_wheel_speed), vz)
         self.drive_local = local

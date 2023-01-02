@@ -14,7 +14,7 @@ from wpimath.interpolation import TimeInterpolatablePose2dBuffer
 from wpimath.controller import SimpleMotorFeedforwardMeters
 from wpimath.filter import SlewRateLimiter
 
-from utilities.functions import constrain_angle, rate_limit_2d
+from utilities.functions import constrain_angle, rate_limit_module
 from utilities.ctre import FALCON_CPR, FALCON_FREE_RPS
 from ids import CanIds
 
@@ -32,6 +32,11 @@ class SwerveModule:
     STEER_COUNTS_TO_RAD = STEER_MOTOR_REV_TO_RAD / FALCON_CPR
     STEER_RAD_TO_COUNTS = FALCON_CPR / STEER_MOTOR_REV_TO_RAD
 
+    # limit the acceleration of the commanded speeds of the robot to what is actually
+    # achiveable without the wheels slipping. This is done to improve odometry
+    # TODO: measure this empirically
+    accel_limit = 15  # m/s^2
+
     def __init__(
         self,
         x: float,
@@ -47,6 +52,7 @@ class SwerveModule:
         *_id: can ids of steer and drive motors and absolute encoder
         """
         self.translation = Translation2d(x, y)
+        self.state = SwerveModuleState(0, Rotation2d(0))
 
         # Create Motor and encoder objects
         self.steer = ctre.WPI_TalonFX(steer_id)
@@ -115,6 +121,9 @@ class SwerveModule:
             self.steer.set(ctre.ControlMode.Velocity, 0)
             return
 
+        # smooth wheel velocity vector
+        self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
+
         current_angle = self.get_angle_integrated()
         target_displacement = constrain_angle(
             desired_state.angle.radians() - current_angle
@@ -149,15 +158,10 @@ class Chassis:
     WHEEL_DIST = math.sqrt(2) * WIDTH / 2
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
-    # limit the acceleration of the robot to what is actually achiveable
-    # without the drive wheels slipping to improve odometry
-    # TODO: measure this empirically
-    accel_limit = 15
 
     control_loop_wait_time: float
 
-    # the speeds we want to be at, will be smoothed to the speeds that are commanded
-    desired_chassis_speeds = magicbot.will_reset_to(ChassisSpeeds(0, 0, 0))
+    chassis_speeds = magicbot.will_reset_to(ChassisSpeeds(0, 0, 0))
     field: wpilib.Field2d
     logger: Logger
 
@@ -167,8 +171,6 @@ class Chassis:
         self.translation_velocity = Translation2d()
         self.rotation_velocity = Rotation2d()
         self.last_time = time.monotonic()
-        # actual speeds that are commanded
-        self.commanded_chassis_speeds = ChassisSpeeds(0, 0, 0)
 
     def setup(self) -> None:
         self.imu = navx.AHRS.create_spi()
@@ -229,29 +231,19 @@ class Chassis:
         self.field_obj = self.field.getObject("fused_pose")
         self.set_pose(Pose2d(2, 0, Rotation2d.fromDegrees(180)))
 
-    def drive_field(self, vx: float, vy: float, omega: float, smooth=True) -> None:
+    def drive_field(self, vx: float, vy: float, omega: float) -> None:
         """Field oriented drive commands"""
         current_heading = self.get_rotation()
-        speeds = ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, current_heading)
-        self._drive(speeds, smooth)
+        self.chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            vx, vy, omega, current_heading
+        )
 
-    def drive_local(self, vx: float, vy: float, omega: float, smooth=True) -> None:
+    def drive_local(self, vx: float, vy: float, omega: float) -> None:
         """Robot oriented drive commands"""
-        speeds = ChassisSpeeds(vx, vy, omega)
-        self._drive(speeds, smooth)
-
-    def _drive(self, speeds: ChassisSpeeds, smooth: bool) -> None:
-        if not smooth:
-            self.commanded_chassis_speeds = speeds
-        self.desired_chassis_speeds = speeds
+        self.chassis_speeds = ChassisSpeeds(vx, vy, omega)
 
     def execute(self) -> None:
-        # since the point of this smoothing is to improve odometry it dosent limit rotation
-        # beacuse the gyro is unaffected by wheel slip
-        self.commanded_chassis_speeds = rate_limit_2d(
-            self.commanded_chassis_speeds, self.desired_chassis_speeds, self.accel_limit
-        )
-        desired_states = self.kinematics.toSwerveModuleStates(self.commanded_chassis_speeds)
+        desired_states = self.kinematics.toSwerveModuleStates(self.chassis_speeds)
         desired_states = self.kinematics.desaturateWheelSpeeds(
             desired_states, attainableMaxSpeed=self.max_wheel_speed
         )
@@ -261,11 +253,8 @@ class Chassis:
 
         self.update_odometry()
 
-        # add to prevent division by 0
-        dt = min(time.monotonic() - self.last_time, 0.1) + 1e-10
         # rotation2d and translation2d have mul but not div
-        control_rate = 1 / dt
-        chassis_speeds = self.kinematics.toChassisSpeeds(
+        real_chassis_speeds = self.kinematics.toChassisSpeeds(
             (
                 self.modules[0].get(),
                 self.modules[1].get(),

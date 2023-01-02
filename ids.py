@@ -1,6 +1,7 @@
 import inspect
 from typing import List
 
+
 class CanIds:
     class Chassis:
         drive_1 = 1
