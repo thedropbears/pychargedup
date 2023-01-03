@@ -1,7 +1,7 @@
 from logging import Logger
 import math
 import time
-from typing import Optional
+from typing import List, Optional
 
 import ctre
 import magicbot
@@ -53,10 +53,12 @@ class SwerveModule:
         """
         self.translation = Translation2d(x, y)
         self.state = SwerveModuleState(0, Rotation2d(0))
+        self.do_smooth = False
 
         # Create Motor and encoder objects
         self.steer = ctre.WPI_TalonFX(steer_id)
         self.drive = ctre.WPI_TalonFX(drive_id)
+        self.drive_id = drive_id
         self.encoder = ctre.CANCoder(encoder_id)
 
         # Reduce CAN status frame rates before configuring
@@ -74,7 +76,7 @@ class SwerveModule:
         self.steer.config_kI(0, 0, 10)
         self.steer.config_kD(0, 5.6805, 10)
         self.steer.configAllowableClosedloopError(
-            0, self.STEER_RAD_TO_COUNTS * math.radians(3)
+            0, self.STEER_RAD_TO_COUNTS * math.radians(2)
         )
         self.steer.configSelectedFeedbackSensor(
             ctre.FeedbackDevice.IntegratedSensor, 0, 10
@@ -116,17 +118,21 @@ class SwerveModule:
         return self.drive.getSelectedSensorVelocity() * self.DRIVE_COUNTS_TO_METRES * 10
 
     def set(self, desired_state: SwerveModuleState):
-        if abs(desired_state.speed) < 1e-3:
-            self.drive.set(ctre.ControlMode.Velocity, 0)
-            self.steer.set(ctre.ControlMode.Velocity, 0)
-            return
-
         # smooth wheel velocity vector
-        self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
+        if self.do_smooth:
+            self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
+        else:
+            self.state = desired_state
+        self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
+
+        if abs(self.state.speed) < 1e-3:
+            self.drive.set(ctre.ControlMode.Velocity, 0)
+            self.steer.set(ctre.ControlMode.PercentOutput, 0)
+            return
 
         current_angle = self.get_angle_integrated()
         target_displacement = constrain_angle(
-            desired_state.angle.radians() - current_angle
+            self.state.angle.radians() - current_angle
         )
         target_angle = target_displacement + current_angle
         self.steer.set(
@@ -134,7 +140,7 @@ class SwerveModule:
         )
 
         # rescale the speed target based on how close we are to being correctly aligned
-        target_speed = desired_state.speed * math.cos(target_displacement) ** 2
+        target_speed = self.state.speed * math.cos(target_displacement) ** 2
         speed_volt = self.drive_ff.calculate(target_speed)
         self.drive.set(
             ctre.ControlMode.Velocity,
@@ -155,6 +161,7 @@ class SwerveModule:
 class Chassis:
     # assumes square chassis
     WIDTH = 0.6167  # meters between modules from CAD
+    # distace from center to wheels
     WHEEL_DIST = math.sqrt(2) * WIDTH / 2
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
@@ -164,6 +171,10 @@ class Chassis:
     chassis_speeds = magicbot.will_reset_to(ChassisSpeeds(0, 0, 0))
     field: wpilib.Field2d
     logger: Logger
+
+    send_modules = magicbot.tunable(False)
+    do_fudge = magicbot.tunable(True)
+    do_smooth = magicbot.tunable(True)
 
     def __init__(self) -> None:
         self.pose_history = TimeInterpolatablePose2dBuffer(2)
@@ -229,6 +240,9 @@ class Chassis:
             visionMeasurementStdDevs=(0.5, 0.5, 0.2),
         )
         self.field_obj = self.field.getObject("fused_pose")
+        self.module_objs: List[wpilib.FieldObject2d] = []
+        for idx, module in enumerate(self.modules):
+            self.module_objs.append(self.field.getObject("s_module_"+str(idx)))
         self.set_pose(Pose2d(2, 0, Rotation2d.fromDegrees(180)))
 
     def drive_field(self, vx: float, vy: float, omega: float) -> None:
@@ -243,12 +257,22 @@ class Chassis:
         self.chassis_speeds = ChassisSpeeds(vx, vy, omega)
 
     def execute(self) -> None:
-        desired_states = self.kinematics.toSwerveModuleStates(self.chassis_speeds)
+        # rotate desired velocity to compensate for skew caused by discretization
+        # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
+        if self.do_fudge:
+            # in the sim i found using 5 instead of 0.5 did a lot better
+            desired_speed_translation = Translation2d(self.chassis_speeds.vx, self.chassis_speeds.vy).rotateBy(
+                Rotation2d(-self.chassis_speeds.omega * 5 * self.control_loop_wait_time)
+            )
+            desired_speeds = ChassisSpeeds(desired_speed_translation.x, desired_speed_translation.y, self.chassis_speeds.omega)
+        else:
+            desired_speeds = self.chassis_speeds
+        desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
         desired_states = self.kinematics.desaturateWheelSpeeds(
             desired_states, attainableMaxSpeed=self.max_wheel_speed
         )
         for state, module in zip(desired_states, self.modules):
-            state = SwerveModuleState.optimize(state, module.get_rotation())
+            module.do_smooth = self.do_smooth
             module.set(state)
 
         self.update_odometry()
@@ -275,6 +299,12 @@ class Chassis:
             self.modules[3].get(),
         )
         self.field_obj.setPose(self.get_pose())
+        if self.send_modules:
+            robot_location = self.estimator.getEstimatedPosition()
+            for idx, module in enumerate(self.modules):
+                module_location = robot_location.translation() + module.translation.rotateBy(robot_location.rotation())
+                module_rotation = module.get_rotation().rotateBy(robot_location.rotation())
+                self.module_objs[idx].setPose(Pose2d(module_location, module_rotation))
 
     def update_pose_history(self) -> None:
         pose = self.get_pose()

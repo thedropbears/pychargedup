@@ -1,7 +1,7 @@
 from magicbot import StateMachine, state, timed_state, default_state
 from wpimath.geometry import Pose2d
 from components.chassis import Chassis
-from utilities.functions import clamp_2d
+from utilities.functions import clamp_chassis_inputs
 
 
 class Movement(StateMachine):
@@ -39,8 +39,8 @@ class Movement(StateMachine):
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """Sets teleoperated drive inputs"""
-        # clamp to inputs to be achiveable
-        self.inputs = (*clamp_2d((vx, vy), Chassis.max_wheel_speed), vz)
+        # clamp inputs to be achiveable
+        self.inputs = clamp_chassis_inputs((vx, vy, vz), Chassis.max_wheel_speed, Chassis.WHEEL_DIST)
         self.drive_local = local
 
     def do_autodrive(self):

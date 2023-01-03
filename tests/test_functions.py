@@ -8,11 +8,6 @@ from wpimath.kinematics import SwerveModuleState
 from wpimath.geometry import Rotation2d
 
 
-# SwerveModuleState dosent have an equals operator
-def module_equals(a: SwerveModuleState, b: SwerveModuleState) -> bool:
-    return approx(a.angle) == approx(b.angle) and approx(a.speed) == approx(b.speed)
-
-
 sensible_floats = floats(allow_infinity=False, allow_nan=False, width=16)
 sensible_positive_floats = floats(
     min_value=0, allow_infinity=False, allow_nan=False, width=16

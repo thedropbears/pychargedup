@@ -20,7 +20,7 @@ def distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
 
 def rate_limit_2d(
     cur: Tuple[float, float], target: Tuple[float, float], rate_limit: float, dt: float
-):
+) -> Tuple[float, float]:
     """Limits the change in a vector to rate_limit * dt"""
     err = (target[0] - cur[0], target[1] - cur[1])
     mag = math.hypot(*err)
@@ -39,7 +39,7 @@ def rate_limit_module(
     target: SwerveModuleState,
     rate_limit: float,
     dt: float = 0.02,
-):
+) -> SwerveModuleState:
     """
     Limit the change in a module state so that the acceleration dosent exceed rate_limit
     """
@@ -53,13 +53,13 @@ def rate_limit_module(
     )
     new_speed = math.hypot(new_vx, new_vy)
     if new_speed == 0:
-        rot = target.angle
+        rot = cur.angle
     else:
         rot = Rotation2d(new_vx, new_vy)
     return SwerveModuleState(new_speed, rot)
 
 
-def clamp_2d(val: Tuple[float, float], radius: float):
+def clamp_2d(val: Tuple[float, float], radius: float) -> Tuple[float, float]:
     """
     Constrains a vector to be within the unit circle
     """
@@ -68,3 +68,21 @@ def clamp_2d(val: Tuple[float, float], radius: float):
         return (0, 0)
     new_mag = min(mag, radius)
     return new_mag * val[0] / mag, new_mag * val[1] / mag
+
+
+def clamp_chassis_inputs(
+    vals: Tuple[float, float, float], max_speed: float, wheel_dist: float
+) -> Tuple[float, float, float]:
+    """Clamps vx, vy, vz inputs to be achiveable with all modules within max_speed
+    Prioritises reducing translation over reducing rotation"""
+    # speed modules are going due to rotation
+    rot_speed = abs(vals[2]) * wheel_dist
+    # if rotation is too high, set it to highest rotation speed
+    if rot_speed > max_speed:
+        rot_speed = max_speed
+    max_trans_speed = max_speed-rot_speed
+    new_x, new_y = clamp_2d((vals[0], vals[1]), max_trans_speed)
+    return (
+        new_x, new_y,
+        math.copysign(rot_speed / wheel_dist, vals[2]),
+    )
