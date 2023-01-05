@@ -7,12 +7,16 @@ import ctre
 import magicbot
 import navx
 import wpilib
-from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds, SwerveModuleState, SwerveModulePosition
+from wpimath.kinematics import (
+    SwerveDrive4Kinematics,
+    ChassisSpeeds,
+    SwerveModuleState,
+    SwerveModulePosition,
+)
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.estimator import SwerveDrive4PoseEstimator
 from wpimath.interpolation import TimeInterpolatablePose2dBuffer
 from wpimath.controller import SimpleMotorFeedforwardMeters
-from wpimath.filter import SlewRateLimiter
 
 from utilities.functions import constrain_angle, rate_limit_module
 from utilities.ctre import FALCON_CPR, FALCON_FREE_RPS
@@ -116,7 +120,7 @@ class SwerveModule:
     def get_speed(self) -> float:
         # velocity is in counts / 100ms, return in m/s
         return self.drive.getSelectedSensorVelocity() * self.DRIVE_COUNTS_TO_METRES * 10
-    
+
     def get_distance_traveled(self) -> float:
         return self.drive.getSelectedSensorPosition() * self.DRIVE_COUNTS_TO_METRES
 
@@ -156,7 +160,7 @@ class SwerveModule:
         self.steer.setSelectedSensorPosition(
             self.get_angle_absolute() * self.STEER_RAD_TO_COUNTS
         )
-    
+
     def get_position(self) -> SwerveModulePosition:
         return SwerveModulePosition(self.get_distance_traveled(), self.get_rotation())
 
@@ -248,7 +252,7 @@ class Chassis:
         self.field_obj = self.field.getObject("fused_pose")
         self.module_objs: List[wpilib.FieldObject2d] = []
         for idx, module in enumerate(self.modules):
-            self.module_objs.append(self.field.getObject("s_module_"+str(idx)))
+            self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
         self.set_pose(Pose2d(2, 0, Rotation2d.fromDegrees(180)))
 
     def drive_field(self, vx: float, vy: float, omega: float) -> None:
@@ -267,12 +271,19 @@ class Chassis:
         # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
         if self.do_fudge:
             # in the sim i found using 5 instead of 0.5 did a lot better
-            desired_speed_translation = Translation2d(self.chassis_speeds.vx, self.chassis_speeds.vy).rotateBy(
+            desired_speed_translation = Translation2d(
+                self.chassis_speeds.vx, self.chassis_speeds.vy
+            ).rotateBy(
                 Rotation2d(-self.chassis_speeds.omega * 5 * self.control_loop_wait_time)
             )
-            desired_speeds = ChassisSpeeds(desired_speed_translation.x, desired_speed_translation.y, self.chassis_speeds.omega)
+            desired_speeds = ChassisSpeeds(
+                desired_speed_translation.x,
+                desired_speed_translation.y,
+                self.chassis_speeds.omega,
+            )
         else:
             desired_speeds = self.chassis_speeds
+
         desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
         desired_states = self.kinematics.desaturateWheelSpeeds(
             desired_states, attainableMaxSpeed=self.max_wheel_speed
@@ -294,16 +305,18 @@ class Chassis:
         self.last_time = time.monotonic()
 
     def update_odometry(self) -> None:
-        self.estimator.update(
-            self.imu.getRotation2d(),
-            self.get_module_positions()
-        )
+        self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
         self.field_obj.setPose(self.get_pose())
         if self.send_modules:
             robot_location = self.estimator.getEstimatedPosition()
             for idx, module in enumerate(self.modules):
-                module_location = robot_location.translation() + module.translation.rotateBy(robot_location.rotation())
-                module_rotation = module.get_rotation().rotateBy(robot_location.rotation())
+                module_location = (
+                    robot_location.translation()
+                    + module.translation.rotateBy(robot_location.rotation())
+                )
+                module_rotation = module.get_rotation().rotateBy(
+                    robot_location.rotation()
+                )
                 self.module_objs[idx].setPose(Pose2d(module_location, module_rotation))
 
     def update_pose_history(self) -> None:
@@ -317,21 +330,39 @@ class Chassis:
 
     def set_pose(self, pose: Pose2d) -> None:
         self.pose_history.clear()
-        self.estimator.resetPosition(self.imu.getRotation2d(), self.get_module_positions(), pose)
+        self.estimator.resetPosition(
+            self.imu.getRotation2d(), self.get_module_positions(), pose
+        )
         self.update_pose_history()
         self.field.setRobotPose(pose)
         self.field_obj.setPose(pose)
-    
+
     def zero_yaw(self) -> None:
         """Sets pose to current pose but with a heading of zero"""
         cur_pose = self.estimator.getEstimatedPosition()
-        self.estimator.resetPosition(self.imu.getRotation2d(), self.get_module_positions(), Pose2d(cur_pose.translation(), Rotation2d(0)))
+        self.estimator.resetPosition(
+            self.imu.getRotation2d(),
+            self.get_module_positions(),
+            Pose2d(cur_pose.translation(), Rotation2d(0)),
+        )
 
-    def get_module_positions(self) -> Tuple[SwerveModulePosition]:
-        return tuple(module.get_position() for module in self.modules)
+    def get_module_positions(
+        self,
+    ) -> Tuple[
+        SwerveModulePosition,
+        SwerveModulePosition,
+        SwerveModulePosition,
+        SwerveModulePosition,
+    ]:
+        return (
+            self.modules[0].get_position(),
+            self.modules[1].get_position(),
+            self.modules[2].get_position(),
+            self.modules[3].get_position(),
+        )
 
     def get_pose(self) -> Pose2d:
-        """Get the current location of the robot relative to the goal."""
+        """Get the current location of the robot relative to ???"""
         return self.estimator.getEstimatedPosition()
 
     def get_rotation(self) -> Rotation2d:
@@ -339,8 +370,12 @@ class Chassis:
         return self.get_pose().rotation()
 
     def get_pose_at(self, t: float) -> Pose2d:
-        """Gets where the robot was at t"""
-        return self.pose_history.sample(t)
+        """Gets where the robot was at t seconds in the past"""
+        pose = self.pose_history.sample(t)
+        # sample returns None if there is nothing in the history
+        if pose is None:
+            return self.get_pose()
+        return pose
 
     def robot_to_world(
         self, offset: Translation2d, robot: Optional[Pose2d] = None
