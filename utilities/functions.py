@@ -1,5 +1,4 @@
 import math
-import numpy as np
 from typing import Tuple
 from wpimath.kinematics import SwerveModuleState
 from wpimath.geometry import Rotation2d
@@ -68,21 +67,3 @@ def clamp_2d(val: Tuple[float, float], radius: float) -> Tuple[float, float]:
         return (0, 0)
     new_mag = min(mag, radius)
     return new_mag * val[0] / mag, new_mag * val[1] / mag
-
-
-def clamp_chassis_inputs(
-    vals: Tuple[float, float, float], max_speed: float, wheel_dist: float
-) -> Tuple[float, float, float]:
-    """Clamps vx, vy, vz inputs to be achiveable with all modules within max_speed
-    Prioritises reducing translation over reducing rotation"""
-    # speed modules are going due to rotation
-    rot_speed = abs(vals[2]) * wheel_dist
-    # if rotation is too high, set it to highest rotation speed
-    if rot_speed > max_speed:
-        rot_speed = max_speed
-    max_trans_speed = max_speed-rot_speed
-    new_x, new_y = clamp_2d((vals[0], vals[1]), max_trans_speed)
-    return (
-        new_x, new_y,
-        math.copysign(rot_speed / wheel_dist, vals[2]),
-    )

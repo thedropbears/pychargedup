@@ -24,7 +24,6 @@ class MyRobot(magicbot.MagicRobot):
     chassis: Chassis
 
     def createObjects(self) -> None:
-        wpilib.I2C.Port.kMXP
         self.logger.info("pyrapidreact %s", GIT_INFO)
         self.data_log = wpilib.DataLogManager.getLog()
 
@@ -40,7 +39,7 @@ class MyRobot(magicbot.MagicRobot):
             except ImportError:
                 self.logger.exception("Could not import CameraServer")
             else:
-                CameraServer.getInstance().startAutomaticCapture()
+                CameraServer.startAutomaticCapture()
 
     def teleopPeriodic(self) -> None:
         auto_driving = self.gamepad.getAButton()

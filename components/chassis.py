@@ -1,13 +1,13 @@
 from logging import Logger
 import math
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import ctre
 import magicbot
 import navx
 import wpilib
-from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds, SwerveModuleState
+from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds, SwerveModuleState, SwerveModulePosition
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.estimator import SwerveDrive4PoseEstimator
 from wpimath.interpolation import TimeInterpolatablePose2dBuffer
@@ -35,7 +35,7 @@ class SwerveModule:
     # limit the acceleration of the commanded speeds of the robot to what is actually
     # achiveable without the wheels slipping. This is done to improve odometry
     # TODO: measure this empirically
-    accel_limit = 15  # m/s^2
+    accel_limit = 10  # m/s^2
 
     def __init__(
         self,
@@ -116,6 +116,9 @@ class SwerveModule:
     def get_speed(self) -> float:
         # velocity is in counts / 100ms, return in m/s
         return self.drive.getSelectedSensorVelocity() * self.DRIVE_COUNTS_TO_METRES * 10
+    
+    def get_distance_traveled(self) -> float:
+        return self.drive.getSelectedSensorPosition() * self.DRIVE_COUNTS_TO_METRES
 
     def set(self, desired_state: SwerveModuleState):
         # smooth wheel velocity vector
@@ -153,6 +156,9 @@ class SwerveModule:
         self.steer.setSelectedSensorPosition(
             self.get_angle_absolute() * self.STEER_RAD_TO_COUNTS
         )
+    
+    def get_position(self) -> SwerveModulePosition:
+        return SwerveModulePosition(self.get_distance_traveled(), self.get_rotation())
 
     def get(self) -> SwerveModuleState:
         return SwerveModuleState(self.get_speed(), self.get_rotation())
@@ -232,11 +238,11 @@ class Chassis:
         self.sync_all()
         self.imu.zeroYaw()
         self.estimator = SwerveDrive4PoseEstimator(
-            self.imu.getRotation2d(),
-            Pose2d(0, 0, 0),
             self.kinematics,
+            self.imu.getRotation2d(),
+            self.get_module_positions(),
+            Pose2d(0, 0, 0),
             stateStdDevs=(0.1, 0.1, math.radians(5)),
-            localMeasurementStdDevs=(0.01,),
             visionMeasurementStdDevs=(0.5, 0.5, 0.2),
         )
         self.field_obj = self.field.getObject("fused_pose")
@@ -276,15 +282,12 @@ class Chassis:
             module.set(state)
 
         self.update_odometry()
-
         # rotation2d and translation2d have mul but not div
         real_chassis_speeds = self.kinematics.toChassisSpeeds(
-            (
-                self.modules[0].get(),
-                self.modules[1].get(),
-                self.modules[2].get(),
-                self.modules[3].get(),
-            )
+            self.modules[0].get(),
+            self.modules[1].get(),
+            self.modules[2].get(),
+            self.modules[3].get(),
         )
 
         self.update_pose_history()
@@ -293,10 +296,7 @@ class Chassis:
     def update_odometry(self) -> None:
         self.estimator.update(
             self.imu.getRotation2d(),
-            self.modules[0].get(),
-            self.modules[1].get(),
-            self.modules[2].get(),
-            self.modules[3].get(),
+            self.get_module_positions()
         )
         self.field_obj.setPose(self.get_pose())
         if self.send_modules:
@@ -317,17 +317,18 @@ class Chassis:
 
     def set_pose(self, pose: Pose2d) -> None:
         self.pose_history.clear()
-        self.estimator.resetPosition(pose, self.imu.getRotation2d())
+        self.estimator.resetPosition(self.imu.getRotation2d(), self.get_module_positions(), pose)
         self.update_pose_history()
         self.field.setRobotPose(pose)
         self.field_obj.setPose(pose)
-
+    
     def zero_yaw(self) -> None:
         """Sets pose to current pose but with a heading of zero"""
         cur_pose = self.estimator.getEstimatedPosition()
-        self.estimator.resetPosition(
-            Pose2d(cur_pose.translation(), Rotation2d(0)), self.imu.getRotation2d()
-        )
+        self.estimator.resetPosition(self.imu.getRotation2d(), self.get_module_positions(), Pose2d(cur_pose.translation(), Rotation2d(0)))
+
+    def get_module_positions(self) -> Tuple[SwerveModulePosition]:
+        return tuple(module.get_position() for module in self.modules)
 
     def get_pose(self) -> Pose2d:
         """Get the current location of the robot relative to the goal."""

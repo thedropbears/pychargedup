@@ -1,4 +1,4 @@
 hypothesis
-pyfrc ~= 2022.1.2
+pyfrc~=2023.0.0b4
 pytest
 -r requirements.txt

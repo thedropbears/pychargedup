@@ -84,17 +84,7 @@ class PhysicsEngine:
         for steer in self.steer:
             steer.update(tm_diff)
 
-        # complains about incompatable types if not cast
-        states = typing.cast(
-            typing.Tuple[
-                SwerveModuleState,
-                SwerveModuleState,
-                SwerveModuleState,
-                SwerveModuleState,
-            ],
-            tuple([module.get() for module in self.swerve_modules]),
-        )
-        speeds = self.kinematics.toChassisSpeeds(states)
+        speeds = self.kinematics.toChassisSpeeds(*(module.get() for module in self.swerve_modules))
 
         self.imu_yaw.set(self.imu_yaw.get() - math.degrees(speeds.omega * tm_diff))
 
