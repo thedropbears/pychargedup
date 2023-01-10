@@ -3,12 +3,14 @@
 import wpilib
 import magicbot
 
+
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm
 from utilities.scalers import rescale_js
 from components.intake import Intake
+from components.claw import Claw
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -20,6 +22,7 @@ class MyRobot(magicbot.MagicRobot):
     vision: Vision
     arm: Arm
     intake: Intake
+    claw: Claw
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -39,7 +42,7 @@ class MyRobot(magicbot.MagicRobot):
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * Chassis.max_wheel_speed
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
-        local_driving = self.gamepad.getBButton()
+        local_driving = self.gamepad.getXButton()
 
         if self.gamepad.getYButtonPressed():
             self.intake.retract()
@@ -67,13 +70,10 @@ class MyRobot(magicbot.MagicRobot):
 
         # self.arm.execute()
 
-        self.vision.execute()
-
-    def disabledInit(self) -> None:
-        self.vision.add_to_estimator = False
-
-    def disabledPeriodic(self):
-        self.vision.execute()
+        if self.Xbox.getYButtonPressed():
+            self.claw.open_gripper()
+        if self.Xbox.getXButtonPressed():
+            self.claw.close_gripper()
 
 
 if __name__ == "__main__":
