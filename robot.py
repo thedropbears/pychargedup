@@ -11,9 +11,6 @@ from controllers.movement import Movement
 from components.chassis import Chassis
 
 from utilities.scalers import rescale_js, scale_value
-from utilities import git
-
-GIT_INFO = git.describe()
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -24,7 +21,6 @@ class MyRobot(magicbot.MagicRobot):
     chassis: Chassis
 
     def createObjects(self) -> None:
-        self.logger.info("pyrapidreact %s", GIT_INFO)
         self.data_log = wpilib.DataLogManager.getLog()
 
         self.gamepad = wpilib.XboxController(0)
