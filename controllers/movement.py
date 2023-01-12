@@ -1,4 +1,4 @@
-from magicbot import StateMachine, state, timed_state, default_state
+from magicbot import StateMachine, state, default_state
 from wpimath.geometry import Pose2d
 from components.chassis import Chassis
 

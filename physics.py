@@ -6,13 +6,11 @@ import ctre
 from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
 
 import wpilib.simulation
-from wpimath.kinematics import SwerveDrive4Kinematics, SwerveModuleState
-from wpimath.system.plant import DCMotor
+from wpimath.kinematics import SwerveDrive4Kinematics
 
 from components.chassis import SwerveModule
 
 import typing
-from typing import List
 
 if typing.TYPE_CHECKING:
     from robot import MyRobot
@@ -57,7 +55,7 @@ class PhysicsEngine:
         self.physics_controller = physics_controller
 
         self.kinematics: SwerveDrive4Kinematics = robot.chassis.kinematics
-        self.swerve_modules: List[SwerveModule] = robot.chassis.modules
+        self.swerve_modules: list[SwerveModule] = robot.chassis.modules
 
         # Motors
         self.wheels = [
@@ -84,7 +82,9 @@ class PhysicsEngine:
         for steer in self.steer:
             steer.update(tm_diff)
 
-        speeds = self.kinematics.toChassisSpeeds(*(module.get() for module in self.swerve_modules))
+        speeds = self.kinematics.toChassisSpeeds(
+            *(module.get() for module in self.swerve_modules)
+        )
 
         self.imu_yaw.set(self.imu_yaw.get() - math.degrees(speeds.omega * tm_diff))
 
