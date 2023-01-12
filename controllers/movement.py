@@ -1,3 +1,4 @@
+from math import sqrt
 from magicbot import StateMachine, state, timed_state, default_state
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d
