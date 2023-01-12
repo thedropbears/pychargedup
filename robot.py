@@ -2,15 +2,11 @@
 
 import wpilib
 import magicbot
-import ctre
-import navx
-import rev
-import math
 
 from controllers.movement import Movement
 from components.chassis import Chassis
 
-from utilities.scalers import rescale_js, scale_value
+from utilities.scalers import rescale_js
 
 
 class MyRobot(magicbot.MagicRobot):

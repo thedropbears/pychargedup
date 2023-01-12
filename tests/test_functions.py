@@ -3,9 +3,7 @@ from pytest import approx
 from hypothesis import given
 from hypothesis.strategies import floats, tuples
 
-from utilities.functions import clamp_2d, rate_limit_module, rate_limit_2d
-from wpimath.kinematics import SwerveModuleState
-from wpimath.geometry import Rotation2d
+from utilities.functions import clamp_2d, rate_limit_2d
 
 
 sensible_floats = floats(allow_infinity=False, allow_nan=False, width=16)

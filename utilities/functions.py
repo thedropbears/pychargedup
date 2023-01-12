@@ -1,5 +1,4 @@
 import math
-from typing import Tuple
 from wpimath.kinematics import SwerveModuleState
 from wpimath.geometry import Rotation2d
 
@@ -13,13 +12,13 @@ def clamp(val: float, low: float, high: float) -> float:
     return max(min(val, high), low)
 
 
-def distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     return math.hypot(b[0] - a[0], b[1] - a[1])
 
 
 def rate_limit_2d(
-    cur: Tuple[float, float], target: Tuple[float, float], rate_limit: float, dt: float
-) -> Tuple[float, float]:
+    cur: tuple[float, float], target: tuple[float, float], rate_limit: float, dt: float
+) -> tuple[float, float]:
     """Limits the change in a vector to rate_limit * dt"""
     err = (target[0] - cur[0], target[1] - cur[1])
     mag = math.hypot(*err)
@@ -51,14 +50,11 @@ def rate_limit_module(
         (cur_vx, cur_vy), (target_vx, target_vy), rate_limit, dt
     )
     new_speed = math.hypot(new_vx, new_vy)
-    if new_speed == 0:
-        rot = cur.angle
-    else:
-        rot = Rotation2d(new_vx, new_vy)
+    rot = cur.angle if new_speed == 0 else Rotation2d(new_vx, new_vy)
     return SwerveModuleState(new_speed, rot)
 
 
-def clamp_2d(val: Tuple[float, float], radius: float) -> Tuple[float, float]:
+def clamp_2d(val: tuple[float, float], radius: float) -> tuple[float, float]:
     """
     Constrains a vector to be within the unit circle
     """
