@@ -1,19 +1,41 @@
+from math import sqrt
 from magicbot import StateMachine, state, timed_state, default_state
-from wpimath.geometry import Pose2d
 from components.chassis import Chassis
-from wpimath.controller import ProfiledPIDController
-from wpimath.trajectory import TrapezoidProfile
+from wpimath.geometry import Pose2d
+from wpimath.trajectory import TrajectoryConfig
+from wpimath.trajectory import TrajectoryGenerator
+from wpimath.trajectory import TrapezoidProfileRadians
+from wpimath.controller import HolonomicDriveController
+from wpimath.controller import PIDController
+from wpimath.controller import ProfiledPIDControllerRadians
+from math import pi
+from math import atan2
+from wpilib import Field2d
 
 class Movement(StateMachine):
     chassis: Chassis
+    field: Field2d
 
     def __init__(self):
-        self.goal = Pose2d()
+        # create config
+        self.goal = Pose2d(0, 0, pi)
         self.inputs = (0, 0, 0)
         self.drive_local = False
-        self.x_controller = ProfiledPIDController(3, 0, 0, TrapezoidProfile.Constraints(1,1))
-        self.y_controller = ProfiledPIDController(3, 0, 0, TrapezoidProfile.Constraints(1,1))
-        self.heading_controller = ProfiledPIDController(3, 0, 0, TrapezoidProfile.Constraints(1,1))
+        self.config = TrajectoryConfig(1.5,1.5)
+
+        self.x_controller = PIDController(3, 0, 0)
+        self.y_controller = PIDController(3, 0, 0)
+        self.heading_controller = ProfiledPIDControllerRadians(3, 0, 0,TrapezoidProfileRadians.Constraints(1,1))
+        self.heading_controller.enableContinuousInput(0,2*pi)
+
+        self.drive_controller = HolonomicDriveController(   
+            self.x_controller,
+            self.y_controller,
+            self.heading_controller
+        )
+    
+    def setup(self):
+        self.robot_object = self.field.getObject("auto_trajectory")
 
     # will execute if no other states are executing
     @default_state
@@ -24,17 +46,25 @@ class Movement(StateMachine):
             self.chassis.drive_field(*self.inputs)
 
     @state(first=True)
-    def autodrive(self):
-        self.x_controller.setGoal(self.goal.X())
-        self.y_controller.setGoal(self.goal.Y())
-        self.heading_controller.setGoal(self.goal.rotation().radians())
-
-        x_velocity = self.x_controller.calculate(self.chassis.get_pose().X())
-        y_velocity = self.y_controller.calculate(self.chassis.get_pose().Y())
-        omega = self.heading_controller.calculate(self.chassis.get_pose().rotation().radians())
+    def autodrive(self, state_tm, initial_call):
         
-        self.chassis.drive_field(x_velocity,y_velocity,omega)
+        #generate trajectory
+        if initial_call:
+            self.chassis_velocity = self.chassis.get_velocity()
+            self.trajectory_preprocess_pose = Pose2d(
+                self.chassis.get_pose().X(),
+                self.chassis.get_pose().Y(),
+                atan2(self.chassis_velocity.vy, self.chassis_velocity.vx)
+            )
+            self.config.setStartVelocity(sqrt((self.chassis_velocity.vy**2)+(self.chassis_velocity.vx**2)))
+            self.auto_trajectory = TrajectoryGenerator.generateTrajectory(self.trajectory_preprocess_pose,[],self.goal,self.config)
+            self.has_trajectory = True
+            self.robot_object.setTrajectory(self.auto_trajectory)
 
+        target_state = self.auto_trajectory.sample(state_tm)
+
+        self.chassis_speed = self.drive_controller.calculate(self.chassis.get_pose(),target_state,self.goal.rotation())
+        self.chassis.drive_local(self.chassis_speed.vx, self.chassis_speed.vy, self.chassis_speed.omega)
         """Drive to a waypoint"""
         ...
 
