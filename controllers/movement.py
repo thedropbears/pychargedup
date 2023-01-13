@@ -126,7 +126,6 @@ class Movement(StateMachine):
 
     @state(first=True)
     def autodrive(self, state_tm, initial_call):
-
         # generate trajectory
         if initial_call:
             self.x_controller = PIDController(1.5, 0, 0)
