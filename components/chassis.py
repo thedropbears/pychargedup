@@ -39,7 +39,7 @@ class SwerveModule:
     # limit the acceleration of the commanded speeds of the robot to what is actually
     # achiveable without the wheels slipping. This is done to improve odometry
     # TODO: measure this empirically
-    accel_limit = 10  # m/s^2
+    accel_limit = 5  # m/s^2
 
     def __init__(
         self,
@@ -57,7 +57,7 @@ class SwerveModule:
         """
         self.translation = Translation2d(x, y)
         self.state = SwerveModuleState(0, Rotation2d(0))
-        self.do_smooth = False
+        self.do_smooth = True
 
         # Create Motor and encoder objects
         self.steer = ctre.WPI_TalonFX(steer_id)
@@ -80,7 +80,7 @@ class SwerveModule:
         self.steer.config_kI(0, 0, 10)
         self.steer.config_kD(0, 5.6805, 10)
         self.steer.configAllowableClosedloopError(
-            0, self.STEER_RAD_TO_COUNTS * math.radians(2)
+            0, self.STEER_RAD_TO_COUNTS * math.radians(4)
         )
         self.steer.configSelectedFeedbackSensor(
             ctre.FeedbackDevice.IntegratedSensor, 0, 10
@@ -253,7 +253,7 @@ class Chassis:
         self.module_objs: list[wpilib.FieldObject2d] = []
         for idx, _module in enumerate(self.modules):
             self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
-        self.set_pose(Pose2d(2, 0, Rotation2d.fromDegrees(180)))
+        self.set_pose(Pose2d(0, 0, Rotation2d.fromDegrees(0)))
 
     def drive_field(self, vx: float, vy: float, omega: float) -> None:
         """Field oriented drive commands"""
@@ -293,16 +293,19 @@ class Chassis:
             module.set(state)
 
         self.update_odometry()
-        # rotation2d and translation2d have mul but not div
-        self.kinematics.toChassisSpeeds(
+        self.update_pose_history()
+        self.last_time = time.monotonic()
+
+    def get_velocity(self) -> ChassisSpeeds:
+        self.local_speed = self.kinematics.toChassisSpeeds(
             self.modules[0].get(),
             self.modules[1].get(),
             self.modules[2].get(),
             self.modules[3].get(),
         )
-
-        self.update_pose_history()
-        self.last_time = time.monotonic()
+        return ChassisSpeeds.fromFieldRelativeSpeeds(
+            self.local_speed, -self.get_rotation()
+        )
 
     def update_odometry(self) -> None:
         self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
