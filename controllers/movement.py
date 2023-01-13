@@ -24,10 +24,10 @@ class Movement(StateMachine):
         self.goal = Pose2d(0,5,math.pi)
         self.goal_spline = Spline3.ControlVector((self.goal.X(), -10), (self.goal.Y(), 0))
         
-        self.config = TrajectoryConfig(1.5,3)
+        self.config = TrajectoryConfig(1.5,1)
         self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X()-1,self.goal.Y()-1)
-        bottomLeft = Translation2d(self.goal.X()+1,self.goal.Y()+1)
+        topRight = Translation2d(self.goal.X()+3,self.goal.Y()-3)
+        bottomLeft = Translation2d(self.goal.X()-3,self.goal.Y()+3)
         self.config.addConstraint(RectangularRegionConstraint(bottomLeft,topRight,MaxVelocityConstraint(0.5)))
 
     def setup(self):
