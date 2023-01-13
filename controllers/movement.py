@@ -26,7 +26,7 @@ class Movement(StateMachine):
     chassis: Chassis
     field: Field2d
 
-    def __init__(self):
+    def __init__(self) -> None:
         # create config
         self.inputs = (0, 0, 0)
         self.drive_local = False
@@ -117,7 +117,7 @@ class Movement(StateMachine):
 
     # will execute if no other states are executing
     @default_state
-    def manualdrive(self):
+    def manualdrive(self) -> None:
         self.generate_trajectory()
         if self.drive_local:
             self.chassis.drive_local(*self.inputs)
@@ -125,7 +125,7 @@ class Movement(StateMachine):
             self.chassis.drive_field(*self.inputs)
 
     @state(first=True)
-    def autodrive(self, state_tm, initial_call):
+    def autodrive(self, state_tm: float, initial_call: bool) -> None:
 
         # generate trajectory
         if initial_call:
@@ -152,15 +152,15 @@ class Movement(StateMachine):
         ...
 
     @state
-    def score(self):
+    def score(self) -> None:
         ...
 
     @state
-    def pickup(self):
+    def pickup(self) -> None:
         ...
 
     @state
-    def comfirm_action(self):
+    def comfirm_action(self) -> None:
         ...
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
@@ -168,5 +168,5 @@ class Movement(StateMachine):
         self.inputs = (vx, vy, vz)
         self.drive_local = local
 
-    def do_autodrive(self):
+    def do_autodrive(self) -> None:
         self.engage()
