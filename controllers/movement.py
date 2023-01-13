@@ -31,15 +31,17 @@ class Movement(StateMachine):
             self.chassis.drive_field(*self.inputs)
 
     @state(first=True)
-    def autodrive(self):
-        self.x_controller.setGoal(self.goal.X())
-        self.y_controller.setGoal(self.goal.Y())
-        self.heading_controller.setGoal(self.goal.rotation().radians())
+    def autodrive(self, initial_call):
+        if initial_call:
+            self.x_controller.reset()
+            self.y_controller.reset()
+            self.heading_controller.reset()
 
-        x_velocity = self.x_controller.calculate(self.chassis.get_pose().X())
-        y_velocity = self.y_controller.calculate(self.chassis.get_pose().Y())
+        x_velocity = self.x_controller.calculate(self.chassis.get_pose().X(), self.goal.y)
+        y_velocity = self.y_controller.calculate(self.chassis.get_pose().Y(), self.goal.y)
         omega = self.heading_controller.calculate(
-            self.chassis.get_pose().rotation().radians()
+            self.chassis.get_pose().rotation().radians(),
+            self.goal.rotation().radians()
         )
 
         self.chassis.drive_field(x_velocity, y_velocity, omega)
