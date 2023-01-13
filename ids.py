@@ -4,20 +4,20 @@ import inspect
 class CanIds:
     class Chassis:
         drive_1 = 1
-        steer_1 = 2
-        encoder_1 = 1
+        steer_1 = 5
+        encoder_1 = 9
 
-        drive_2 = 3
-        steer_2 = 4
-        encoder_2 = 2
+        drive_2 = 2
+        steer_2 = 6
+        encoder_2 = 10
 
-        drive_3 = 5
-        steer_3 = 6
-        encoder_3 = 3
+        drive_3 = 3
+        steer_3 = 7
+        encoder_3 = 11
 
-        drive_4 = 7
+        drive_4 = 4
         steer_4 = 8
-        encoder_4 = 4
+        encoder_4 = 12
 
 
 class PWM:

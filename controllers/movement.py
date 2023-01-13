@@ -1,17 +1,13 @@
 from magicbot import StateMachine, state, default_state
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
-from wpimath.trajectory import TrajectoryConfig
-from wpimath.trajectory import TrajectoryGenerator
-from wpimath.trajectory import TrapezoidProfileRadians
+from wpimath.trajectory import TrajectoryConfig, Trajectory, TrajectoryGenerator, TrapezoidProfileRadians
 from wpimath.trajectory.constraint import (
     CentripetalAccelerationConstraint,
     RectangularRegionConstraint,
     MaxVelocityConstraint,
 )
-from wpimath.controller import HolonomicDriveController
-from wpimath.controller import PIDController
-from wpimath.controller import ProfiledPIDControllerRadians
+from wpimath.controller import HolonomicDriveController, PIDController, ProfiledPIDControllerRadians
 from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
@@ -26,25 +22,25 @@ class Movement(StateMachine):
         self.inputs = (0, 0, 0)
         self.drive_local = False
 
-        self.goal = Pose2d(0, 5, math.pi)
+        self.goal = Pose2d(0, 0, 0)
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), -10), (self.goal.Y(), 0)
+            (self.goal.X(), -7), (self.goal.Y(), 0)
         )
 
-        self.config = TrajectoryConfig(1.5, 1)
+        self.config = TrajectoryConfig(1, 1.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
         topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
         bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() + 3)
         self.config.addConstraint(
             RectangularRegionConstraint(
-                bottomLeft, topRight, MaxVelocityConstraint(0.5)
+                bottomLeft, topRight, MaxVelocityConstraint(1)
             )
         )
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
 
-    def generate_trajectory(self):
+    def generate_trajectory(self) -> Trajectory:
         self.chassis_velocity = self.chassis.get_velocity()
 
         self.x_pos = self.chassis.get_pose().X()
@@ -62,7 +58,10 @@ class Movement(StateMachine):
             y_translation = self.goal.Y() - self.y_pos
 
             translation_distance = math.sqrt(x_translation**2 + y_translation**2)
-
+            
+            if(translation_distance== 0):
+                return Trajectory([Trajectory.State(0, 0, 0, self.chassis.get_pose())])
+            
             normalised_x = x_translation / translation_distance
             normalised_y = y_translation / translation_distance
 
@@ -97,17 +96,17 @@ class Movement(StateMachine):
     def set_goal(self, goal: Pose2d, approach_direciton: Rotation2d) -> None:
         self.goal = goal
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), approach_direciton.cos() * 7.5),
-            (self.goal.Y(), approach_direciton.sin() * 7.5),
+            (self.goal.X(), approach_direciton.cos() * 10),
+            (self.goal.Y(), approach_direciton.sin() * 10),
         )
 
-        self.config = TrajectoryConfig(1.5, 3)
+        self.config = TrajectoryConfig(1, 1.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X() - 1, self.goal.Y() - 1)
-        bottomLeft = Translation2d(self.goal.X() + 1, self.goal.Y() + 1)
+        topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
+        bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() + 3)
         self.config.addConstraint(
             RectangularRegionConstraint(
-                bottomLeft, topRight, MaxVelocityConstraint(0.5)
+                bottomLeft, topRight, MaxVelocityConstraint(1)
             )
         )
 
