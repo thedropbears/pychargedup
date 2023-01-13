@@ -1,16 +1,21 @@
-from magicbot import StateMachine, state, timed_state, default_state
+from magicbot import StateMachine, state, default_state
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import TrajectoryConfig
 from wpimath.trajectory import TrajectoryGenerator
 from wpimath.trajectory import TrapezoidProfileRadians
-from wpimath.trajectory.constraint import CentripetalAccelerationConstraint, RectangularRegionConstraint, MaxVelocityConstraint
+from wpimath.trajectory.constraint import (
+    CentripetalAccelerationConstraint,
+    RectangularRegionConstraint,
+    MaxVelocityConstraint,
+)
 from wpimath.controller import HolonomicDriveController
 from wpimath.controller import PIDController
 from wpimath.controller import ProfiledPIDControllerRadians
 from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
+
 
 class Movement(StateMachine):
     chassis: Chassis
@@ -21,18 +26,23 @@ class Movement(StateMachine):
         self.inputs = (0, 0, 0)
         self.drive_local = False
 
-        self.goal = Pose2d(0,5,math.pi)
-        self.goal_spline = Spline3.ControlVector((self.goal.X(), -10), (self.goal.Y(), 0))
-        
-        self.config = TrajectoryConfig(1.5,1)
+        self.goal = Pose2d(0, 5, math.pi)
+        self.goal_spline = Spline3.ControlVector(
+            (self.goal.X(), -10), (self.goal.Y(), 0)
+        )
+
+        self.config = TrajectoryConfig(1.5, 1)
         self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X()+3,self.goal.Y()-3)
-        bottomLeft = Translation2d(self.goal.X()-3,self.goal.Y()+3)
-        self.config.addConstraint(RectangularRegionConstraint(bottomLeft,topRight,MaxVelocityConstraint(0.5)))
+        topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
+        bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() + 3)
+        self.config.addConstraint(
+            RectangularRegionConstraint(
+                bottomLeft, topRight, MaxVelocityConstraint(0.5)
+            )
+        )
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
-
 
     def generate_trajectory(self):
         self.chassis_velocity = self.chassis.get_velocity()
@@ -44,12 +54,10 @@ class Movement(StateMachine):
         self.y_velocity = self.chassis_velocity.vy
 
         self.trajectory_preprocess_pose = Pose2d(
-            self.x_pos,
-            self.y_pos,
-            math.atan2(self.y_velocity, self.x_velocity)
+            self.x_pos, self.y_pos, math.atan2(self.y_velocity, self.x_velocity)
         )
 
-        if(math.sqrt(self.x_velocity**2 + self.y_velocity**2) < 0.2):
+        if math.sqrt(self.x_velocity**2 + self.y_velocity**2) < 0.2:
             x_translation = self.goal.X() - self.x_pos
             y_translation = self.goal.Y() - self.y_pos
 
@@ -60,36 +68,48 @@ class Movement(StateMachine):
 
             kD = 5
 
-            self.spline_start_momentum_x = normalised_x*kD
-            self.spline_start_momentum_y = normalised_y*kD
+            self.spline_start_momentum_x = normalised_x * kD
+            self.spline_start_momentum_y = normalised_y * kD
 
         else:
             kvx = 3
             kvy = 3
-            
-            self.spline_start_momentum_x = self.chassis_velocity.vx*kvx
-            self.spline_start_momentum_y = self.chassis_velocity.vy*kvy
 
-        self.trajectory_preprocess_vector = Spline3.ControlVector((self.x_pos, self.spline_start_momentum_x), (self.y_pos, self.spline_start_momentum_y))
+            self.spline_start_momentum_x = self.chassis_velocity.vx * kvx
+            self.spline_start_momentum_y = self.chassis_velocity.vy * kvy
 
-        self.config.setStartVelocity(math.sqrt(self.y_velocity**2 + self.x_velocity**2))
+        self.trajectory_preprocess_vector = Spline3.ControlVector(
+            (self.x_pos, self.spline_start_momentum_x),
+            (self.y_pos, self.spline_start_momentum_y),
+        )
 
-        self.auto_trajectory = TrajectoryGenerator.generateTrajectory(self.trajectory_preprocess_vector,[],self.goal_spline,self.config)
+        self.config.setStartVelocity(
+            math.sqrt(self.y_velocity**2 + self.x_velocity**2)
+        )
+
+        self.auto_trajectory = TrajectoryGenerator.generateTrajectory(
+            self.trajectory_preprocess_vector, [], self.goal_spline, self.config
+        )
 
         self.robot_object.setTrajectory(self.auto_trajectory)
         return self.auto_trajectory
 
-
-    def set_goal(self, goal:Pose2d, approach_direciton:Rotation2d) -> None:
+    def set_goal(self, goal: Pose2d, approach_direciton: Rotation2d) -> None:
         self.goal = goal
-        self.goal_spline = Spline3.ControlVector((self.goal.X(), approach_direciton.cos()*7.5), (self.goal.Y(), approach_direciton.sin()*7.5))
-        
-        self.config = TrajectoryConfig(1.5,3)
-        self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X()-1,self.goal.Y()-1)
-        bottomLeft = Translation2d(self.goal.X()+1,self.goal.Y()+1)
-        self.config.addConstraint(RectangularRegionConstraint(bottomLeft,topRight,MaxVelocityConstraint(0.5)))
+        self.goal_spline = Spline3.ControlVector(
+            (self.goal.X(), approach_direciton.cos() * 7.5),
+            (self.goal.Y(), approach_direciton.sin() * 7.5),
+        )
 
+        self.config = TrajectoryConfig(1.5, 3)
+        self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
+        topRight = Translation2d(self.goal.X() - 1, self.goal.Y() - 1)
+        bottomLeft = Translation2d(self.goal.X() + 1, self.goal.Y() + 1)
+        self.config.addConstraint(
+            RectangularRegionConstraint(
+                bottomLeft, topRight, MaxVelocityConstraint(0.5)
+            )
+        )
 
     # will execute if no other states are executing
     @default_state
@@ -103,24 +123,28 @@ class Movement(StateMachine):
     @state(first=True)
     def autodrive(self, state_tm, initial_call):
 
-        #generate trajectory
+        # generate trajectory
         if initial_call:
             self.x_controller = PIDController(1.5, 0, 0)
             self.y_controller = PIDController(1.5, 0, 0)
-            self.heading_controller = ProfiledPIDControllerRadians(1.5, 0, 0,TrapezoidProfileRadians.Constraints(1,1))
+            self.heading_controller = ProfiledPIDControllerRadians(
+                1.5, 0, 0, TrapezoidProfileRadians.Constraints(1, 1)
+            )
             self.heading_controller.enableContinuousInput(0, math.tau)
 
-            self.drive_controller = HolonomicDriveController(   
-                self.x_controller,
-                self.y_controller,
-                self.heading_controller
+            self.drive_controller = HolonomicDriveController(
+                self.x_controller, self.y_controller, self.heading_controller
             )
             self.trajectory = self.generate_trajectory()
-        
+
         target_state = self.trajectory.sample(state_tm)
 
-        self.chassis_speed = self.drive_controller.calculate(self.chassis.get_pose(),target_state,self.goal.rotation())
-        self.chassis.drive_local(self.chassis_speed.vx, self.chassis_speed.vy, self.chassis_speed.omega)
+        self.chassis_speed = self.drive_controller.calculate(
+            self.chassis.get_pose(), target_state, self.goal.rotation()
+        )
+        self.chassis.drive_local(
+            self.chassis_speed.vx, self.chassis_speed.vy, self.chassis_speed.omega
+        )
         ...
 
     @state

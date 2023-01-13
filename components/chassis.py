@@ -297,14 +297,16 @@ class Chassis:
         self.last_time = time.monotonic()
 
     def get_velocity(self) -> ChassisSpeeds:
-        self.local_speed =  self.kinematics.toChassisSpeeds(
+        self.local_speed = self.kinematics.toChassisSpeeds(
             self.modules[0].get(),
             self.modules[1].get(),
             self.modules[2].get(),
             self.modules[3].get(),
         )
-        return ChassisSpeeds.fromFieldRelativeSpeeds(self.local_speed, -self.get_rotation())
-        
+        return ChassisSpeeds.fromFieldRelativeSpeeds(
+            self.local_speed, -self.get_rotation()
+        )
+
     def update_odometry(self) -> None:
         self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
         self.field_obj.setPose(self.get_pose())

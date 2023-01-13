@@ -43,8 +43,8 @@ def check_ids() -> None:
     all_ids = get_ids(CanIds)
     dups = {str(x) for x in all_ids if all_ids.count(x) > 1}
     if dups:
-       # raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
-       pass
+        # raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
+        pass
 
 
 if __name__ == "__main__":
