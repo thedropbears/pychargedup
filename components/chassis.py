@@ -1,7 +1,7 @@
 from logging import Logger
 import math
 import time
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import ctre
 import magicbot
@@ -250,8 +250,8 @@ class Chassis:
             visionMeasurementStdDevs=(0.5, 0.5, 0.2),
         )
         self.field_obj = self.field.getObject("fused_pose")
-        self.module_objs: List[wpilib.FieldObject2d] = []
-        for idx, module in enumerate(self.modules):
+        self.module_objs: list[wpilib.FieldObject2d] = []
+        for idx, _module in enumerate(self.modules):
             self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
         self.set_pose(Pose2d(0, 0, Rotation2d.fromDegrees(0)))
 
@@ -349,7 +349,7 @@ class Chassis:
 
     def get_module_positions(
         self,
-    ) -> Tuple[
+    ) -> tuple[
         SwerveModulePosition,
         SwerveModulePosition,
         SwerveModulePosition,

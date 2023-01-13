@@ -1,5 +1,4 @@
 import math
-from typing import Tuple
 
 from hypothesis import assume, given
 from hypothesis.strategies import floats, tuples
@@ -42,10 +41,10 @@ real_halves = floats(allow_nan=False, allow_infinity=False, width=16)
 @given(
     value=real_halves,
     input_range=tuples(real_halves, real_halves).filter(lambda x: x[0] != x[1]),
-    output_range=tuples(real_halves, real_halves).filter(lambda x: x[0] != x[1])
+    output_range=tuples(real_halves, real_halves).filter(lambda x: x[0] != x[1]),
 )
 def test_scale_value(
-    value: float, input_range: Tuple[float, float], output_range: Tuple[float, float]
+    value: float, input_range: tuple[float, float], output_range: tuple[float, float]
 ):
     input_lower, input_upper = input_range
     output_lower, output_upper = output_range

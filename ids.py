@@ -1,5 +1,4 @@
 import inspect
-from typing import List
 
 
 class CanIds:
@@ -26,7 +25,7 @@ class PWM:
 
 
 # recursively get all attributes
-def get_ids(cls) -> List[int]:
+def get_ids(cls) -> list[int]:
     # ignore dunders
     attributes = [x for x in dir(cls) if not x.startswith("__")]
     ids = []
@@ -42,7 +41,7 @@ def get_ids(cls) -> List[int]:
 # enforce no duplicate ids
 def check_ids() -> None:
     all_ids = get_ids(CanIds)
-    dups = set([str(x) for x in all_ids if all_ids.count(x) > 1])
+    dups = {str(x) for x in all_ids if all_ids.count(x) > 1}
     if dups:
        # raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
        pass

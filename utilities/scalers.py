@@ -1,5 +1,4 @@
 import math
-from typing import Tuple
 
 
 def apply_deadzone(value: float, threshold: float) -> float:
