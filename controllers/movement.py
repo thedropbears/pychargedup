@@ -49,7 +49,6 @@ class Movement(StateMachine):
 
     def generate_trajectory(self) -> Trajectory:
         self.chassis_velocity = self.chassis.get_velocity()
-
         self.x_pos = self.chassis.get_pose().X()
         self.y_pos = self.chassis.get_pose().Y()
 
@@ -103,8 +102,8 @@ class Movement(StateMachine):
     def set_goal(self, goal: Pose2d, approach_direciton: Rotation2d) -> None:
         self.goal = goal
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), approach_direciton.cos() * 10),
-            (self.goal.Y(), approach_direciton.sin() * 10),
+            (self.goal.X(), approach_direciton.cos() * 1),
+            (self.goal.Y(), approach_direciton.sin() * 1),
         )
 
         self.config = TrajectoryConfig(1, 1.5)
@@ -128,6 +127,7 @@ class Movement(StateMachine):
     def autodrive(self, state_tm, initial_call):
         # generate trajectory
         if initial_call:
+            self.set_goal(Pose2d(0,0,0),Rotation2d(math.pi))
             self.x_controller = PIDController(1.5, 0, 0)
             self.y_controller = PIDController(1.5, 0, 0)
             self.heading_controller = ProfiledPIDControllerRadians(
