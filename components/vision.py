@@ -26,7 +26,7 @@ class Vision:
         self.has_targets = False
         self.timestamp = 0
         self.last_latency = 0
-        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(0.5, 0, 0.5), Rotation3d.fromDegrees(0, 0, 0)))])
+        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(0.35, 0.08, 0.1), Rotation3d.fromDegrees(0, 0, 0)))])
         self.last_pose = Pose2d()
 
     def setup(self) -> None:
