@@ -1,13 +1,22 @@
 from magicbot import StateMachine, state, default_state
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
-from wpimath.trajectory import TrajectoryConfig, Trajectory, TrajectoryGenerator, TrapezoidProfileRadians
+from wpimath.trajectory import (
+    TrajectoryConfig,
+    Trajectory,
+    TrajectoryGenerator,
+    TrapezoidProfileRadians,
+)
 from wpimath.trajectory.constraint import (
     CentripetalAccelerationConstraint,
     RectangularRegionConstraint,
     MaxVelocityConstraint,
 )
-from wpimath.controller import HolonomicDriveController, PIDController, ProfiledPIDControllerRadians
+from wpimath.controller import (
+    HolonomicDriveController,
+    PIDController,
+    ProfiledPIDControllerRadians,
+)
 from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
@@ -32,9 +41,7 @@ class Movement(StateMachine):
         topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
         bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() + 3)
         self.config.addConstraint(
-            RectangularRegionConstraint(
-                bottomLeft, topRight, MaxVelocityConstraint(1)
-            )
+            RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
         )
 
     def setup(self):
@@ -58,10 +65,10 @@ class Movement(StateMachine):
             y_translation = self.goal.Y() - self.y_pos
 
             translation_distance = math.sqrt(x_translation**2 + y_translation**2)
-            
-            if(translation_distance== 0):
+
+            if translation_distance == 0:
                 return Trajectory([Trajectory.State(0, 0, 0, self.chassis.get_pose())])
-            
+
             normalised_x = x_translation / translation_distance
             normalised_y = y_translation / translation_distance
 
@@ -105,9 +112,7 @@ class Movement(StateMachine):
         topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
         bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() + 3)
         self.config.addConstraint(
-            RectangularRegionConstraint(
-                bottomLeft, topRight, MaxVelocityConstraint(1)
-            )
+            RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
         )
 
     # will execute if no other states are executing
