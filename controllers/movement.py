@@ -31,11 +31,12 @@ class Movement(StateMachine):
         self.inputs = (0, 0, 0)
         self.drive_local = False
 
-        self.goal = Pose2d(0, 0, 0)
+        self.goal = Pose2d(3, 0, math.pi)
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), -7), (self.goal.Y(), 0)
+            (self.goal.X(), -2), (self.goal.Y(), 0)
         )
 
+        self.debug_trajectory = False
         self.config = TrajectoryConfig(1, 1.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
         topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
@@ -117,7 +118,8 @@ class Movement(StateMachine):
     # will execute if no other states are executing
     @default_state
     def manualdrive(self):
-        self.generate_trajectory()
+        if self.debug_trajectory == True:
+            self.generate_trajectory()
         if self.drive_local:
             self.chassis.drive_local(*self.inputs)
         else:
@@ -127,7 +129,7 @@ class Movement(StateMachine):
     def autodrive(self, state_tm, initial_call):
         # generate trajectory
         if initial_call:
-            self.set_goal(Pose2d(0,0,0),Rotation2d(math.pi))
+            #self.set_goal(Pose2d(0,0,0),Rotation2d(math.pi))
             self.x_controller = PIDController(1.5, 0, 0)
             self.y_controller = PIDController(1.5, 0, 0)
             self.heading_controller = ProfiledPIDControllerRadians(
@@ -148,7 +150,6 @@ class Movement(StateMachine):
         self.chassis.drive_local(
             self.chassis_speed.vx, self.chassis_speed.vy, self.chassis_speed.omega
         )
-        ...
 
     @state
     def score(self):

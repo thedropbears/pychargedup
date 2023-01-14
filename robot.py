@@ -27,13 +27,13 @@ class MyRobot(magicbot.MagicRobot):
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
-        if self.isReal():
-            try:
-                from cscore import CameraServer  # type: ignore
-            except ImportError:
-                self.logger.exception("Could not import CameraServer")
-            else:
-                CameraServer.startAutomaticCapture()
+        # if self.isReal():
+        #     try:
+        #         from cscore import CameraServer  # type: ignore
+        #     except ImportError:
+        #         self.logger.exception("Could not import CameraServer")
+        #     else:
+        #         CameraServer.startAutomaticCapture()
 
     def teleopPeriodic(self) -> None:
         auto_driving = self.gamepad.getAButton()
@@ -46,6 +46,8 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if auto_driving:
             self.movement.do_autodrive()
+        else:
+            self.movement.next_state("manualdrive")
 
 
 if __name__ == "__main__":

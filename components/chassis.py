@@ -246,7 +246,7 @@ class Chassis:
             self.imu.getRotation2d(),
             self.get_module_positions(),
             Pose2d(0, 0, 0),
-            stateStdDevs=(0.1, 0.1, math.radians(5)),
+            stateStdDevs=(0.1, 0.1, math.radians(1)),
             visionMeasurementStdDevs=(0.5, 0.5, 0.2),
         )
         self.field_obj = self.field.getObject("fused_pose")

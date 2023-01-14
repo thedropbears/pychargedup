@@ -24,10 +24,8 @@ class Vision:
     def __init__(self) -> None:
         self.camera = PhotonCamera("forward_camera")
         self.has_targets = False
-        self.timestamp = 0
-        self.last_latency = 0
-        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(0.35, 0.08, 0.1), Rotation3d.fromDegrees(0, 0, 0)))])
-        self.last_pose = Pose2d()
+        self.last_timestamp = 0
+        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(-0.35, -0.085, 0.11), Rotation3d.fromDegrees(0, 0, 0)))])
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
@@ -35,14 +33,23 @@ class Vision:
     def execute(self) -> None:
         results = self.camera.getLatestResult()
         self.has_targets = self.camera.hasTargets()
-        self.timestamp = wpilib.Timer.getFPGATimestamp() - results.getLatency()
+        timestamp = results.getTimestamp()
+
         if not self.has_targets:
             return
-        if results.getLatency() == self.last_latency and wpilib.RobotBase.isReal():
+        if timestamp == self.last_timestamp and wpilib.RobotBase.isReal():
             return
+
+        self.last_timestamp = timestamp
         self.pose_estimator.update()
-        self.last_pose = self.pose_estimator.getLastPose().toPose2d()
-        self.field_pos_obj.setPose(self.last_pose)
+        # current pose2d with rotation from vision
+        cur_pose_real = self.pose_estimator.getLastPose().toPose2d()
+        cur_translation = cur_pose_real.translation()
+        # create a new pose that has the translation from the vision and rotation from gyro
+        # gets rotation when image was taken
+        rot = self.chassis.get_pose_at(timestamp).rotation()
+        cur_pose = Pose2d(cur_translation, rot)
+        self.field_pos_obj.setPose(cur_pose_real)
         std_dev = 1
-        self.chassis.estimator.addVisionMeasurement(self.last_pose, self.timestamp, [std_dev, std_dev, 1])
+        self.chassis.estimator.addVisionMeasurement(cur_pose, timestamp)
         
