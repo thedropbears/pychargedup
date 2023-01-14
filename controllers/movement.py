@@ -26,21 +26,21 @@ class Movement(StateMachine):
     chassis: Chassis
     field: Field2d
 
-    def __init__(self):
+    def __init__(self) -> None:
         # create config
         self.inputs = (0, 0, 0)
         self.drive_local = False
 
         self.goal = Pose2d(3, 0, math.pi)
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), -2), (self.goal.Y(), 0)
+            (self.goal.X(), -6), (self.goal.Y(), 0)
         )
 
         self.debug_trajectory = False
         self.config = TrajectoryConfig(1, 1.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X() + 3, self.goal.Y() - 3)
-        bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() + 3)
+        topRight = Translation2d(self.goal.X() + 2, self.goal.Y() - 2)
+        bottomLeft = Translation2d(self.goal.X() - 2, self.goal.Y() + 2)
         self.config.addConstraint(
             RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
         )
@@ -61,6 +61,7 @@ class Movement(StateMachine):
         )
 
         if math.sqrt(self.x_velocity**2 + self.y_velocity**2) < 0.2:
+            # Normalisation
             x_translation = self.goal.X() - self.x_pos
             y_translation = self.goal.Y() - self.y_pos
 
@@ -117,7 +118,7 @@ class Movement(StateMachine):
 
     # will execute if no other states are executing
     @default_state
-    def manualdrive(self):
+    def manualdrive(self) -> None:
         if self.debug_trajectory == True:
             self.generate_trajectory()
         if self.drive_local:
@@ -126,10 +127,9 @@ class Movement(StateMachine):
             self.chassis.drive_field(*self.inputs)
 
     @state(first=True)
-    def autodrive(self, state_tm, initial_call):
+    def autodrive(self, state_tm: float, initial_call: bool) -> None:
         # generate trajectory
         if initial_call:
-            #self.set_goal(Pose2d(0,0,0),Rotation2d(math.pi))
             self.x_controller = PIDController(1.5, 0, 0)
             self.y_controller = PIDController(1.5, 0, 0)
             self.heading_controller = ProfiledPIDControllerRadians(
@@ -152,15 +152,15 @@ class Movement(StateMachine):
         )
 
     @state
-    def score(self):
+    def score(self) -> None:
         ...
 
     @state
-    def pickup(self):
+    def pickup(self) -> None:
         ...
 
     @state
-    def comfirm_action(self):
+    def comfirm_action(self) -> None:
         ...
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
@@ -168,5 +168,5 @@ class Movement(StateMachine):
         self.inputs = (vx, vy, vz)
         self.drive_local = local
 
-    def do_autodrive(self):
+    def do_autodrive(self) -> None:
         self.engage()
