@@ -60,7 +60,7 @@ class Movement(StateMachine):
             self.x_pos, self.y_pos, math.atan2(self.y_velocity, self.x_velocity)
         )
 
-        if math.sqrt(self.x_velocity**2 + self.y_velocity**2) < 0.2:
+        if math.hypot(self.x_velocity, self.y_velocity) < 0.2:
             # Normalisation
             x_translation = self.goal.X() - self.x_pos
             y_translation = self.goal.Y() - self.y_pos
