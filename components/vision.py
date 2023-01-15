@@ -1,6 +1,7 @@
 from components.chassis import Chassis
 import wpilib
 import wpimath
+import math
 import robotpy_apriltag
 from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
 
@@ -25,7 +26,7 @@ class Vision:
         self.camera = PhotonCamera("forward_camera")
         self.has_targets = False
         self.last_timestamp = 0
-        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(-0.35, -0.085, 0.11), Rotation3d.fromDegrees(0, 0, 0)))])
+        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(-0.35, 0.005, 0.26624), Rotation3d.fromDegrees(0, 0, 180)))])
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
@@ -49,7 +50,19 @@ class Vision:
         # gets rotation when image was taken
         rot = self.chassis.get_pose_at(timestamp).rotation()
         cur_pose = Pose2d(cur_translation, rot)
-        self.field_pos_obj.setPose(cur_pose_real)
-        std_dev = 1
-        self.chassis.estimator.addVisionMeasurement(cur_pose, timestamp)
+        self.field_pos_obj.setPose(cur_pose)
+
+        std_dev_x = 0.3
+        std_dev_y = 0.3
+        std_dev_omega = math.inf
+
+        if(self.chassis.chassis_speeds.vx < 0.1):
+            std_dev_x = 0.25
+        if(self.chassis.chassis_speeds.vy < 0.1):
+            std_dev_y = 0.25
+        
+        if(abs(cur_pose_real.rotation().radians()-rot.radians())< (10/math.pi)):
+            std_dev_omega = 0.5
+
+        #self.chassis.estimator.addVisionMeasurement(cur_pose, timestamp,(std_dev_x,std_dev_y,std_dev_omega))
         
