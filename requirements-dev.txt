@@ -1,4 +1,3 @@
 hypothesis
-pyfrc~=2023.0.0b4
 pytest
 -r requirements.txt
