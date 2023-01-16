@@ -1,24 +1,18 @@
 from components.chassis import Chassis
 import wpilib
-import wpimath
 import math
 import robotpy_apriltag
 from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
 
-from photonvision import (
-    PhotonCamera,
-    PhotonUtils,
-    LEDMode,
-    SimVisionSystem,
-    SimVisionTarget,
-    RobotPoseEstimator,
-    PoseStrategy
-)
+from photonvision import PhotonCamera, RobotPoseEstimator, PoseStrategy
+
 
 class Vision:
     chassis: Chassis
 
-    FIELD_LAYOUT = robotpy_apriltag.AprilTagFieldLayout(wpilib.getDeployDirectory() + "/field_layout.json")
+    FIELD_LAYOUT = robotpy_apriltag.AprilTagFieldLayout(
+        wpilib.getDeployDirectory() + "/field_layout.json"
+    )
 
     field: wpilib.Field2d
 
@@ -26,7 +20,19 @@ class Vision:
         self.camera = PhotonCamera("forward_camera")
         self.has_targets = False
         self.last_timestamp = 0
-        self.pose_estimator = RobotPoseEstimator(self.FIELD_LAYOUT, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, [(self.camera, Transform3d(Translation3d(-0.35, 0.005, 0.26624), Rotation3d.fromDegrees(0, 0, 180)))])
+        self.pose_estimator = RobotPoseEstimator(
+            self.FIELD_LAYOUT,
+            PoseStrategy.CLOSEST_TO_REFERENCE_POSE,
+            [
+                (
+                    self.camera,
+                    Transform3d(
+                        Translation3d(-0.35, 0.005, 0.26624),
+                        Rotation3d.fromDegrees(0, 0, 180),
+                    ),
+                )
+            ],
+        )
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
@@ -56,13 +62,14 @@ class Vision:
         std_dev_y = 0.3
         std_dev_omega = math.inf
 
-        if(self.chassis.chassis_speeds.vx < 0.1):
+        if self.chassis.chassis_speeds.vx < 0.1:
             std_dev_x = 0.25
-        if(self.chassis.chassis_speeds.vy < 0.1):
+        if self.chassis.chassis_speeds.vy < 0.1:
             std_dev_y = 0.25
-        
-        if(abs(cur_pose_real.rotation().radians()-rot.radians())< (10/math.pi)):
+
+        if abs(cur_pose_real.rotation().radians() - rot.radians()) < (10 / math.pi):
             std_dev_omega = 0.5
 
-        self.chassis.estimator.addVisionMeasurement(cur_pose, timestamp,(std_dev_x,std_dev_y,std_dev_omega))
-        
+        self.chassis.estimator.addVisionMeasurement(
+            cur_pose, timestamp, (std_dev_x, std_dev_y, std_dev_omega)
+        )

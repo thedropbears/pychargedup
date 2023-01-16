@@ -34,7 +34,11 @@ class Movement(StateMachine):
         # variables according to the provided parameters.
         self.goal = Pose2d(3, 0, 0)
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), -6), (self.goal.Y(), 0)                                 # This will be recalculated every code run to adjust derivatives accordingly.
+            (self.goal.X(), -6),
+            (
+                self.goal.Y(),
+                0,
+            ),  # This will be recalculated every code run to adjust derivatives accordingly.
         )
         self.goal_rotation = Rotation2d()
 
@@ -69,9 +73,13 @@ class Movement(StateMachine):
 
         x_translation = self.goal.X() - self.x_pos
         y_translation = self.goal.Y() - self.y_pos
-        translation_distance = 0                                                    # Pre-define translation_distance so it can never be Unbound.
-        translation_distance = math.sqrt(x_translation**2 + y_translation**2)       # Calculate the distance between the robot and the goal to be used later.
-       
+        translation_distance = (
+            0  # Pre-define translation_distance so it can never be Unbound.
+        )
+        translation_distance = math.sqrt(
+            x_translation**2 + y_translation**2
+        )  # Calculate the distance between the robot and the goal to be used later.
+
         # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
         # return an empty trajectory that starts at the end point so the robot won't move.
         if translation_distance <= 0.01:
@@ -84,7 +92,9 @@ class Movement(StateMachine):
             # before going towards the goal) when the robot is stationary or moving slowly.
             kD = 0.3
 
-            self.spline_start_momentum_x = x_translation * kD                       # Multiplying the translations by the above constant to decrease the momentum.
+            self.spline_start_momentum_x = (
+                x_translation * kD
+            )  # Multiplying the translations by the above constant to decrease the momentum.
             self.spline_start_momentum_y = y_translation * kD
 
         else:
@@ -95,34 +105,49 @@ class Movement(StateMachine):
             kvx = 3
             kvy = 3
 
-            self.spline_start_momentum_x = self.chassis_velocity.vx * kvx           # Multiplying the current velocity by the above constant constant to enlarge the momentum.
-            self.spline_start_momentum_y = self.chassis_velocity.vy * kvy           # This creates a smoother curve than the un-enlarged values.
+            self.spline_start_momentum_x = (
+                self.chassis_velocity.vx * kvx
+            )  # Multiplying the current velocity by the above constant constant to enlarge the momentum.
+            self.spline_start_momentum_y = (
+                self.chassis_velocity.vy * kvy
+            )  # This creates a smoother curve than the un-enlarged values.
 
         # If the robot is close to the goal but still not enough, making the robot reverse to
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        k_spline = min(8, translation_distance*2)
+        k_spline = min(8, translation_distance * 2)
 
         self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), self.goal_rotation.cos() * k_spline),                   # Actually scaling the control vector using the above constant.
+            (
+                self.goal.X(),
+                self.goal_rotation.cos() * k_spline,
+            ),  # Actually scaling the control vector using the above constant.
             (self.goal.Y(), self.goal_rotation.sin() * k_spline),
         )
 
         start_point_spline = Spline3.ControlVector(
-            (self.x_pos, self.spline_start_momentum_x),                             # Defining the control vector for the starting point (the curren robot position)
+            (
+                self.x_pos,
+                self.spline_start_momentum_x,
+            ),  # Defining the control vector for the starting point (the curren robot position)
             (self.y_pos, self.spline_start_momentum_y),
         )
 
         self.config.setStartVelocity(
             math.sqrt(self.y_velocity**2 + self.x_velocity**2)
         )
-    
+
         self.auto_trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, [], self.goal_spline, self.config                   # Generating the trajectory
+            start_point_spline,
+            [],
+            self.goal_spline,
+            self.config,  # Generating the trajectory
         )
 
-        self.robot_object.setTrajectory(self.auto_trajectory)                       # Draw the generated trajectory onto Glass' SmartDashboard.
+        self.robot_object.setTrajectory(
+            self.auto_trajectory
+        )  # Draw the generated trajectory onto Glass' SmartDashboard.
         return self.auto_trajectory
 
     def set_goal(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
@@ -140,7 +165,7 @@ class Movement(StateMachine):
     # will execute if no other states are executing
     @default_state
     def manualdrive(self) -> None:
-        if self.debug_trajectory == True:
+        if self.debug_trajectory is True:
             self.generate_trajectory()
         if self.drive_local:
             self.chassis.drive_local(*self.inputs)
@@ -165,13 +190,19 @@ class Movement(StateMachine):
             )
             self.trajectory = self.generate_trajectory()
 
-        target_state = self.trajectory.sample(state_tm)                             # Grabbing the target position at the current point in time from the trajectory.
+        target_state = self.trajectory.sample(
+            state_tm
+        )  # Grabbing the target position at the current point in time from the trajectory.
 
         self.chassis_speed = self.drive_controller.calculate(
-            self.chassis.get_pose(), target_state, self.goal.rotation()             # Calculating the speeds required to get to the target position.
+            self.chassis.get_pose(),
+            target_state,
+            self.goal.rotation(),  # Calculating the speeds required to get to the target position.
         )
         self.chassis.drive_local(
-            self.chassis_speed.vx, self.chassis_speed.vy, self.chassis_speed.omega  # Going to the target position.
+            self.chassis_speed.vx,
+            self.chassis_speed.vy,
+            self.chassis_speed.omega,  # Going to the target position.
         )
 
     @state
@@ -193,5 +224,5 @@ class Movement(StateMachine):
 
     def do_autodrive(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
         # Sets the goal and execute the autodrive state.
-        self.set_goal(goal,approach_direction)
+        self.set_goal(goal, approach_direction)
         self.engage()

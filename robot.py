@@ -6,7 +6,7 @@ import magicbot
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Pose2d, Rotation2d
 import math
 from utilities.scalers import rescale_js
 
@@ -47,9 +47,9 @@ class MyRobot(magicbot.MagicRobot):
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if drop_off:
-            self.movement.do_autodrive(Pose2d(3,0,0),Rotation2d(0))
+            self.movement.do_autodrive(Pose2d(3, 0, 0), Rotation2d(0))
         elif pick_up:
-            self.movement.do_autodrive(Pose2d(0,-1,math.pi),Rotation2d(math.pi))
+            self.movement.do_autodrive(Pose2d(0, -1, math.pi), Rotation2d(math.pi))
         else:
             self.movement.next_state("manualdrive")
 
