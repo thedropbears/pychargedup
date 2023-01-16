@@ -102,7 +102,8 @@ class Movement(StateMachine):
         )
 
         start_point_spline = Spline3.ControlVector(
-            (pose.x, self.spline_start_momentum_x), (pose.y, self.spline_start_momentum_y)
+            (pose.x, self.spline_start_momentum_x),
+            (pose.y, self.spline_start_momentum_y),
         )
 
         self.config.setStartVelocity(math.hypot(y_velocity, x_velocity))
