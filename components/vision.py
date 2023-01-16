@@ -61,7 +61,7 @@ class Vision:
         if(self.chassis.chassis_speeds.vy < 0.1):
             std_dev_y = 0.25
         
-        if(abs(cur_pose_real.rotation().radians()-rot.radians())< (10/math.pi)):
+        if(abs(cur_pose_real.rotation().radians()-rot.radians())< (math.radians(10))):
             std_dev_omega = 0.5
 
         self.chassis.estimator.addVisionMeasurement(cur_pose, timestamp,(std_dev_x,std_dev_y,std_dev_omega))
