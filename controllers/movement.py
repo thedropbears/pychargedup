@@ -27,6 +27,8 @@ class Movement(StateMachine):
     field: Field2d
 
     def __init__(self) -> None:
+        self.inputs = (0.0, 0.0, 0.0)
+        self.drive_local = False
         # Initialise the goal pose, control vector and rotation2d
         # These will be used until set_goal() is called, which will then define new
         # variables according to the provided parameters.
