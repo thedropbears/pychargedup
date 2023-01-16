@@ -102,13 +102,15 @@ class Movement(StateMachine):
             (self.goal.Y(), self.goal_rotation.sin() * k_spline),
         )
 
-        start_point_spline = Spline3.ControlVector((x_pos, self.spline_start_momentum_x), (y_pos, self.spline_start_momentum_y))
-
-        self.config.setStartVelocity(
-            math.sqrt(y_velocity**2 + x_velocity**2)
+        start_point_spline = Spline3.ControlVector(
+            (x_pos, self.spline_start_momentum_x), (y_pos, self.spline_start_momentum_y)
         )
 
-        self.auto_trajectory = TrajectoryGenerator.generateTrajectory(start_point_spline, [], self.goal_spline, self.config)
+        self.config.setStartVelocity(math.sqrt(y_velocity**2 + x_velocity**2))
+
+        self.auto_trajectory = TrajectoryGenerator.generateTrajectory(
+            start_point_spline, [], self.goal_spline, self.config
+        )
 
         self.robot_object.setTrajectory(self.auto_trajectory)
         return self.auto_trajectory
@@ -162,7 +164,11 @@ class Movement(StateMachine):
             target_state,
             self.goal.rotation(),  # Calculating the speeds required to get to the target position.
         )
-        self.chassis.drive_local(chassis_speed.vx, chassis_speed.vy, chassis_speed.omega,)
+        self.chassis.drive_local(
+            chassis_speed.vx,
+            chassis_speed.vy,
+            chassis_speed.omega,
+        )
 
     @state
     def score(self) -> None:
@@ -183,6 +189,6 @@ class Movement(StateMachine):
 
     def do_autodrive(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
         # Sets the goal and execute the autodrive state.
-        if (goal == self.goal):
+        if goal == self.goal:
             self.set_goal(goal, approach_direction)
         self.engage()
