@@ -1,16 +1,15 @@
-import math
+from __future__ import annotations
 
-from pyfrc.physics.core import PhysicsInterface  # type: ignore
+import math
+import typing
 
 import ctre
-from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
-
 import wpilib.simulation
+from pyfrc.physics.core import PhysicsInterface
 from wpimath.kinematics import SwerveDrive4Kinematics
 
 from components.chassis import SwerveModule
-
-import typing
+from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
 
 if typing.TYPE_CHECKING:
     from robot import MyRobot
@@ -25,12 +24,9 @@ class SimpleTalonFXMotorSim:
     def update(self, dt: float) -> None:
         voltage = self.sim_collection.getMotorOutputLeadVoltage()
         velocity = voltage / self.kV  # units per second
-        self.sim_collection.setIntegratedSensorVelocity(
-            int(velocity * self.rev_per_unit * FALCON_CPR / 10)
-        )
-        self.sim_collection.addIntegratedSensorPosition(
-            int(velocity * self.rev_per_unit * FALCON_CPR * dt)
-        )
+        velocity_cps = velocity * self.rev_per_unit * FALCON_CPR
+        self.sim_collection.setIntegratedSensorVelocity(int(velocity_cps / 10))
+        self.sim_collection.addIntegratedSensorPosition(int(velocity_cps * dt))
 
 
 class SimpleTalonSRXMotorSim:
@@ -42,16 +38,13 @@ class SimpleTalonSRXMotorSim:
     def update(self, dt: float) -> None:
         voltage = self.sim_collection.getMotorOutputLeadVoltage()
         velocity = voltage / self.kV  # units per second
-        self.sim_collection.setQuadratureVelocity(
-            int(velocity * self.rev_per_unit * VERSA_ENCODER_CPR / 10)
-        )
-        self.sim_collection.addQuadraturePosition(
-            int(velocity * self.rev_per_unit * VERSA_ENCODER_CPR * dt)
-        )
+        velocity_cps = velocity * self.rev_per_unit * VERSA_ENCODER_CPR
+        self.sim_collection.setQuadratureVelocity(int(velocity_cps / 10))
+        self.sim_collection.addQuadraturePosition(int(velocity_cps * dt))
 
 
 class PhysicsEngine:
-    def __init__(self, physics_controller: PhysicsInterface, robot: "MyRobot"):
+    def __init__(self, physics_controller: PhysicsInterface, robot: MyRobot):
         self.physics_controller = physics_controller
 
         self.kinematics: SwerveDrive4Kinematics = robot.chassis.kinematics
