@@ -55,18 +55,17 @@ class Movement(StateMachine):
 
     def generate_trajectory(self) -> Trajectory:
         chassis_velocity = self.chassis.get_velocity()
-        x_pos = self.chassis.get_pose().X()
-        y_pos = self.chassis.get_pose().Y()
+        pose = self.chassis.get_pose()
         x_velocity = chassis_velocity.vx
         y_velocity = chassis_velocity.vy
 
-        translation = self.goal.translation() - Pose2d(x_pos, y_pos, 0).translation()
+        translation = self.goal.translation() - pose.translation()
         translation_distance = translation.norm()
 
         # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
         # return an empty trajectory that starts at the end point so the robot won't move.
         if translation_distance <= 0.01:
-            return Trajectory([Trajectory.State(0, 0, 0, self.chassis.get_pose())])
+            return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
         if math.hypot(x_velocity, y_velocity) < 0.2:
             # If the robot is stationary, instead of accounting for the momentum of the robot,
@@ -103,10 +102,10 @@ class Movement(StateMachine):
         )
 
         start_point_spline = Spline3.ControlVector(
-            (x_pos, self.spline_start_momentum_x), (y_pos, self.spline_start_momentum_y)
+            (pose.x, self.spline_start_momentum_x), (pose.y, self.spline_start_momentum_y)
         )
 
-        self.config.setStartVelocity(math.sqrt(y_velocity**2 + x_velocity**2))
+        self.config.setStartVelocity(math.hypot(y_velocity, x_velocity))
 
         self.auto_trajectory = TrajectoryGenerator.generateTrajectory(
             start_point_spline, [], self.goal_spline, self.config
