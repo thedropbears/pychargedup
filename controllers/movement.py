@@ -26,27 +26,15 @@ class Movement(StateMachine):
     chassis: Chassis
     field: Field2d
 
+    # This vairable controls if trajectory generation will be set up for debugging
+    # When on True, a trajectory is genearted every code run and will consistently
+    # be painted onto Glass' SmartDashboard.
+    # When on False, a trajectory is only generated when needed to save robotRIO resources.
+    debug_trajectory = tunable(False)
+
     def __init__(self) -> None:
         self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
-        # Initialise the goal pose, control vector and rotation2d
-        # These will be used until set_goal() is called, which will then define new
-        # variables according to the provided parameters.
-        self.goal = Pose2d(3, 0, 0)
-        self.goal_spline = Spline3.ControlVector(
-            (self.goal.X(), -6),
-            (
-                self.goal.Y(),
-                0,
-            ),  # This will be recalculated every code run to adjust derivatives accordingly.
-        )
-        self.goal_rotation = Rotation2d()
-
-        # This vairable controls if trajectory generation will be set up for debugging
-        # When on True, a trajectory is genearted every code run and will consistently
-        # be painted onto Glass' SmartDashboard.
-        # When on False, a trajectory is only generated when needed to save robotRIO resources.
-        self.debug_trajectory = tunable(False)
 
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
 
