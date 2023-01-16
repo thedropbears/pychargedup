@@ -28,7 +28,7 @@ class Movement(StateMachine):
 
     def __init__(self) -> None:
         # create config
-        self.inputs = (0, 0, 0)
+        self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
 
         self.goal = Pose2d(0, 0, 0)
