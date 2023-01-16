@@ -50,8 +50,6 @@ class MyRobot(magicbot.MagicRobot):
             self.movement.do_autodrive(Pose2d(3, 0, 0), Rotation2d(0))
         elif pick_up:
             self.movement.do_autodrive(Pose2d(0, -1, math.pi), Rotation2d(math.pi))
-        else:
-            self.movement.next_state("manualdrive")
 
 
 if __name__ == "__main__":

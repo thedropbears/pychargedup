@@ -62,9 +62,8 @@ class Vision:
         std_dev_y = 0.3
         std_dev_omega = math.inf
 
-        if self.chassis.chassis_speeds.vx < 0.1:
+        if self.chassis.chassis_speeds.vx < 0.1 and self.chassis.chassis_speeds.vy < 0.1:
             std_dev_x = 0.25
-        if self.chassis.chassis_speeds.vy < 0.1:
             std_dev_y = 0.25
 
         if abs(cur_pose_real.rotation().radians() - rot.radians()) < (math.radians(10)):
