@@ -246,8 +246,8 @@ class Chassis:
             self.imu.getRotation2d(),
             self.get_module_positions(),
             Pose2d(0, 0, 0),
-            stateStdDevs=(0.1, 0.1, math.radians(5)),
-            visionMeasurementStdDevs=(0.5, 0.5, 0.2),
+            stateStdDevs=(0.5, 0.5, 0.1),
+            visionMeasurementStdDevs=(0.4, 0.4, math.inf),
         )
         self.field_obj = self.field.getObject("fused_pose")
         self.module_objs: list[wpilib.FieldObject2d] = []
