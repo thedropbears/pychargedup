@@ -6,6 +6,7 @@ import magicbot
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
+from components.arm import Arm
 from wpimath.geometry import Pose2d, Rotation2d
 import math
 from utilities.scalers import rescale_js
@@ -18,6 +19,7 @@ class MyRobot(magicbot.MagicRobot):
     # Components
     chassis: Chassis
     vision: Vision
+    arm: Arm
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
