@@ -74,7 +74,7 @@ class Movement(StateMachine):
         x_translation = self.goal.X() - self.x_pos
         y_translation = self.goal.Y() - self.y_pos
         translation_distance = (
-            0  # Pre-define translation_distance so it can never be Unbound.
+            0.00  # Pre-define translation_distance so it can never be Unbound.
         )
         translation_distance = math.sqrt(
             x_translation**2 + y_translation**2
