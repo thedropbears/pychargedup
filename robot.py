@@ -53,6 +53,10 @@ class MyRobot(magicbot.MagicRobot):
         elif pick_up:
             self.movement.do_autodrive(Pose2d(0, -1, math.pi), Rotation2d(math.pi))
 
+    def testPeriodic(self) -> None:
+        self.arm.rotation_motor.set(self.gamepad.getRightTriggerAxis() * 0.1)
+        self.arm.extension_motor.set(self.gamepad.getRightTriggerAxis() * 0.1)
+
 
 if __name__ == "__main__":
     wpilib.run(MyRobot)
