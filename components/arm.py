@@ -85,7 +85,7 @@ class Arm:
 
         # Calculate rotation motor output
         pid_output = self.rotation_controller.calculate(self.get_angle())
-        setpoint: TrapezoidProfile.State = self.rotation_controller.getSetpoint()
+        setpoint = self.rotation_controller.getSetpoint()
         rotation_ff = self.calculate_rotation_feedforwards(setpoint.velocity)
         self.rotation_motor.set(pid_output + rotation_ff)
 

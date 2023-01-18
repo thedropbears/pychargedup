@@ -19,9 +19,18 @@ class CanIds:
         steer_4 = 8
         encoder_4 = 12
 
+    class Arm:
+        rotation_left = 13
+        rotation_right = 14
+        extension = 15
 
-class PWM:
-    ...
+
+class PcmChannels:
+    arm_brake = 4
+
+
+class PwmPorts:
+    arm_abs_encoder = 0
 
 
 # recursively get all attributes
@@ -39,13 +48,9 @@ def get_ids(cls) -> list[int]:
 
 
 # enforce no duplicate ids
-def check_ids() -> None:
-    all_ids = get_ids(CanIds)
-    dups = {str(x) for x in all_ids if all_ids.count(x) > 1}
-    if dups:
-        # raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
-        pass
-
-
-if __name__ == "__main__":
-    check_ids()
+def check_ids(*classes) -> None:
+    for cls in classes:
+        ids = get_ids(cls)
+        dups = {str(x) for x in ids if ids.count(x) > 1}
+        if dups:
+            raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
