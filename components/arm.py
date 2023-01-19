@@ -175,7 +175,7 @@ class Arm:
         arm_extension: float = math.sqrt(x**2 + y**2)
 
         # required extension
-        required_extension = self.get_extension() - arm_extension
+        required_extension = arm_extension - self.get_extension()
 
         if (arm_extension < self.MIN_EXTENSION) or (arm_extension > self.MAX_EXTENSION):
             # the arm can't reach that far, so return none values
