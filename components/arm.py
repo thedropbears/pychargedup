@@ -32,6 +32,7 @@ class Arm:
             CanIds.Arm.rotation_right, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_right.follow(self.rotation_motor, True)
+        self._rotation_motor_right.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         # output position = conversion factor * motor rotations
         self.rotation_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
@@ -51,7 +52,7 @@ class Arm:
         self.extension_motor = rev.CANSparkMax(
             CanIds.Arm.extension, rev.CANSparkMax.MotorType.kBrushless
         )
-        self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
+        self.extension_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self.extension_encoder = self.extension_motor.getEncoder()
         self.extension_encoder.setPositionConversionFactor(self.EXTEND_GEAR_RATIO)
         self.extension_encoder.setVelocityConversionFactor(self.EXTEND_GEAR_RATIO * 60)
