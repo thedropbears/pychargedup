@@ -173,14 +173,14 @@ class Arm:
         arm_extension: float = math.sqrt(x**2 + y**2)
 
         # required extension
-        required_extension = self.get_extension() - arm_extension 
+        required_extension = self.get_extension() - arm_extension
 
         if (arm_extension < self.MIN_EXTENSION) or (arm_extension > self.MAX_EXTENSION):
-            # the arm can't reach that far, so return none values 
+            # the arm can't reach that far, so return none values
             return (None, None)
 
         # then, get the angle needed from the origin
-        angle_from_origin: float = math.acos(x/arm_extension)
+        angle_from_origin: float = math.acos(x / arm_extension)
 
         # get the degrees of the current angle from the origin
         offset: float = self.get_angle() * math.radians(1)
@@ -201,11 +201,8 @@ class Arm:
         y: the y position to move the arm to"""
         target = self.get_target(x, y)
 
-        if target[0] == None:
-            return # don't allow if the arm can't reach
+        if target[0] is None:
+            return  # don't allow if the arm can't reach
 
         self.set_angle(target[0])
         self.set_length(target[1])
-
-        
-    
