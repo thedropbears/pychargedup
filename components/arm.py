@@ -185,7 +185,7 @@ class Arm:
             return (None, None)
 
         # then, get the angle needed from the origin
-        angle_from_origin: float = math.atan2(x / y)
+        angle_from_origin: float = math.atan2(x, y)
 
         # if the arm can't move to angle_from_origin, return none values
         if ((angle_from_origin > self.ANGLE_BOUNDARIES[0]) and (angle_from_origin < self.ANGLE_BOUNDARIES[1])):
