@@ -147,3 +147,64 @@ class Arm:
 
     def unbrake(self):
         self.brake_solenoid.set(False)
+
+    def get_target(self, x: float, y: float) -> tuple[float | None, float | None]:
+
+        """
+                |
+                |
+        --------o------- x
+                |
+                |
+                y
+
+        o is the center of the arm
+
+        x: the x position to move the arm to
+        y: the y position to move the arm to
+
+        returns the (radians needed to get to (x,y), arm length needed to get to (x,y))
+        x and y are in meters
+        (None, None) return values mean that the position can't be reached
+        """
+
+        # first, get the arm length needed
+        arm_extension: float = math.sqrt(x**2 + y**2)
+
+        # required extension
+        required_extension = self.get_extension() - arm_extension 
+
+        if (arm_extension < self.MIN_EXTENSION) or (arm_extension > self.MAX_EXTENSION):
+            # the arm can't reach that far, so return none values 
+            return (None, None)
+
+        # then, get the angle needed from the origin
+        angle_from_origin: float = math.acos(x/arm_extension)
+
+        # get the degrees of the current angle from the origin
+        offset: float = self.get_angle() * math.radians(1)
+
+        # get the amount of radians needed to turn
+        radians: float = (angle_from_origin + offset) / math.radians(1)
+
+        # we dont need to make >360 turns and we dont need to be exactly precise so modulo works fine.
+        # however, negative numbers might cause problems so we get the absolute value and then multiply it by -1 if its negative (or 1 if not)
+        if radians > 1:
+            radians = (1 if (radians > 0) else -1) * (abs(radians) % 1)
+
+        return (radians, required_extension)
+
+    def set_target(self, x: float, y: float) -> None:
+        """Set a position in terms of x and y to move the arm to.
+        x: the x position to move the arm to
+        y: the y position to move the arm to"""
+        target = self.get_target(x, y)
+
+        if target[0] == None:
+            return # don't allow if the arm can't reach
+
+        self.set_angle(target[0])
+        self.set_length(target[1])
+
+        
+    
