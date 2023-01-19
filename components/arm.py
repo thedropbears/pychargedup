@@ -20,6 +20,9 @@ class Arm:
     ROTATE_GEAR_RATIO = (60 / 25) * (60 / 25) * (70 / 20)
     EXTEND_GEAR_RATIO = (1 / 7) * (math.pi * 0.05)  # converts to meters
 
+    ANGLE_BOUNDARIES = (90, 270) # a range of angles that the arm cannot turn to. in the case of (90, 270), the arm wouldn't be able to move to 90 degrees, 120 degrees, etc. to 270 degrees
+    # TODO: add the real boundaries
+
     def __init__(self):
 
         # Create rotation things
@@ -150,14 +153,13 @@ class Arm:
         self.brake_solenoid.set(False)
 
     def get_target(self, x: float, y: float) -> tuple[float | None, float | None]:
-
-        """
-                |
-                |
-        --------o------- x
-                |
-                |
-                y
+        """             y (1.3m)
+                        |
+                        |
+        (-1.3m) --------o------- x (1.3m)
+                        |
+                        |
+                        y (-1.3m)
 
         o is the center of the arm
 
@@ -181,6 +183,10 @@ class Arm:
 
         # then, get the angle needed from the origin
         angle_from_origin: float = math.acos(x/arm_extension)
+
+        # if the arm can't move to angle_from_origin, return none values
+        if ((angle_from_origin > self.ANGLE_BOUNDARIES[0]) and (angle_from_origin < self.ANGLE_BOUNDARIES[1])):
+            return (None, None)
 
         # get the degrees of the current angle from the origin
         offset: float = self.get_angle() * math.radians(1)
