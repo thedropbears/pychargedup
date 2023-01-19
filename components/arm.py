@@ -185,21 +185,16 @@ class Arm:
             return (None, None)
 
         # then, get the angle needed from the origin
-        angle_from_origin: float = math.acos(x / arm_extension)
+        angle_from_origin: float = math.atan2(x / y)
 
         # if the arm can't move to angle_from_origin, return none values
-        if (angle_from_origin > self.ANGLE_BOUNDARIES[0]) and (
-            angle_from_origin < self.ANGLE_BOUNDARIES[1]
-        ):
+        if ((angle_from_origin > self.ANGLE_BOUNDARIES[0]) and (angle_from_origin < self.ANGLE_BOUNDARIES[1])):
             return (None, None)
 
-        # get the degrees of the current angle from the origin
-        offset: float = self.get_angle() * math.radians(1)
-
         # get the amount of radians needed to turn
-        radians: float = (angle_from_origin + offset) / math.radians(1)
+        radians: float = (angle_from_origin + self.get_angle())
 
-        # we dont need to make >360 turns and we dont need to be exactly precise so modulo works fine.
+        # we dont need to make >360 degree turns and we dont need to be exactly precise so modulo works fine.
         # however, negative numbers might cause problems so we get the absolute value and then multiply it by -1 if its negative (or 1 if not)
         if radians > 1:
             radians = (1 if (radians > 0) else -1) * (abs(radians) % 1)
@@ -213,7 +208,7 @@ class Arm:
         target = self.get_target(x, y)
 
         if target[0] is None:
-            return  # don't allow if the arm can't reach
+            return # don't allow if the arm can't reach
 
         self.set_angle(target[0])
-        self.set_length(target[1])
+        self.set_length(int(target[1]))
