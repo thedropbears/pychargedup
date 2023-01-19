@@ -212,8 +212,5 @@ class Arm:
         if target[0] is None:
             return  # don't allow if the arm can't reach
 
-        # this unwraps target[0] from Optional[float] to just float, which fixes certain type errors
-        length: float = target[1]
-
         self.set_angle(target[0])
-        self.set_length(math.floor(length))
+        self.set_length(math.floor(target[1])) # type: ignore
