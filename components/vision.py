@@ -10,8 +10,8 @@ from photonvision import PhotonCamera, RobotPoseEstimator, PoseStrategy
 class Vision:
     chassis: Chassis
 
-    FIELD_LAYOUT = robotpy_apriltag.AprilTagFieldLayout(
-        wpilib.getDeployDirectory() + "/field_layout.json"
+    FIELD_LAYOUT = robotpy_apriltag.loadAprilTagLayoutField(
+        robotpy_apriltag.AprilTagField.k2023ChargedUp
     )
 
     field: wpilib.Field2d
