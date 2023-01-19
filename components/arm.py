@@ -213,4 +213,4 @@ class Arm:
             return  # don't allow if the arm can't reach
 
         self.set_angle(target[0])
-        self.set_length(math.floor(target[1])) # type: ignore
+        self.set_length(math.floor(target[1]))  # type: ignore
