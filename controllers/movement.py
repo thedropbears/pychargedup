@@ -19,8 +19,15 @@ from wpimath.controller import (
 )
 from wpimath.spline import Spline3
 import math
-from wpilib import Field2d
+from wpilib import Field2d, getDeployDirectory
+from dataclasses import dataclass
+import json
 
+@dataclass
+class NodeTraversal:
+    x : float
+    y : float
+    edges : list[int]
 
 class Movement(StateMachine):
     chassis: Chassis
@@ -37,9 +44,12 @@ class Movement(StateMachine):
         self.drive_local = False
 
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
+        self.field_waypoints = []
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
+        with open(getDeployDirectory() + "/trajectory_waypoints.json", "r") as f:
+            j = json.load(f)
 
     def generate_trajectory(self) -> Trajectory:
         chassis_velocity = self.chassis.get_velocity()
@@ -177,6 +187,6 @@ class Movement(StateMachine):
 
     def do_autodrive(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
         # Sets the goal and execute the autodrive state.
-        if goal == self.goal:
+        if goal != self.goal:
             self.set_goal(goal, approach_direction)
         self.engage()
