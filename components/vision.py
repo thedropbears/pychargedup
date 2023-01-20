@@ -19,10 +19,12 @@ class Vision:
         wpilib.getDeployDirectory() + "/test_field_layout.json"
     )
     FORWARD_CAMERA_TRANSFORM = Transform3d(
-        Translation3d(-0.35, 0.01, 0.11), Rotation3d.fromDegrees(0, 0, 180)
+        Translation3d(-0.35, 0.01, 0.11), Rotation3d.fromDegrees(0, 0, 175)
     )
     STD_DEV_CONSTANT = 5.0
-    ZERO_DIVISION_THRESHOLD = 0.0001
+    ZERO_DIVISION_THRESHOLD = 1e-6
+    POSE_AMBIGUITY_FACTOR = 4.0
+    POSE_AMBIGUITY_THRESHOLD = 0.25
 
     field: wpilib.Field2d
     use_resection = tunable(False)
@@ -198,17 +200,17 @@ class Vision:
                     estimated_pose = Pose2d(mx, my, 0)
         else:
             estimated_poses = [Vision.estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t) for t in self.targets]
-            weights = [1.0 - t.getPoseAmbiguity() for t in self.targets]
+            weights = [max(1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity(), 0) for t in self.targets]
+            if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights): return
             points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
             mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(
                 points
             )
             rotation_unit_vectors = [(p.rotation().cos(), p.rotation().sin()) for p in estimated_poses]
-            accx = accy = accw = 0
+            accx = accy = 0
             for (x, y), w in zip(rotation_unit_vectors, weights):
                 accx += x * w
                 accy += y * w
-                accw += w
             f = 1 / math.hypot(accx, accy)
             estimated_pose = Pose2d(mx, my, Rotation2d(accx * f, accy * f))
 
@@ -219,5 +221,5 @@ class Vision:
         self.field_pos_obj.setPose(estimated_pose)
 
         self.chassis.estimator.addVisionMeasurement(
-            estimated_pose, timestamp, [std_dev_x, std_dev_y, 1.0]
+            estimated_pose, timestamp, [std_dev_x, std_dev_y, 3.0]
         )
