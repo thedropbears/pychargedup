@@ -22,9 +22,13 @@ class Vision:
         Translation3d(-0.35, 0.01, 0.11), Rotation3d.fromDegrees(0, 0, 175)
     )
     STD_DEV_CONSTANT = 5.0
+    ANGULAR_STD_DEV_CONSTANT = 3.0
     ZERO_DIVISION_THRESHOLD = 1e-6
     POSE_AMBIGUITY_FACTOR = 5.0
     POSE_AMBIGUITY_THRESHOLD = 0.2
+
+    VELOCITY_SCALING_THRESHOLD = 0.5
+    VELOCITY_SCALING_FACTOR = 2
 
     field: wpilib.Field2d
     enabled = tunable(True)
@@ -143,12 +147,11 @@ class Vision:
         f = 1 / math.hypot(accx, accy)
         estimated_pose = Pose2d(mx, my, Rotation2d(accx * f, accy * f))
 
-        # chassis_rotation = self.chassis.get_pose().rotation()
-        # Overwrite rotation given by vision with what gyro gives
-        # estimated_pose = Pose2d(estimated_pose.translation(), chassis_rotation)
-
         self.field_pos_obj.setPose(estimated_pose)
 
+        v = math.hypot(self.chassis.imu.getVelocityX(), self.chassis.imu.getVelocityY())
+        f = 1.0 + max(v - Vision.VELOCITY_SCALING_THRESHOLD, 0.0) * Vision.VELOCITY_SCALING_FACTOR # Start trusting vision less if the robot moves fast
+
         self.chassis.estimator.addVisionMeasurement(
-            estimated_pose, timestamp, [std_dev_x, std_dev_y, 3.0]
+            estimated_pose, timestamp, [f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT]
         )
