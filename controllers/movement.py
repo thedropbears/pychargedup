@@ -43,6 +43,7 @@ class Movement(StateMachine):
         self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
 
+        self.goal = None
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
         self.field_waypoints = []
 
@@ -114,21 +115,19 @@ class Movement(StateMachine):
         return self.auto_trajectory
 
     def set_goal(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
-        self.goal = goal
-        self.goal_rotation = approach_direction
+        if goal != self.goal:
+            self.goal = goal
+            self.goal_rotation = approach_direction
 
-        self.config = TrajectoryConfig(1, 1.5)
-        self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X() + 2, self.goal.Y() - 2)
-        bottomLeft = Translation2d(self.goal.X() - 2, self.goal.Y() + 2)
-        self.config.addConstraint(
-            RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
-        )
+            self.config = TrajectoryConfig(1, 2)
+            self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
+            topRight = Translation2d(self.goal.X() + 3, self.goal.Y() + 3)
+            bottomLeft = Translation2d(self.goal.X() - 3, self.goal.Y() - 3)
+            self.config.addConstraint(
+                RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
+            )
 
     def trajectory_generation_setup(self) -> None:
-        # When the robot is following a trajectory, it doesn't need to re-define the
-        # PID controllers nor does it need to generate another trajectory.
-        # Therefore, this section of code only runs when the state is first active.
         self.x_controller = PIDController(2.5, 0, 0)
         self.y_controller = PIDController(2.5, 0, 0)
         self.heading_controller = ProfiledPIDControllerRadians(
@@ -154,12 +153,14 @@ class Movement(StateMachine):
     @state(first=True)
     def score(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
+            # When the robot is following a trajectory, it doesn't need to re-define the
+            # PID controllers nor does it need to generate another trajectory.
+            # Therefore, trajectory_generation_setup() only runs when the state is first active.
             self.trajectory_generation_setup()
 
         if (self.goal.translation() - self.chassis.get_pose().translation()).norm() < 0.05:
             self.next_state("arrived")
             return
-
 
         target_state = self.trajectory.sample(
             state_tm
@@ -180,6 +181,9 @@ class Movement(StateMachine):
     def wait(self) -> None:
         ...
 
+    @state
+    def arrived(self) -> None:
+        ...
 
     @state
     def pickup(self) -> None:
@@ -196,6 +200,5 @@ class Movement(StateMachine):
 
     def do_autodrive(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
         # Sets the goal and execute the autodrive state.
-        if goal != self.goal:
-            self.set_goal(goal, approach_direction)
+        self.set_goal(goal, approach_direction)
         self.engage()
