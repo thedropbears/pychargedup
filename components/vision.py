@@ -74,6 +74,31 @@ class Vision:
             Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
         )
 
+    @staticmethod
+    def weighted_point_cloud_centroid(
+        points: list[tuple[float, float, float]]
+    ) -> tuple[float, float, float, float]:
+        accx = accy = accw = 0
+        for (x, y, w) in points:
+            accx += x * w
+            accy += y * w
+            accw += w
+        f = 1.0 / accw
+        mx = accx * f
+        my = accy * f
+        accx = accy = accw = 0
+        for (x, y, w) in points:
+            dx = x - mx
+            dy = y - my
+            accx += (dx * dx) * w
+            accy += (dy * dy) * w
+        return (
+            mx,
+            my,
+            Vision.STD_DEV_CONSTANT * f + math.sqrt(accx * f),
+            Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
+        )
+
     def execute(self) -> None:
         results = self.camera.getLatestResult()
         self.has_targets = results.hasTargets()
@@ -173,15 +198,17 @@ class Vision:
                     estimated_pose = Pose2d(mx, my, 0)
         else:
             estimated_poses = [Vision.estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t) for t in self.targets]
-            points = [(p.x, p.y) for p in estimated_poses]
-            mx, my, std_dev_x, std_dev_y = Vision.point_cloud_centroid(
+            weights = [1.0 - t.getPoseAmbiguity() for t in self.targets]
+            points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
+            mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(
                 points
             )
             rotation_unit_vectors = [(p.rotation().cos(), p.rotation().sin()) for p in estimated_poses]
-            accx = accy = 0
-            for x, y in rotation_unit_vectors:
-                accx += x
-                accy += y
+            accx = accy = accw = 0
+            for (x, y), w in zip(rotation_unit_vectors, weights):
+                accx += x * w
+                accy += y * w
+                accw += w
             f = 1 / math.hypot(accx, accy)
             estimated_pose = Pose2d(mx, my, Rotation2d(accx * f, accy * f))
 
