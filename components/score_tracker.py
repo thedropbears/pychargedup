@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np
-import numpy.typing
+import numpy.typing as npt
 
 
 class FieldSide(Enum):
@@ -31,6 +31,13 @@ class NodeLocation:
             return GamePiceType.CUBE
         else:
             return GamePiceType.CONE
+
+    def can_place_piece(self, piece: GamePiceType) -> bool:
+        """Checks if a piece is allowed to be placed in a node"""
+        return (
+            self.get_allowed_piece() == piece
+            or self.get_allowed_piece() == GamePiceType.BOTH
+        )
 
 
 class ScoreTracker:
@@ -66,7 +73,7 @@ class ScoreTracker:
                 self.SIGHTING_FALSE_WEIGHT * self.control_loop_wait_time
             )
 
-    def get_row(self, row: int) -> np.typing.NDArray[np.bool_]:
+    def get_row(self, row: int) -> npt.NDArray[np.bool_]:
         return self.confidences[row * 9 : (row + 1) * 9] > self.CONFIDENCE_THRESHOLD
 
     def add_piece(self, node_location: NodeLocation) -> None:
@@ -78,51 +85,6 @@ class ScoreTracker:
         """
         self.confidences[node_location.get_index()] = self.PLACE_WEIGHT
 
-    @staticmethod
-    def evaluate_row(row_values: np.typing.NDArray[np.bool_], row: int) -> float:
-        """
-        Evaluate how good a state of a row is
-        row_values: bool array or if there are pieces in nodes
-        row: which row (0 bottom, 1 middle, 2 top)
-        """
-        total_score = 0.0
-        piece_value = 0
-        if row == 0:
-            piece_value = 2
-        if row == 1:
-            piece_value = 3
-        if row == 2:
-            piece_value = 5
-
-        # Count points for scoring pieces
-        for col in row_values:
-            if col:
-                total_score += piece_value
-        # Count points for scoring link
-        cur_row_idx = 0
-        while cur_row_idx <= 6:
-            # np.bool_ dosent support adding
-            n = 0
-            n += 1 if row_values[cur_row_idx] else 0
-            n += 1 if row_values[cur_row_idx + 1] else 0
-            n += 1 if row_values[cur_row_idx + 2] else 0
-            if n == 3:
-                total_score += 5
-                cur_row_idx += 3
-                continue
-            if n == 2:
-                total_score += 0.1
-            cur_row_idx += 1
-
-        return total_score
-
-    def can_place_piece(self, location: NodeLocation, piece: GamePiceType) -> bool:
-        """Checks if a piece is allowed to be placed in a node"""
-        return (
-            location.get_allowed_piece() == piece
-            or location.get_allowed_piece() == GamePiceType.BOTH
-        )
-
     def evaluate_place_location(
         self, location: NodeLocation, piece_type: GamePiceType
     ) -> float:
@@ -132,13 +94,13 @@ class ScoreTracker:
         location: Where to place the piece
         piece_type: What piece
         """
-        if not self.can_place_piece(location, piece_type):
+        if not location.can_place_piece(piece_type):
             return -1
 
         # get turn confidences into bools
         row = self.get_row(location.row)
         row[location.column] = True
-        return self.evaluate_row(row, location.row)
+        return evaluate_row(row, location.row)
 
     def get_node_picklist(self, piece_type: GamePiceType) -> list[NodeLocation]:
         """Gets a sorted list of which locations to put piece_type"""
@@ -153,3 +115,41 @@ class ScoreTracker:
                     all_locations.append(NodeLocation(col, row, side))
 
         return sorted(all_locations, key=evaluate_func, reverse=True)
+
+
+def evaluate_row(row_values: npt.NDArray[np.bool_], row: int) -> float:
+    """
+    Evaluate how good a state of a row is
+    row_values: bool array or if there are pieces in nodes
+    row: which row (0 bottom, 1 middle, 2 top)
+    """
+    total_score = 0.0
+    piece_value = 0
+    if row == 0:
+        piece_value = 2
+    if row == 1:
+        piece_value = 3
+    if row == 2:
+        piece_value = 5
+
+    # Count points for scoring pieces
+    for col in row_values:
+        if col:
+            total_score += piece_value
+    # Count points for scoring link
+    cur_row_idx = 0
+    while cur_row_idx <= 6:
+        # np.bool_ dosent support adding
+        n = 0
+        n += 1 if row_values[cur_row_idx] else 0
+        n += 1 if row_values[cur_row_idx + 1] else 0
+        n += 1 if row_values[cur_row_idx + 2] else 0
+        if n == 3:
+            total_score += 5
+            cur_row_idx += 3
+            continue
+        if n == 2:
+            total_score += 0.1
+        cur_row_idx += 1
+
+    return total_score

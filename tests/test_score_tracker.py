@@ -1,5 +1,11 @@
 import numpy as np
-from components.score_tracker import ScoreTracker, GamePiceType, NodeLocation, FieldSide
+from components.score_tracker import (
+    ScoreTracker,
+    GamePiceType,
+    NodeLocation,
+    FieldSide,
+    evaluate_row,
+)
 
 EMPTY_ROW = np.array([False, False, False, False, False, False, False, False, False])
 FULL_ROW = np.array([True, True, True, True, True, True, True, True, True])
@@ -10,22 +16,12 @@ def test_evaluate_row_empty():
         new_row = EMPTY_ROW.copy()
         new_row[i] = True
         # check if we prefer to place a piece
-        assert ScoreTracker.evaluate_row(new_row, 0) > ScoreTracker.evaluate_row(
-            EMPTY_ROW, 0
-        )
-        assert ScoreTracker.evaluate_row(new_row, 1) > ScoreTracker.evaluate_row(
-            EMPTY_ROW, 1
-        )
-        assert ScoreTracker.evaluate_row(new_row, 2) > ScoreTracker.evaluate_row(
-            EMPTY_ROW, 2
-        )
+        assert evaluate_row(new_row, 0) > evaluate_row(EMPTY_ROW, 0)
+        assert evaluate_row(new_row, 1) > evaluate_row(EMPTY_ROW, 1)
+        assert evaluate_row(new_row, 2) > evaluate_row(EMPTY_ROW, 2)
         # check if we prefer higher rows
-        assert ScoreTracker.evaluate_row(new_row, 1) > ScoreTracker.evaluate_row(
-            new_row, 0
-        )
-        assert ScoreTracker.evaluate_row(new_row, 2) > ScoreTracker.evaluate_row(
-            new_row, 1
-        )
+        assert evaluate_row(new_row, 1) > evaluate_row(new_row, 0)
+        assert evaluate_row(new_row, 2) > evaluate_row(new_row, 1)
 
 
 def test_evaluate_row_link():
@@ -41,9 +37,9 @@ def test_evaluate_row_link():
 
     for row_idx in (0, 1, 2):
         assert (
-            ScoreTracker.evaluate_row(row_without_link, row_idx)
-            < ScoreTracker.evaluate_row(row_with_link, row_idx)
-            < ScoreTracker.evaluate_row(row_with_2_links, row_idx)
+            evaluate_row(row_without_link, row_idx)
+            < evaluate_row(row_with_link, row_idx)
+            < evaluate_row(row_with_2_links, row_idx)
         )
 
 
