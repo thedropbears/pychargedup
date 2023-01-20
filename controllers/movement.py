@@ -125,6 +125,22 @@ class Movement(StateMachine):
             RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
         )
 
+    def trajectory_generation_setup(self) -> None:
+        # When the robot is following a trajectory, it doesn't need to re-define the
+        # PID controllers nor does it need to generate another trajectory.
+        # Therefore, this section of code only runs when the state is first active.
+        self.x_controller = PIDController(2.5, 0, 0)
+        self.y_controller = PIDController(2.5, 0, 0)
+        self.heading_controller = ProfiledPIDControllerRadians(
+            5, 0, 0, TrapezoidProfileRadians.Constraints(1, 1)
+        )
+        self.heading_controller.enableContinuousInput(0, math.tau)
+
+        self.drive_controller = HolonomicDriveController(
+            self.x_controller, self.y_controller, self.heading_controller
+        )
+        self.trajectory = self.generate_trajectory()
+
     # will execute if no other states are executing
     @default_state
     def manualdrive(self) -> None:
@@ -136,22 +152,14 @@ class Movement(StateMachine):
             self.chassis.drive_field(*self.inputs)
 
     @state(first=True)
-    def autodrive(self, state_tm: float, initial_call: bool) -> None:
+    def score(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
-            # When the robot is following a trajectory, it doesn't need to re-define the
-            # PID controllers nor does it need to generate another trajectory.
-            # Therefore, this section of code only runs when the state is first active.
-            self.x_controller = PIDController(2.5, 0, 0)
-            self.y_controller = PIDController(2.5, 0, 0)
-            self.heading_controller = ProfiledPIDControllerRadians(
-                5, 0, 0, TrapezoidProfileRadians.Constraints(1, 1)
-            )
-            self.heading_controller.enableContinuousInput(0, math.tau)
+            self.trajectory_generation_setup()
 
-            self.drive_controller = HolonomicDriveController(
-                self.x_controller, self.y_controller, self.heading_controller
-            )
-            self.trajectory = self.generate_trajectory()
+        if (self.goal.translation() - self.chassis.get_pose().translation()).norm() < 0.05:
+            self.next_state("arrived")
+            return
+
 
         target_state = self.trajectory.sample(
             state_tm
@@ -169,8 +177,9 @@ class Movement(StateMachine):
         )
 
     @state
-    def score(self) -> None:
+    def wait(self) -> None:
         ...
+
 
     @state
     def pickup(self) -> None:
