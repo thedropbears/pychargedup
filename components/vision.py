@@ -23,10 +23,11 @@ class Vision:
     )
     STD_DEV_CONSTANT = 5.0
     ZERO_DIVISION_THRESHOLD = 1e-6
-    POSE_AMBIGUITY_FACTOR = 4.0
-    POSE_AMBIGUITY_THRESHOLD = 0.25
+    POSE_AMBIGUITY_FACTOR = 5.0
+    POSE_AMBIGUITY_THRESHOLD = 0.2
 
     field: wpilib.Field2d
+    enabled = tunable(True)
     use_resection = tunable(False)
 
     def __init__(self) -> None:
@@ -102,6 +103,8 @@ class Vision:
         )
 
     def execute(self) -> None:
+        if not Vision.enabled:
+            return
         results = self.camera.getLatestResult()
         self.has_targets = results.hasTargets()
         timestamp = results.getTimestamp()
@@ -113,108 +116,34 @@ class Vision:
 
         self.last_timestamp = timestamp
         self.targets = results.getTargets()
-        chassis_rotation = self.chassis.get_pose().rotation()
+        
         estimated_pose = Pose2d()
         std_dev_x = std_dev_y = math.inf
-        if self.use_resection:
-            if len(self.targets) == 1:
-                # Use the only possibility
-                estimated_pose = Vision.estimate_pos_from_apriltag(
-                    Vision.FORWARD_CAMERA_TRANSFORM, self.targets[0]
-                )
-                std_dev_x = std_dev_y = (
-                    2 * Vision.STD_DEV_CONSTANT
-                )  # Don't trust a single reading much
-            else:
-                # Locate using position resection
-                tag_positions = []
-                tag_neg_unit_transls = []
-                for t in self.targets:
-                    tag_id = t.getFiducialId()
-                    tag_pose = Vision.FIELD_LAYOUT.getTagPose(tag_id)
-                    if tag_pose is None:
-                        print(f"AprilTag with ID {tag_id} not found")
-                        return
-                    tag_positions.append((tag_pose.x, tag_pose.y))
-                    world_transl = (
-                        t.getBestCameraToTarget()
-                        .translation()
-                        .toTranslation2d()
-                        .rotateBy(-tag_pose.toPose2d().rotation())
-                    )
-                    world_cam_to_robot = (
-                        Vision.FORWARD_CAMERA_TRANSFORM.translation()
-                        .toTranslation2d()
-                        .rotateBy(chassis_rotation)
-                    )
-                    # Get estimated pose of chassis and not camera
-                    world_transl -= world_cam_to_robot
-                    hypot = world_transl.norm()
-                    if hypot < Vision.ZERO_DIVISION_THRESHOLD:
-                        print(f"AprilTag with ID {tag_id} apears to be unreasonably close")
-                        return
-                    tag_neg_unit_transls.append(
-                        (-world_transl.X() / hypot, -world_transl.Y() / hypot)
-                    )
-                l = len(tag_positions)
-                intersections = []
-                for i in range(l - 1):
-                    for j in range(i + 1, l):
-                        ix = tag_positions[i][0]
-                        iy = tag_positions[i][1]
-                        jx = tag_positions[j][0]
-                        idx = tag_neg_unit_transls[i][0]
-                        idy = tag_neg_unit_transls[i][1]
-                        jdx = tag_neg_unit_transls[j][0]
-                        if abs(idx - jdx) < Vision.ZERO_DIVISION_THRESHOLD:
-                            # TODO: Remove:
-                            print("Skipping parallel vectors")
-                            continue  # Unit vectors seem parallel
-                        t = (jx - ix) / (idx - jdx)
-                        if t < 0:
-                            # TODO: Remove:
-                            print("Skipping negative t")
-                            continue  # Can't be behind apriltags
-                        x = ix + idx * t
-                        y = iy + idy * t
-                        intersections.append((x, y))
-                l = len(intersections)
-                if (
-                    l == 0
-                ):  # if no intersections, take centroid of reverse-projected apriltag position to camera
-                    positions = [
-                        (p.X(), p.Y())
-                        for p in (
-                            Vision.estimate_pos_from_apriltag(
-                                Vision.FORWARD_CAMERA_TRANSFORM, t
-                            )
-                            for t in self.targets
-                        )
-                    ]
-                    mx, my, std_dev_x, std_dev_y = Vision.point_cloud_centroid(positions)
-                    estimated_pose = Pose2d(mx, my, 0)
-                else:
-                    mx, my, std_dev_x, std_dev_y = Vision.point_cloud_centroid(
-                        intersections
-                    )
-                    estimated_pose = Pose2d(mx, my, 0)
-        else:
-            estimated_poses = [Vision.estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t) for t in self.targets]
-            weights = [max(1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity(), 0) for t in self.targets]
-            if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights): return
-            points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
-            mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(
-                points
-            )
-            rotation_unit_vectors = [(p.rotation().cos(), p.rotation().sin()) for p in estimated_poses]
-            accx = accy = 0
-            for (x, y), w in zip(rotation_unit_vectors, weights):
-                accx += x * w
-                accy += y * w
-            f = 1 / math.hypot(accx, accy)
-            estimated_pose = Pose2d(mx, my, Rotation2d(accx * f, accy * f))
 
+        estimated_poses = [
+            Vision.estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t)
+            for t in self.targets
+            if t.getPoseAmbiguity() < Vision.POSE_AMBIGUITY_THRESHOLD
+        ]
+        weights = [
+            max(1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity(), 0)
+            for t in self.targets
+        ]
+        if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights):
+            return
+        points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
+        mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(points)
+        rotation_unit_vectors = [
+            (p.rotation().cos(), p.rotation().sin()) for p in estimated_poses
+        ]
+        accx = accy = 0
+        for (x, y), w in zip(rotation_unit_vectors, weights):
+            accx += x * w
+            accy += y * w
+        f = 1 / math.hypot(accx, accy)
+        estimated_pose = Pose2d(mx, my, Rotation2d(accx * f, accy * f))
 
+        # chassis_rotation = self.chassis.get_pose().rotation()
         # Overwrite rotation given by vision with what gyro gives
         # estimated_pose = Pose2d(estimated_pose.translation(), chassis_rotation)
 
