@@ -1,4 +1,3 @@
 hypothesis
 pytest
-data-science-types
 -r requirements.txt

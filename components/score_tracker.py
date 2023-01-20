@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np
+import numpy.typing
 
 
 class FieldSide(Enum):
@@ -65,7 +66,7 @@ class ScoreTracker:
                 self.SIGHTING_FALSE_WEIGHT * self.control_loop_wait_time
             )
 
-    def get_row(self, row: int) -> np.ndarray[np.bool_]:
+    def get_row(self, row: int) -> np.typing.NDArray[np.bool_]:
         return self.confidences[row * 9 : (row + 1) * 9] > self.CONFIDENCE_THRESHOLD
 
     def add_piece(self, node_location: NodeLocation) -> None:
@@ -78,7 +79,7 @@ class ScoreTracker:
         self.confidences[node_location.get_index()] = self.PLACE_WEIGHT
 
     @staticmethod
-    def evaluate_row(row_values: np.ndarray[np.bool_], row: int) -> float:
+    def evaluate_row(row_values: np.typing.NDArray[np.bool_], row: int) -> float:
         """
         Evaluate how good a state of a row is
         row_values: bool array or if there are pieces in nodes
