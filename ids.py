@@ -29,7 +29,7 @@ class PcmChannels:
     arm_brake = 4
 
 
-class PwmPorts:
+class PwmChannels:
     arm_abs_encoder = 0
 
 

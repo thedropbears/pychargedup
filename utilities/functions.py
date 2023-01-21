@@ -12,10 +12,6 @@ def clamp(val: float, low: float, high: float) -> float:
     return max(min(val, high), low)
 
 
-def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
-    return math.hypot(b[0] - a[0], b[1] - a[1])
-
-
 def rate_limit_2d(
     cur: tuple[float, float], target: tuple[float, float], rate_limit: float, dt: float
 ) -> tuple[float, float]:
