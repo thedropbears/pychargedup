@@ -1,7 +1,7 @@
 import rev
-from ids import CanIds, PcmChannels, PwmChannels
+from ids import CanIds, PcmChannels
 import math
-from wpilib import DutyCycleEncoder, Solenoid, PneumaticsModuleType
+from wpilib import Solenoid, PneumaticsModuleType
 from wpimath.controller import ProfiledPIDController, SimpleMotorFeedforwardMeters
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
@@ -31,13 +31,21 @@ class Arm:
         self.rotation_motor = rev.CANSparkMax(
             CanIds.Arm.rotation_left, rev.CANSparkMax.MotorType.kBrushless
         )
-        self.rotation_encoder = self.rotation_motor.getEncoder()
+        self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        self.rotation_motor.setInverted(False)
+        # setup second motor to follow first
         self._rotation_motor_right = rev.CANSparkMax(
             CanIds.Arm.rotation_right, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_right.follow(self.rotation_motor, True)
         self._rotation_motor_right.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        self._rotation_motor_right.setInverted(False)
+
+        self.rotation_encoder = self.rotation_motor.getAbsoluteEncoder(
+            rev.SparkMaxAbsoluteEncoder.Type.kDutyCycle
+        )
+        self.rotation_encoder.setZeroOffset(0)
+        self.rotation_encoder.setInverted(False)
         # output position = conversion factor * motor rotations
         self.rotation_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
         # also go from RPM to RPS
@@ -57,6 +65,7 @@ class Arm:
             CanIds.Arm.extension, rev.CANSparkMax.MotorType.kBrushless
         )
         self.extension_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
+        self.extension_motor.setInverted(False)
         self.extension_encoder = self.extension_motor.getEncoder()
         self.extension_encoder.setPositionConversionFactor(self.EXTEND_GEAR_RATIO)
         self.extension_encoder.setVelocityConversionFactor(self.EXTEND_GEAR_RATIO * 60)
@@ -67,8 +76,6 @@ class Arm:
         )
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(0.1, 0.5, 1)
 
-        self.absolute_encoder = DutyCycleEncoder(PwmChannels.arm_abs_encoder)
-        self.absolute_encoder.setPositionOffset(0)
         self.brake_solenoid = Solenoid(
             PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
         )
@@ -117,7 +124,7 @@ class Arm:
 
     def get_angle(self) -> float:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
-        return self.absolute_encoder.getAbsolutePosition()
+        return self.rotation_encoder.getPosition()
 
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in RPS"""
@@ -146,7 +153,7 @@ class Arm:
         return abs(self.get_extension() - self.goal_extension) < allowable_error
 
     def is_angle_still(self, allowable_speed=0.01) -> bool:
-        """Allowable speed in RPS"""
+        """Is the arm currently not moving, allowable speed is in RPS"""
         return abs(self.get_arm_speed()) < allowable_speed
 
     def brake(self):

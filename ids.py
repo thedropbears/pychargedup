@@ -30,7 +30,7 @@ class PcmChannels:
 
 
 class PwmChannels:
-    arm_abs_encoder = 0
+    ...
 
 
 # recursively get all attributes
