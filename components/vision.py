@@ -15,7 +15,6 @@ from photonvision import (
 class Vision:
     chassis: Chassis
 
-
     FIELD_LAYOUT = robotpy_apriltag.AprilTagFieldLayout(
         wpilib.getDeployDirectory() + "/test_field_layout.json"
     )
@@ -129,8 +128,7 @@ class Vision:
         std_dev_x = std_dev_y = math.inf
 
         estimated_poses = [
-            Vision.estimate_pos_from_apriltag(
-                Vision.FORWARD_CAMERA_TRANSFORM, t)
+            Vision.estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t)
             for t in self.targets
             if t.getPoseAmbiguity() < Vision.POSE_AMBIGUITY_THRESHOLD
         ]
@@ -139,16 +137,14 @@ class Vision:
             decr_tag_id = t.getFiducialId() - 1
             new_confidence = 1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity()
             weights[i] = self.confidence_accs[decr_tag_id] = (
-                Vision.CONF_EXP_FILTER_ALPHA *
-                self.confidence_accs[decr_tag_id]
+                Vision.CONF_EXP_FILTER_ALPHA * self.confidence_accs[decr_tag_id]
                 + (1 - Vision.CONF_EXP_FILTER_ALPHA) * new_confidence
             )
 
         if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights):
             return
         points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
-        mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(
-            points)
+        mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(points)
         rotation_unit_vectors = [
             (p.rotation().cos(), p.rotation().sin()) for p in estimated_poses
         ]
@@ -161,8 +157,7 @@ class Vision:
 
         self.field_pos_obj.setPose(estimated_pose)
 
-        v = math.hypot(self.chassis.imu.getVelocityX(),
-                       self.chassis.imu.getVelocityY())
+        v = math.hypot(self.chassis.imu.getVelocityX(), self.chassis.imu.getVelocityY())
         f = (
             1.0
             + max(v - Vision.VELOCITY_SCALING_THRESHOLD, 0.0)
