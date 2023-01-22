@@ -63,13 +63,12 @@ class Vision:
 
         estimated_pose = Pose2d()
         std_dev_x = std_dev_y = math.inf
-
-        estimated_poses = [
-            Vision.estimate_pos_from_apriltag(
+        estimated_poses = [p for p in (
+            estimate_pos_from_apriltag(
                 Vision.FORWARD_CAMERA_TRANSFORM, t)
             for t in self.targets
             if t.getPoseAmbiguity() < Vision.POSE_AMBIGUITY_THRESHOLD
-        ]
+        ) if p is not None]
         weights = [0.0] * len(self.targets)
         for i, t in enumerate(self.targets):
             decr_tag_id = t.getFiducialId() - 1
