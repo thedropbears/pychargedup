@@ -46,69 +46,6 @@ class Vision:
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
 
-    @staticmethod
-    def estimate_pos_from_apriltag(
-        cam_trans: Transform3d, target: PhotonTrackedTarget
-    ) -> Optional[Pose2d]:
-        tag_id = target.getFiducialId()
-        tag_pose = Vision.FIELD_LAYOUT.getTagPose(tag_id)
-        if tag_pose is None:
-            return None
-        return (
-            tag_pose.transformBy(target.getBestCameraToTarget().inverse())
-            .transformBy(cam_trans.inverse())
-            .toPose2d()
-        )
-
-    @staticmethod
-    def point_cloud_centroid(
-        points: list[tuple[float, float]]
-    ) -> tuple[float, float, float, float]:
-        f = 1.0 / len(points)
-        accx = accy = 0
-        for (x, y) in points:
-            accx += x
-            accy += y
-        mx = accx * f
-        my = accy * f
-        accx = accy = 0
-        for (x, y) in points:
-            dx = x - mx
-            dy = y - my
-            accx += dx * dx
-            accy += dy * dy
-        return (
-            mx,
-            my,
-            Vision.STD_DEV_CONSTANT * f + math.sqrt(accx * f),
-            Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
-        )
-
-    @staticmethod
-    def weighted_point_cloud_centroid(
-        points: list[tuple[float, float, float]]
-    ) -> tuple[float, float, float, float]:
-        accx = accy = accw = 0
-        for (x, y, w) in points:
-            accx += x * w
-            accy += y * w
-            accw += w
-        f = 1.0 / accw
-        mx = accx * f
-        my = accy * f
-        accx = accy = accw = 0
-        for (x, y, w) in points:
-            dx = x - mx
-            dy = y - my
-            accx += (dx * dx) * w
-            accy += (dy * dy) * w
-        return (
-            mx,
-            my,
-            Vision.STD_DEV_CONSTANT * f + math.sqrt(accx * f),
-            Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
-        )
-
     def execute(self) -> None:
         if not Vision.enabled:
             return
@@ -169,3 +106,63 @@ class Vision:
             timestamp,
             [f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT],
         )
+
+def estimate_pos_from_apriltag(
+    cam_trans: Transform3d, target: PhotonTrackedTarget
+) -> Optional[Pose2d]:
+    tag_id = target.getFiducialId()
+    tag_pose = Vision.FIELD_LAYOUT.getTagPose(tag_id)
+    if tag_pose is None:
+        return None
+    return (
+        tag_pose.transformBy(target.getBestCameraToTarget().inverse())
+        .transformBy(cam_trans.inverse())
+        .toPose2d()
+    )
+
+def point_cloud_centroid(
+    points: list[tuple[float, float]]
+) -> tuple[float, float, float, float]:
+    f = 1.0 / len(points)
+    accx = accy = 0
+    for (x, y) in points:
+        accx += x
+        accy += y
+    mx = accx * f
+    my = accy * f
+    accx = accy = 0
+    for (x, y) in points:
+        dx = x - mx
+        dy = y - my
+        accx += dx * dx
+        accy += dy * dy
+    return (
+        mx,
+        my,
+        Vision.STD_DEV_CONSTANT * f + math.sqrt(accx * f),
+        Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
+    )
+
+def weighted_point_cloud_centroid(
+    points: list[tuple[float, float, float]]
+) -> tuple[float, float, float, float]:
+    accx = accy = accw = 0
+    for (x, y, w) in points:
+        accx += x * w
+        accy += y * w
+        accw += w
+    f = 1.0 / accw
+    mx = accx * f
+    my = accy * f
+    accx = accy = accw = 0
+    for (x, y, w) in points:
+        dx = x - mx
+        dy = y - my
+        accx += (dx * dx) * w
+        accy += (dy * dy) * w
+    return (
+        mx,
+        my,
+        Vision.STD_DEV_CONSTANT * f + math.sqrt(accx * f),
+        Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
+    )
