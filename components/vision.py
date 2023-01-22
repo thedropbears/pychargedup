@@ -74,8 +74,7 @@ class Vision:
             decr_tag_id = t.getFiducialId() - 1
             new_confidence = 1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity()
             weights[i] = self.confidence_accs[decr_tag_id] = (
-                Vision.CONF_EXP_FILTER_ALPHA *
-                self.confidence_accs[decr_tag_id]
+                Vision.CONF_EXP_FILTER_ALPHA * self.confidence_accs[decr_tag_id]
                 + (1 - Vision.CONF_EXP_FILTER_ALPHA) * new_confidence
             )
 
@@ -96,8 +95,7 @@ class Vision:
 
         self.field_pos_obj.setPose(estimated_pose)
 
-        v = math.hypot(self.chassis.imu.getVelocityX(),
-                       self.chassis.imu.getVelocityY())
+        v = math.hypot(self.chassis.imu.getVelocityX(), self.chassis.imu.getVelocityY())
         f = (
             1.0
             + max(v - Vision.VELOCITY_SCALING_THRESHOLD, 0.0)
@@ -107,7 +105,7 @@ class Vision:
         self.chassis.estimator.addVisionMeasurement(
             estimated_pose,
             timestamp,
-            (f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT)
+            (f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT),
         )
 
 
