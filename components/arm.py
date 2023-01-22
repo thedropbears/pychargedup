@@ -1,3 +1,4 @@
+from magicbot import feedback, tunable
 from rev import CANSparkMax, SparkMaxAbsoluteEncoder
 from ids import CanIds, PcmChannels
 import math
@@ -29,20 +30,23 @@ class Arm:
     # too avoid exceeding the max hieght
     UPRIGHT_ANGLE = math.radians(20)
 
+    goal_angle = tunable(0)
+    goal_extension = tunable(MIN_EXTENSION)
+
     def __init__(self):
         # Create rotation things
         # left motor is main
         self.rotation_motor = CANSparkMax(
             CanIds.Arm.rotation_left, CANSparkMax.MotorType.kBrushless
         )
-        self.rotation_motor.setIdleMode(CANSparkMax.IdleMode.kBrake)
+        self.rotation_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.rotation_motor.setInverted(False)
         # setup second motor to follow first
         self._rotation_motor_right = CANSparkMax(
             CanIds.Arm.rotation_right, CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_right.follow(self.rotation_motor, True)
-        self._rotation_motor_right.setIdleMode(CANSparkMax.IdleMode.kBrake)
+        self._rotation_motor_right.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_right.setInverted(False)
 
         self.rotation_encoder = self.rotation_motor.getAbsoluteEncoder(
@@ -77,16 +81,13 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(self.MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            1, 0, 0, TrapezoidProfile.Constraints(maxVelocity=2, maxAcceleration=5)
+            15, 0, 0, TrapezoidProfile.Constraints(maxVelocity=2, maxAcceleration=2)
         )
-        self.extension_simple_ff = SimpleMotorFeedforwardMeters(0.1, 0.5, 1)
+        self.extension_simple_ff = SimpleMotorFeedforwardMeters(0, 0.1, 0.1)
 
         self.brake_solenoid = Solenoid(
             PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
         )
-
-        self.goal_angle = 0
-        self.goal_extension = self.MIN_EXTENSION
 
     def execute(self) -> None:
         # Clamp extension to not break max height rules
@@ -99,15 +100,15 @@ class Arm:
             self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
         )
         should_retract = is_going_over or is_currently_up
-        extension_goal = self.MIN_EXTENSION if should_retract else self.goal_extension
+        self.MIN_EXTENSION if should_retract else self.goal_extension
 
         # Calculate extension motor output
         pid_output = self.extension_controller.calculate(
-            self.get_extension(), extension_goal
+            self.get_extension(), self.goal_extension
         )
         setpoint: TrapezoidProfile.State = self.extension_controller.getSetpoint()
-        extend_ff = self.calculate_extension_feedforward(setpoint.velocity)
-        self.extension_motor.set(pid_output + extend_ff)
+        self.calculate_extension_feedforward(setpoint.velocity)
+        self.extension_motor.setVoltage(pid_output)
 
         if self.at_goal_angle() and self.is_angle_still():
             self.brake()
@@ -145,6 +146,7 @@ class Arm:
         )
         return extend_ff_G + extend_ff_simple
 
+    @feedback
     def get_angle(self) -> float:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
         return self.rotation_encoder.getPosition()
@@ -153,6 +155,7 @@ class Arm:
         """Get the speed of the arm in RPS"""
         return self.rotation_encoder.getVelocity()
 
+    @feedback
     def get_extension(self) -> float:
         """Gets the extension length in meters"""
         return self.MIN_EXTENSION + self.extension_encoder.getPosition()
@@ -232,3 +235,7 @@ class Arm:
             arm_angle = clamp(arm_angle, self.MIN_ANGLE, self.MAX_ANGLE)
 
         return (arm_angle, arm_extension, reachable)
+
+    def on_enable(self):
+        self.extension_controller.reset(self.get_extension())
+        self.rotation_controller.reset(self.get_angle())

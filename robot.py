@@ -53,9 +53,20 @@ class MyRobot(magicbot.MagicRobot):
         elif pick_up:
             self.movement.do_autodrive(Pose2d(0, -1, math.pi), Rotation2d(math.pi))
 
+    def testInit(self) -> None:
+        self.arm.on_enable()
+
     def testPeriodic(self) -> None:
-        self.arm.rotation_motor.set(self.gamepad.getRightTriggerAxis() * 0.1)
-        self.arm.extension_motor.set(self.gamepad.getRightTriggerAxis() * 0.1)
+        right_trigger = self.gamepad.getRightTriggerAxis()
+        left_trigger = self.gamepad.getLeftTriggerAxis()
+        self.arm.rotation_motor.set((left_trigger - right_trigger) * 0.5)
+        # self.arm._rotation_motor_right.set((right_trigger - right_trigger) * 0.5)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
+
+        # self.arm.execute()
 
 
 if __name__ == "__main__":
