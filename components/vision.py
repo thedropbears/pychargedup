@@ -40,7 +40,7 @@ class Vision:
     def __init__(self) -> None:
         self.camera = PhotonCamera("forward_camera")
         self.has_targets = False
-        self.targets = typing.List[PhotonTrackedTarget]
+        self.targets: list[PhotonTrackedTarget] = []
         self.last_timestamp = 0
         self.confidence_accs = [0.0] * 8
 
