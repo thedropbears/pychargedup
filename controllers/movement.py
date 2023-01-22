@@ -19,16 +19,7 @@ from wpimath.controller import (
 )
 from wpimath.spline import Spline3
 import math
-from wpilib import Field2d, getDeployDirectory
-from dataclasses import dataclass
-import json
-
-
-@dataclass
-class NodeTraversal:
-    x: float
-    y: float
-    edges: list[int]
+from wpilib import Field2d
 
 
 class Movement(StateMachine):
@@ -41,7 +32,7 @@ class Movement(StateMachine):
     # When on False, a trajectory is only generated when needed to save robotRIO resources.
     debug_trajectory = tunable(False)
 
-    POSITION_TOLERANCE = 0.008
+    POSITION_TOLERANCE = 0.01
     ANGLE_TOLERANCE = math.radians(2)
 
     def __init__(self) -> None:
@@ -57,8 +48,6 @@ class Movement(StateMachine):
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
-        with open(getDeployDirectory() + "/trajectory_waypoints.json", "r") as f:
-            j = json.load(f)
 
     def generate_trajectory(self) -> Trajectory:
         self.x_controller = PIDController(2.5, 0, 0)
@@ -140,24 +129,27 @@ class Movement(StateMachine):
 
             self.config = TrajectoryConfig(1, 3)
             self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-            topRight = Translation2d(self.goal.X() + 0.25, self.goal.Y() + 0.25)
-            bottomLeft = Translation2d(self.goal.X() - 0.25, self.goal.Y() - 0.25)
+            topRight = Translation2d(
+                self.goal.X() + 0.25, self.goal.Y() + 0.25)
+            bottomLeft = Translation2d(
+                self.goal.X() - 0.25, self.goal.Y() - 0.25)
             self.config.addConstraint(
                 RectangularRegionConstraint(
                     bottomLeft, topRight, MaxVelocityConstraint(0.5)
                 )
             )
 
-    def execute_trajectory(self, state_tm) -> None:
+    def execute_trajectory(self, trajectory: Trajectory, state_tm: float) -> None:
 
-        target_state = self.auto_trajectory.sample(
+        target_state = trajectory.sample(
             state_tm
         )  # Grabbing the target position at the current point in time from the trajectory.
 
         chassis_speed = self.drive_controller.calculate(
             self.chassis.get_pose(),
             target_state,
-            self.goal.rotation(),  # Calculating the speeds required to get to the target position.
+            # Calculating the speeds required to get to the target position.
+            self.goal.rotation(),
         )
         self.chassis.drive_local(
             chassis_speed.vx,
@@ -188,7 +180,7 @@ class Movement(StateMachine):
     def score(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
             self.set_goal(Pose2d(1.76, 1.46, 0), Rotation2d(math.pi))
-            self.generate_trajectory()
+            self.calc_trajectory = self.generate_trajectory()
 
         if self.is_at_goal():
             self.next_state("arrived_at_score")
@@ -205,13 +197,13 @@ class Movement(StateMachine):
             print("Began scoring")
             pass
 
-        self.execute_trajectory(state_tm)
+        self.execute_trajectory(self.calc_trajectory, state_tm)
 
     @state(first=True)
     def pickup(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
             self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
-            self.generate_trajectory()
+            self.calc_trajectory = self.generate_trajectory()
 
         if self.is_at_goal():
             self.next_state("arrived_at_pickup")
@@ -229,7 +221,7 @@ class Movement(StateMachine):
             print("Began pickup")
             pass
 
-        self.execute_trajectory(state_tm)
+        self.execute_trajectory(self.calc_trajectory, state_tm)
 
     @state
     def arrived_at_pickup(self, state_tm: float, initial_call: bool) -> None:
@@ -255,12 +247,10 @@ class Movement(StateMachine):
     def comfirm_action(self) -> None:
         ...
 
-    def set_input(self, vx: float, vy: float, vz: float, local: bool, a_button: bool):
+    def set_input(self, vx: float, vy: float, vz: float, local: bool):
         # Sets teleoperated drive inputs.
         self.inputs = (vx, vy, vz)
         self.drive_local = local
-        self.a_button = a_button
 
     def do_trajectory(self) -> None:
-        if self.a_button:
-            self.engage(self.current_state)
+        self.engage()
