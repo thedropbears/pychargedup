@@ -301,7 +301,7 @@ class Chassis:
     @magicbot.feedback
     def get_imu_speed(self) -> float:
         return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
-    
+
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
             self.modules[0].get(),
@@ -376,7 +376,11 @@ class Chassis:
         return self.estimator.getEstimatedPosition()
 
     def get_gyro_pose(self) -> Pose2d:
-        return Pose2d(self.imu.getDisplacementX(), self.imu.getDisplacementY(), self.imu.getRotation2d())
+        return Pose2d(
+            self.imu.getDisplacementX(),
+            self.imu.getDisplacementY(),
+            self.imu.getRotation2d(),
+        )
 
     def get_rotation(self) -> Rotation2d:
         """Get the current heading of the robot."""
