@@ -63,12 +63,15 @@ class Vision:
 
         estimated_pose = Pose2d()
         std_dev_x = std_dev_y = math.inf
-        estimated_poses = [p for p in (
-            estimate_pos_from_apriltag(
-                Vision.FORWARD_CAMERA_TRANSFORM, t)
-            for t in self.targets
-            if t.getPoseAmbiguity() < Vision.POSE_AMBIGUITY_THRESHOLD
-        ) if p is not None]
+        estimated_poses = [
+            p
+            for p in (
+                estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t)
+                for t in self.targets
+                if t.getPoseAmbiguity() < Vision.POSE_AMBIGUITY_THRESHOLD
+            )
+            if p is not None
+        ]
         weights = [0.0] * len(self.targets)
         for i, t in enumerate(self.targets):
             decr_tag_id = t.getFiducialId() - 1
@@ -81,8 +84,7 @@ class Vision:
         if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights):
             return
         points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
-        mx, my, std_dev_x, std_dev_y = weighted_point_cloud_centroid(
-            points)
+        mx, my, std_dev_x, std_dev_y = weighted_point_cloud_centroid(points)
         rotation_unit_vectors = [
             (p.rotation().cos(), p.rotation().sin()) for p in estimated_poses
         ]
