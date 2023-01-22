@@ -1,155 +1,150 @@
-from dataclasses import dataclass
 from enum import Enum
 import numpy as np
 import numpy.typing as npt
+import wpilib
+import magicbot
 
 
-class FieldSide(Enum):
-    RED = 0
-    BLUE = 1
-
-
-class GamePiceType(Enum):
+class GridNode(Enum):
+    CUBE = 0
     CONE = 1
-    CUBE = 2
-    BOTH = 3
-
-
-@dataclass
-class NodeLocation:
-    column: int
-    row: int
-    side: FieldSide
-
-    def get_index(self):
-        return self.column + self.row * 9 + self.side.value * 27
-
-    def get_allowed_piece(self) -> GamePiceType:
-        if self.row == 0:
-            return GamePiceType.BOTH
-        if self.column % 3 == 1:
-            return GamePiceType.CUBE
-        else:
-            return GamePiceType.CONE
-
-    def can_place_piece(self, piece: GamePiceType) -> bool:
-        """Checks if a piece is allowed to be placed in a node"""
-        return (
-            self.get_allowed_piece() == piece
-            or self.get_allowed_piece() == GamePiceType.BOTH
-        )
+    HYBRID = 2
 
 
 class ScoreTracker:
+    CUBE_MASK = np.array(
+        [
+            [0, 1, 0, 0, 1, 0, 0, 1, 0],
+            [0, 1, 0, 0, 1, 0, 0, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ],
+        dtype=bool,
+    )
+    CONE_MASK = np.array(
+        [
+            [1, 0, 1, 1, 0, 1, 1, 0, 1],
+            [1, 0, 1, 1, 0, 1, 1, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ],
+        dtype=bool,
+    )
 
-    control_loop_wait_time: float
-    # the confidence required to count a possible piece as existing
-    CONFIDENCE_THRESHOLD = 0.5
+    CONF_EXP_FILTER_ALPHA = 0.8
 
-    # the weight increase per second
-    SIGHTING_TRUE_WEIGHT = 0.5
-    # the weight decrease per second
-    SIGHTING_FALSE_WEIGHT = -0.01
-    PLACE_WEIGHT = 5
+    CONF_THRESHOLD = 0.2
 
     def __init__(self) -> None:
-        # confidences for all pieces on the field, including other side
-        self.confidences: np.ndarray = np.zeros(3 * 3 * 3 * 2)
+        # -1.0 - no piece for certain, 1.0 - a piece for certain, 0.0 - unsure
+        self.confidences_red: np.ndarray = np.zeros((3, 9), dtype=float)
+        self.confidences_blue: np.ndarray = np.zeros((3, 9), dtype=float)
+        self.state_red = np.zeros((3, 9), dtype=bool)
+        self.state_blue = np.zeros((3, 9), dtype=bool)
+        self.did_states_change = magicbot.will_reset_to(False)
 
-    def add_vision(self, node_location: NodeLocation, node_value: bool) -> None:
-        """
-        Modify the confidence of the piece in location for node_id
-        node_id: The id of the node
-        node_value: Weather there is a piece there
-        """
-        idx = node_location.get_index()
-        cur_confidence = self.confidences[idx]
-        if node_value and cur_confidence < 1:
-            self.confidences[idx] += (
-                self.SIGHTING_TRUE_WEIGHT * self.control_loop_wait_time
-            )
-        if not node_value:
-            self.confidences[idx] += (
-                self.SIGHTING_FALSE_WEIGHT * self.control_loop_wait_time
-            )
+    def add_vision_data(
+        self, side: wpilib.DriverStation.Alliance, pos: npt.ArrayLike, confidence: float
+    ) -> None:
+        confidences = (
+            self.confidences_red if side == side.kRed else self.confidences_blue
+        )
+        confidences[pos] = confidences[
+            pos
+        ] * ScoreTracker.CONF_EXP_FILTER_ALPHA + confidence * (
+            1.0 - ScoreTracker.CONF_EXP_FILTER_ALPHA
+        )
+        if abs(confidences[pos]) > ScoreTracker.CONF_THRESHOLD:
+            self.did_states_change = True
+            state = self.state_red if side == side.kRed else self.state_blue
+            state[pos] = confidence > 0.0
 
-    def get_row(self, row: int) -> npt.NDArray[np.bool_]:
-        return self.confidences[row * 9 : (row + 1) * 9] > self.CONFIDENCE_THRESHOLD
-
-    def add_piece(self, node_location: NodeLocation) -> None:
-        """
-        A function to add a piece as 100% on position of layer of node_id
-        node_id: The node (1-8)
-        layer: The layer (0-2)
-        position: The postion (0-2)
-        """
-        self.confidences[node_location.get_index()] = self.PLACE_WEIGHT
-
-    def evaluate_place_location(
-        self, location: NodeLocation, piece_type: GamePiceType
-    ) -> float:
-        """
-        Give a reletive score of how good it is to score in this position,
-        roughly equivilant to the score after placing.
-        location: Where to place the piece
-        piece_type: What piece
-        """
-        if not location.can_place_piece(piece_type):
-            return -1
-
-        # get turn confidences into bools
-        row = self.get_row(location.row)
-        row[location.column] = True
-        return evaluate_row(row, location.row)
-
-    def get_node_picklist(self, piece_type: GamePiceType) -> list[NodeLocation]:
-        """Gets a sorted list of which locations to put piece_type"""
-        # capture the piece type in a function to sort with
-        def evaluate_func(location):
-            return self.evaluate_place_location(location, piece_type)
-
-        all_locations: list[NodeLocation] = []
-        for side in (FieldSide.BLUE, FieldSide.RED):
-            for row in range(2):
-                for col in range(9):
-                    all_locations.append(NodeLocation(col, row, side))
-
-        return sorted(all_locations, key=evaluate_func, reverse=True)
-
-
-def evaluate_row(row_values: npt.NDArray[np.bool_], row: int) -> float:
-    """
-    Evaluate how good a state of a row is
-    row_values: bool array or if there are pieces in nodes
-    row: which row (0 bottom, 1 middle, 2 top)
-    """
-    total_score = 0.0
-    piece_value = 0
-    if row == 0:
-        piece_value = 2
-    if row == 1:
-        piece_value = 3
-    if row == 2:
-        piece_value = 5
-
-    # Count points for scoring pieces
-    for col in row_values:
-        if col:
-            total_score += piece_value
-    # Count points for scoring link
-    cur_row_idx = 0
-    while cur_row_idx <= 6:
-        # np.bool_ dosent support adding
+    @staticmethod
+    def count_links(r: npt.NDArray[bool]) -> int:
+        i = 0
         n = 0
-        n += 1 if row_values[cur_row_idx] else 0
-        n += 1 if row_values[cur_row_idx + 1] else 0
-        n += 1 if row_values[cur_row_idx + 2] else 0
-        if n == 3:
-            total_score += 5
-            cur_row_idx += 3
-            continue
-        if n == 2:
-            total_score += 0.1
-        cur_row_idx += 1
+        l = len(r)
+        while i < l - 2:
+            if r[i] and r[i + 1] and r[i + 2]:
+                n += 1
+                i += 3
+                continue
+            i += 1
+        return n
 
-    return total_score
+    @staticmethod
+    def evaluate_state(a: npt.NDArray[bool]) -> int:
+        return (
+            sum(ScoreTracker.count_links(r) for r in a) * 5
+            + a[0].sum() * 5
+            + a[1].sum() * 3
+            + a[2].sum() * 2
+        )
+
+    @staticmethod
+    def run_lengths_mod3(state: npt.NDArray[bool]) -> npt.NDArray[int]:
+        """
+        Returns an array where corresponding in shape to the input, where
+        every value is replaced by the length of the longest uninterrupted
+        run of true values containing it, modulo 3
+        """
+        run_lengths = np.zeros_like(state, dtype=int)
+        for y in range(3):
+            x = 0
+            while x < 9:
+                if not state[y, x]:
+                    x += 1
+                    continue
+                acc = 0
+                for xn in range(x, 9):
+                    if not state[y, xn]:
+                        break
+                    acc += 1
+                run_lengths[y, x : x + acc] = acc % 3
+                x += acc
+        return run_lengths
+
+    @staticmethod
+    def get_in_row(arr: npt.NDArray, x: int, y: int, def_val):
+        if x < 0 or x > 8:
+            return def_val
+        else:
+            return arr[y, x]
+
+    @staticmethod
+    def get_best_moves(
+        state: npt.NDArray[bool],
+        type_to_test: GridNode,
+        link_preparation_score: float = 2.5,
+    ) -> npt.NDArray:
+        vals = np.zeros_like(state, dtype=float)
+        run_lengths = ScoreTracker.run_lengths_mod3(state)
+        for y in range(3):
+            for x in range(9):
+                if (
+                    state[y, x]
+                    or (
+                        type_to_test == GridNode.CUBE
+                        and not ScoreTracker.CUBE_MASK[y, x]
+                    )
+                    or (
+                        type_to_test == GridNode.CONE
+                        and not ScoreTracker.CONE_MASK[y, x]
+                    )
+                ):
+                    continue
+                val = [5.0, 3.0, 2.0][y]
+                # Check link completion
+                if (
+                    ScoreTracker.get_in_row(run_lengths, x - 1, y, 0)
+                    + ScoreTracker.get_in_row(run_lengths, x + 1, y, 0)
+                    >= 2
+                ):
+                    val += 5.0
+                # Otherwise, check link preparation (state where a link can be completed after 1 move)
+                else:
+                    for o in [-2, -1, 1, 2]:
+                        if ScoreTracker.get_in_row(run_lengths, x + o, y, 0) == 1:
+                            val += link_preparation_score
+                            break
+                vals[y, x] = val
+        m = vals.max()
+        return np.argwhere(vals == m)
