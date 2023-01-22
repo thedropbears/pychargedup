@@ -88,7 +88,7 @@ class Vision:
         rotation_unit_vectors = [
             (p.rotation().cos(), p.rotation().sin()) for p in estimated_poses
         ]
-        accx = accy = 0
+        accx = accy = 0.0
         for (x, y), w in zip(rotation_unit_vectors, weights):
             accx += x * w
             accy += y * w
@@ -129,13 +129,13 @@ def point_cloud_centroid(
     points: list[tuple[float, float]]
 ) -> tuple[float, float, float, float]:
     f = 1.0 / len(points)
-    accx = accy = 0
+    accx = accy = 0.0
     for (x, y) in points:
         accx += x
         accy += y
     mx = accx * f
     my = accy * f
-    accx = accy = 0
+    accx = accy = 0.0
     for (x, y) in points:
         dx = x - mx
         dy = y - my
@@ -152,7 +152,7 @@ def point_cloud_centroid(
 def weighted_point_cloud_centroid(
     points: list[tuple[float, float, float]]
 ) -> tuple[float, float, float, float]:
-    accx = accy = accw = 0
+    accx = accy = accw = 0.0
     for (x, y, w) in points:
         accx += x * w
         accy += y * w
@@ -160,7 +160,7 @@ def weighted_point_cloud_centroid(
     f = 1.0 / accw
     mx = accx * f
     my = accy * f
-    accx = accy = accw = 0
+    accx = accy = accw = 0.0
     for (x, y, w) in points:
         dx = x - mx
         dy = y - my

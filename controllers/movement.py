@@ -43,7 +43,6 @@ class Movement(StateMachine):
         self.is_pickup = True
         self.time_remaining = 3
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
-        self.field_waypoints = []
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
