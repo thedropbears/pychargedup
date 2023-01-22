@@ -241,15 +241,17 @@ class Chassis:
         )
         self.sync_all()
         self.imu.zeroYaw()
+        self.imu.resetDisplacement()
         self.estimator = SwerveDrive4PoseEstimator(
             self.kinematics,
             self.imu.getRotation2d(),
             self.get_module_positions(),
-            Pose2d(0, 0, 0),
+            Pose2d(3, 0, 0),
             stateStdDevs=(0.5, 0.5, 0.1),
             visionMeasurementStdDevs=(0.4, 0.4, math.inf),
         )
         self.field_obj = self.field.getObject("fused_pose")
+        self.field_obj_gyro = self.field.getObject("gyro_pose")
         self.module_objs: list[wpilib.FieldObject2d] = []
         for idx, _module in enumerate(self.modules):
             self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
@@ -296,6 +298,10 @@ class Chassis:
         self.update_pose_history()
         self.last_time = time.monotonic()
 
+    @magicbot.feedback
+    def get_imu_speed(self) -> float:
+        return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
+    
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
             self.modules[0].get(),
@@ -310,6 +316,7 @@ class Chassis:
     def update_odometry(self) -> None:
         self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
         self.field_obj.setPose(self.get_pose())
+        self.field_obj_gyro.setPose(self.get_gyro_pose())
         if self.send_modules:
             robot_location = self.estimator.getEstimatedPosition()
             for idx, module in enumerate(self.modules):
@@ -367,6 +374,9 @@ class Chassis:
     def get_pose(self) -> Pose2d:
         """Get the current location of the robot relative to ???"""
         return self.estimator.getEstimatedPosition()
+
+    def get_gyro_pose(self) -> Pose2d:
+        return Pose2d(self.imu.getDisplacementX(), self.imu.getDisplacementY(), self.imu.getRotation2d())
 
     def get_rotation(self) -> Rotation2d:
         """Get the current heading of the robot."""
