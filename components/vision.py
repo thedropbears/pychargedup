@@ -15,6 +15,7 @@ from photonvision import (
 class Vision:
     chassis: Chassis
 
+
     FIELD_LAYOUT = robotpy_apriltag.AprilTagFieldLayout(
         wpilib.getDeployDirectory() + "/test_field_layout.json"
     )
