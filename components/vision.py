@@ -5,6 +5,7 @@ from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Rot
 from typing import Optional
 import math
 from magicbot import tunable
+import typing
 
 from photonvision import (
     PhotonCamera,
@@ -39,7 +40,7 @@ class Vision:
     def __init__(self) -> None:
         self.camera = PhotonCamera("forward_camera")
         self.has_targets = False
-        self.targets = []
+        self.targets = typing.List[PhotonTrackedTarget]
         self.last_timestamp = 0
         self.confidence_accs = [0.0] * 8
 
