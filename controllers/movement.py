@@ -32,13 +32,12 @@ class Movement(StateMachine):
     # When on False, a trajectory is only generated when needed to save robotRIO resources.
     debug_trajectory = tunable(False)
 
-    POSITION_TOLERANCE = 0.01
+    POSITION_TOLERANCE = 0.025
     ANGLE_TOLERANCE = math.radians(2)
 
     def __init__(self) -> None:
         self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
-        self.a_button = False
 
         self.goal = None
         self.is_pickup = True
@@ -161,7 +160,7 @@ class Movement(StateMachine):
         return (
             self.goal.translation() - self.chassis.get_pose().translation()
         ).norm() < self.POSITION_TOLERANCE and abs(
-            self.goal.rotation().radians() - self.chassis.get_rotation().radians()
+            (self.goal.rotation() - self.chassis.get_rotation()).radians()
         ) < self.ANGLE_TOLERANCE
 
     # will execute if no other states are executing
