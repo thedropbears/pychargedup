@@ -20,7 +20,7 @@ class Arm:
 
     ROTATE_GEAR_RATIO = (60 / 25) * (60 / 25) * (70 / 20)
     SPOOL_DIAMETER = 0.05
-    EXTEND_GEAR_RATIO = (1 / 7) * (math.pi * SPOOL_DIAMETER)  # converts to meters
+    EXTEND_OUTPUT_RATIO = (1 / 7) * (math.pi * SPOOL_DIAMETER)  # converts to meters
 
     # Angle soft limits
     MIN_ANGLE = math.radians(-230)
@@ -30,7 +30,7 @@ class Arm:
     # too avoid exceeding the max hieght
     UPRIGHT_ANGLE = math.radians(20)
 
-    goal_angle = tunable(0)
+    goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
 
     def __init__(self):
@@ -45,7 +45,7 @@ class Arm:
         self._rotation_motor_right = CANSparkMax(
             CanIds.Arm.rotation_right, CANSparkMax.MotorType.kBrushless
         )
-        self._rotation_motor_right.follow(self.rotation_motor, True)
+        self._rotation_motor_right.follow(self.rotation_motor, invert=True)
         self._rotation_motor_right.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_right.setInverted(False)
 
@@ -76,8 +76,10 @@ class Arm:
         self.extension_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.extension_motor.setInverted(False)
         self.extension_encoder = self.extension_motor.getEncoder()
-        self.extension_encoder.setPositionConversionFactor(self.EXTEND_GEAR_RATIO)
-        self.extension_encoder.setVelocityConversionFactor(self.EXTEND_GEAR_RATIO * 60)
+        self.extension_encoder.setPositionConversionFactor(self.EXTEND_OUTPUT_RATIO)
+        self.extension_encoder.setVelocityConversionFactor(
+            self.EXTEND_OUTPUT_RATIO * 60
+        )
         # assume retracted starting position
         self.extension_encoder.setPosition(self.MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
@@ -99,12 +101,13 @@ class Arm:
         is_currently_up = (
             self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
         )
-        should_retract = is_going_over or is_currently_up
-        self.MIN_EXTENSION if should_retract else self.goal_extension
+        is_going_over or is_currently_up
+        # actual_extension_goal = self.MIN_EXTENSION if should_retract else self.goal_extension
+        actual_extension_goal = self.goal_extension
 
         # Calculate extension motor output
         pid_output = self.extension_controller.calculate(
-            self.get_extension(), self.goal_extension
+            self.get_extension(), actual_extension_goal
         )
         setpoint: TrapezoidProfile.State = self.extension_controller.getSetpoint()
         self.calculate_extension_feedforward(setpoint.velocity)
