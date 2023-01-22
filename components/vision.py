@@ -5,7 +5,6 @@ from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Rot
 from typing import Optional
 import math
 from magicbot import tunable
-import typing
 
 from photonvision import (
     PhotonCamera,
