@@ -28,7 +28,6 @@ class MyRobot(magicbot.MagicRobot):
 
     def teleopPeriodic(self) -> None:
         drop_off = self.gamepad.getAButton()
-        self.gamepad.getXButton()
         spin_rate = 6
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * Chassis.max_wheel_speed
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
