@@ -15,8 +15,8 @@ from photonvision import (
 class Vision:
     chassis: Chassis
 
-    FIELD_LAYOUT = robotpy_apriltag.AprilTagFieldLayout(
-        wpilib.getDeployDirectory() + "/test_field_layout.json"
+    FIELD_LAYOUT = robotpy_apriltag.loadAprilTagLayoutField(
+        robotpy_apriltag.AprilTagField.k2023ChargedUp
     )
     FORWARD_CAMERA_TRANSFORM = Transform3d(
         Translation3d(-0.35, 0.01, 0.11), Rotation3d.fromDegrees(0, 0, 175)
