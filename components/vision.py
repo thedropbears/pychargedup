@@ -82,7 +82,7 @@ class Vision:
         if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights):
             return
         points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
-        mx, my, std_dev_x, std_dev_y = Vision.weighted_point_cloud_centroid(
+        mx, my, std_dev_x, std_dev_y = weighted_point_cloud_centroid(
             points)
         rotation_unit_vectors = [
             (p.rotation().cos(), p.rotation().sin()) for p in estimated_poses
