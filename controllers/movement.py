@@ -39,7 +39,7 @@ class Movement(StateMachine):
         self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
 
-        self.goal = Pose2d(math.inf,math.inf,math.inf)
+        self.goal = Pose2d(math.inf, math.inf, math.inf)
         self.is_pickup = True
         self.time_remaining = 3
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
