@@ -107,6 +107,7 @@ class Vision:
             [f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT],
         )
 
+
 def estimate_pos_from_apriltag(
     cam_trans: Transform3d, target: PhotonTrackedTarget
 ) -> Optional[Pose2d]:
@@ -119,6 +120,7 @@ def estimate_pos_from_apriltag(
         .transformBy(cam_trans.inverse())
         .toPose2d()
     )
+
 
 def point_cloud_centroid(
     points: list[tuple[float, float]]
@@ -142,6 +144,7 @@ def point_cloud_centroid(
         Vision.STD_DEV_CONSTANT * f + math.sqrt(accx * f),
         Vision.STD_DEV_CONSTANT * f + math.sqrt(accy * f),
     )
+
 
 def weighted_point_cloud_centroid(
     points: list[tuple[float, float, float]]
