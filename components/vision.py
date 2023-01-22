@@ -30,6 +30,8 @@ class Vision:
     VELOCITY_SCALING_THRESHOLD = 0.5
     VELOCITY_SCALING_FACTOR = 2
 
+    CONF_EXP_FILTER_ALPHA = 0.8
+
     field: wpilib.Field2d
     enabled = tunable(True)
     use_resection = tunable(False)
@@ -39,6 +41,7 @@ class Vision:
         self.has_targets = False
         self.targets = []
         self.last_timestamp = 0
+        self.confidence_accs = [0.0] * 8
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
@@ -120,7 +123,7 @@ class Vision:
 
         self.last_timestamp = timestamp
         self.targets = results.getTargets()
-        
+
         estimated_pose = Pose2d()
         std_dev_x = std_dev_y = math.inf
 
@@ -129,10 +132,15 @@ class Vision:
             for t in self.targets
             if t.getPoseAmbiguity() < Vision.POSE_AMBIGUITY_THRESHOLD
         ]
-        weights = [
-            max(1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity(), 0)
-            for t in self.targets
-        ]
+        weights = [0.0] * len(self.targets)
+        for i, t in enumerate(self.targets):
+            decr_tag_id = t.getFiducialId() - 1
+            new_confidence = 1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity()
+            weights[i] = self.confidence_accs[decr_tag_id] = (
+                Vision.CONF_EXP_FILTER_ALPHA * self.confidence_accs[decr_tag_id]
+                + (1 - Vision.CONF_EXP_FILTER_ALPHA) * new_confidence
+            )
+
         if any(w < Vision.ZERO_DIVISION_THRESHOLD for w in weights):
             return
         points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
@@ -150,8 +158,14 @@ class Vision:
         self.field_pos_obj.setPose(estimated_pose)
 
         v = math.hypot(self.chassis.imu.getVelocityX(), self.chassis.imu.getVelocityY())
-        f = 1.0 + max(v - Vision.VELOCITY_SCALING_THRESHOLD, 0.0) * Vision.VELOCITY_SCALING_FACTOR # Start trusting vision less if the robot moves fast
+        f = (
+            1.0
+            + max(v - Vision.VELOCITY_SCALING_THRESHOLD, 0.0)
+            * Vision.VELOCITY_SCALING_FACTOR
+        )  # Start trusting vision less if the robot moves fast
 
         self.chassis.estimator.addVisionMeasurement(
-            estimated_pose, timestamp, [f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT]
+            estimated_pose,
+            timestamp,
+            [f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT],
         )
