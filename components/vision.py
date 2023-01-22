@@ -47,7 +47,7 @@ class Vision:
         self.field_pos_obj = self.field.getObject("vision_pose")
 
     def execute(self) -> None:
-        if not Vision.enabled:
+        if not self.enabled:
             return
         results = self.camera.getLatestResult()
         self.has_targets = results.hasTargets()
