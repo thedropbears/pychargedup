@@ -54,7 +54,7 @@ class Movement(StateMachine):
         self.heading_controller = ProfiledPIDControllerRadians(
             5, 0, 0, TrapezoidProfileRadians.Constraints(1, 1)
         )
-        self.heading_controller.enableContinuousInput(0, math.tau)
+        self.heading_controller.enableContinuousInput(math.pi, -math.pi)
 
         self.drive_controller = HolonomicDriveController(
             self.x_controller, self.y_controller, self.heading_controller
