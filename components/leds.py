@@ -20,15 +20,32 @@ class LedColours(Enum):
     CYAN = (90, 255, MAX_BRIGHTNESS)
     GREEN = (60, 255, MAX_BRIGHTNESS)
     WHITE = (0, 0, MAX_BRIGHTNESS)
+    VIOLET = (300, 45, MAX_BRIGHTNESS)
     OFF = (0, 0, 0)
 
 
 class DisplayType(Enum):
-    PACMAN = auto()
-    RAINBOW = auto()
-    SOLID = auto()
-    PULSE = auto()
-    FLASH = auto()
+    PACMAN    = auto()
+    RAINBOW   = auto()
+    SOLID     = auto()
+    PULSE     = auto()
+    FLASH     = auto()
+    IDK       = auto()
+    HALF_HALF = auto()
+
+class RobotState(Enum):
+    PICKED_UP_PIECE   = auto()
+    LOOKING_FOR_PIECE = auto()
+    OTHER             = auto()
+
+class Piece(Enum):
+    CONE = auto()
+    CUBE = auto()
+    NONE = auto()
+
+class PickupFromSide(Enum):
+    LEFT  = auto()
+    RIGHT = auto()
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
@@ -49,6 +66,7 @@ class StatusLights:
     PULSE_PERIOD = 1
     PACMAN_PERIOD = 60
     RAINBOW_PERIOD = 15
+    IDK_PERIOD = 60
 
     def __init__(self):
         self.led_length = 1
@@ -59,16 +77,57 @@ class StatusLights:
 
         self.pattern = DisplayType.SOLID
 
-        self._message = ""
-
+        self.side = PickupFromSide.RIGHT
 
     def setup(self) -> None:
-        self.choose_morse_message()
         self.leds.setLength(self.led_length)
         self.single_led_data = wpilib.AddressableLED.LEDData()
         self.leds_data = [self.single_led_data] * self.led_length
         self.leds.setData(self.leds_data)
         self.leds.start()
+
+
+    def set_color(self, color: tuple[int, int, int]):
+        self.color = color
+
+    def set_piece(self, piece: Piece):
+        match piece:
+            case Piece.CONE:
+                self.set_color(LedColours.YELLOW)
+            case Piece.CUBE:
+                self.set_color(LedColours.VIOLET)
+            case Piece.NONE:
+                self.set_color(LedColours.OFF)
+
+    def set_state(self, state: RobotState):
+        match state:
+            case RobotState.PICKED_UP_PIECE:
+                self.pattern = DisplayType.SOLID
+            case RobotState.LOOKING_FOR_PIECE:
+                self.pattern = DisplayType.HALF_HALF
+            case RobotState.OTHER:
+                self.set_color(LedColours.OFF)
+
+    def set_intake_side(self, side: PickupFromSide):
+        self.side = side
+
+    def set_display_pattern(self, pattern: DisplayType):
+        self.pattern = pattern
+        
+    def set(self, color: tuple[int, int, int], piece: Piece, state: RobotState, side: PickupFromSide):
+        # self.set_color(color)
+        self.set_piece(piece)
+        self.set_state(state)
+        self.set_intake_side(side)
+
+    def calc_half(self) -> tuple[int, int, int]:
+        led_data = []
+        for i in range(self.led_length):
+            if i < round(self.led_length / 2):
+                led_data.append(self.color)
+            else:
+                led_data.append(LedColours.RED if self.side == PickupFromSide.LEFT else LedColours.GREEN)
+        self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
         return self.color
@@ -149,6 +208,37 @@ class StatusLights:
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
         return (self.color[0], self.color[1], round(self.color[2] * brightness))
 
+    def calc_idk(self):
+        elapsed_time = time.monotonic() - self.start_time
+        # flash, but only every second led
+        # then, the other leds flash
+        # and so on?
+
+        # make patter is redundant here but its easier to just keep it here
+        pattern = make_pattern([
+            (LedColours.BLUE, 1),
+            (LedColours.OFF, 1)
+        ])
+        position = round(scale_value(
+            elapsed_time % self.IDK_PERIOD,
+            0,
+            self.IDK_PERIOD,
+            self.led_length,
+            -len(pattern)
+        ))
+        led_data = []
+        if position > 0:
+            led_data.extend(
+                [wpilib.AddressableLED.LEDData(LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2]), wpilib.AddressableLED.LEDData(0, 0, 0)] * math.floor(position/2)
+            )
+            led_data.extend(pattern)
+        else:
+            led_data.extend(pattern[-position:-1])
+        leds_left = self.led_length - len(led_data)
+        if leds_left > 0:
+            led_data.extend([wpilib.AddressableLED.LEDData(0, 0, 0), wpilib.AddressableLED.LEDData(LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2])] * (leds_left/2))
+        self.leds.setData(led_data[: self.led_length])
+
     def execute(self):
         match self.pattern:
             case DisplayType.SOLID:
@@ -159,9 +249,15 @@ class StatusLights:
                 colors = self.calc_pulse()
             case DisplayType.RAINBOW:
                 colors = self.calc_rainb()
+            case DisplayType.HALF_HALF:
+                self.calc_half()
+                return
             case DisplayType.PACMAN:
                 self.calc_pacma()
-                return
+                return # pacman sets LEDs 
+            case DisplayType.IDK:
+                self.calc_idk() 
+                return # whatever this is sets LEDs
 
         self.single_led_data.setHSV(colors[0], colors[1], colors[2])
         self.leds.setData(self.leds_data)
