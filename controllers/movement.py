@@ -127,10 +127,8 @@ class Movement(StateMachine):
 
             self.config = TrajectoryConfig(2, 1.5)
             self.config.addConstraint(CentripetalAccelerationConstraint(1))
-            topRight = Translation2d(
-                self.goal.X() + 0.25, self.goal.Y() + 0.25)
-            bottomLeft = Translation2d(
-                self.goal.X() - 0.25, self.goal.Y() - 0.25)
+            topRight = Translation2d(self.goal.X() + 0.25, self.goal.Y() + 0.25)
+            bottomLeft = Translation2d(self.goal.X() - 0.25, self.goal.Y() - 0.25)
             self.config.addConstraint(
                 RectangularRegionConstraint(
                     bottomLeft, topRight, MaxVelocityConstraint(0.5)

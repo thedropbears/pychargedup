@@ -91,8 +91,7 @@ class SwerveModule:
         self.drive.setInverted(drive_reversed)
         self.drive.configVoltageCompSaturation(11.5, timeoutMs=10)
         self.drive.enableVoltageCompensation(True)
-        self.drive_ff = SimpleMotorFeedforwardMeters(
-            kS=0.18877, kV=2.7713, kA=0.18824)
+        self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.18877, kV=2.7713, kA=0.18824)
         self.drive.configVelocityMeasurementPeriod(
             ctre.SensorVelocityMeasPeriod.Period_5Ms
         )
@@ -128,12 +127,10 @@ class SwerveModule:
     def set(self, desired_state: SwerveModuleState):
         # smooth wheel velocity vector
         if self.do_smooth:
-            self.state = rate_limit_module(
-                self.state, desired_state, self.accel_limit)
+            self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
         else:
             self.state = desired_state
-        self.state = SwerveModuleState.optimize(
-            self.state, self.get_rotation())
+        self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
 
         if abs(self.state.speed) < 1e-3:
             self.drive.set(ctre.ControlMode.Velocity, 0)
@@ -256,8 +253,7 @@ class Chassis:
         self.field_obj = self.field.getObject("fused_pose")
         self.module_objs: list[wpilib.FieldObject2d] = []
         for idx, _module in enumerate(self.modules):
-            self.module_objs.append(
-                self.field.getObject("s_module_" + str(idx)))
+            self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
         self.set_pose(Pose2d(0, 0, Rotation2d.fromDegrees(0)))
 
     def drive_field(self, vx: float, vy: float, omega: float) -> None:
@@ -279,8 +275,7 @@ class Chassis:
             desired_speed_translation = Translation2d(
                 self.chassis_speeds.vx, self.chassis_speeds.vy
             ).rotateBy(
-                Rotation2d(-self.chassis_speeds.omega *
-                           5 * self.control_loop_wait_time)
+                Rotation2d(-self.chassis_speeds.omega * 5 * self.control_loop_wait_time)
             )
             desired_speeds = ChassisSpeeds(
                 desired_speed_translation.x,
@@ -318,8 +313,7 @@ class Chassis:
         )
 
     def update_odometry(self) -> None:
-        self.estimator.update(self.imu.getRotation2d(),
-                              self.get_module_positions())
+        self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
         self.field_obj.setPose(self.get_pose())
         if self.send_modules:
             robot_location = self.estimator.getEstimatedPosition()
@@ -331,8 +325,7 @@ class Chassis:
                 module_rotation = module.get_rotation().rotateBy(
                     robot_location.rotation()
                 )
-                self.module_objs[idx].setPose(
-                    Pose2d(module_location, module_rotation))
+                self.module_objs[idx].setPose(Pose2d(module_location, module_rotation))
 
     def update_pose_history(self) -> None:
         pose = self.get_pose()
