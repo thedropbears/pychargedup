@@ -4,8 +4,10 @@ import wpilib
 import magicbot
 
 from controllers.movement import Movement
+from controllers.leds import LedController
 from components.chassis import Chassis
 from components.vision import Vision
+from components.leds import StatusLights
 from wpimath.geometry import Pose2d, Rotation2d
 import math
 from utilities.scalers import rescale_js
@@ -14,16 +16,20 @@ from utilities.scalers import rescale_js
 class MyRobot(magicbot.MagicRobot):
     # Controllers
     movement: Movement
+    led_controller: LedController
 
     # Components
     chassis: Chassis
     vision: Vision
+    status_lights: StatusLights
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
 
         self.gamepad = wpilib.XboxController(0)
         self.joystick = wpilib.Joystick(1)
+
+        self.leds = wpilib.AddressableLED(2)
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
