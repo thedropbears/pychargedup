@@ -87,7 +87,7 @@ class StatusLights:
         self.leds.start()
 
 
-    def set_color(self, color: tuple[int, int, int]):
+    def set_color(self, color: tuple[int, int, int] | LedColours):
         self.color = color
 
     def set_piece(self, piece: Piece):
@@ -120,7 +120,7 @@ class StatusLights:
         self.set_state(state)
         self.set_intake_side(side)
 
-    def calc_half(self) -> tuple[int, int, int]:
+    def calc_half(self):
         led_data = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
@@ -135,7 +135,7 @@ class StatusLights:
     def calc_flash(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
-        return (self.colour[0], self.colour[1], self.colour[2] * round(brightness))
+        return (self.color[0], self.color[1], self.color[2] * round(brightness))
 
     def calc_rainb(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
