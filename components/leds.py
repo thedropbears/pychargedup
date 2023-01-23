@@ -25,27 +25,27 @@ class LedColours(Enum):
 
 
 class DisplayType(Enum):
-    PACMAN    = auto()
-    RAINBOW   = auto()
-    SOLID     = auto()
-    PULSE     = auto()
-    FLASH     = auto()
-    IDK       = auto()
-    HALF_HALF = auto()
+    PACMAN    = 0
+    RAINBOW   = 1
+    SOLID     = 2
+    PULSE     = 3
+    FLASH     = 4
+    IDK       = 5
+    HALF_HALF = 6
 
 class RobotState(Enum):
-    PICKED_UP_PIECE   = auto()
-    LOOKING_FOR_PIECE = auto()
-    OTHER             = auto()
+    PICKED_UP_PIECE   = 0
+    LOOKING_FOR_PIECE = 2
+    OTHER             = 3
 
 class Piece(Enum):
-    CONE = auto()
-    CUBE = auto()
-    NONE = auto()
+    CONE = 0
+    CUBE = 1
+    NONE = 2
 
 class PickupFromSide(Enum):
-    LEFT  = auto()
-    RIGHT = auto()
+    LEFT  = 0
+    RIGHT = 1
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
