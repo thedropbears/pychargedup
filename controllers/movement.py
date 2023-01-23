@@ -40,7 +40,7 @@ class Movement(StateMachine):
         self.drive_local = False
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
-        self.is_pickup = True
+        self.is_pickup = False
         self.time_remaining = 3
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
 
@@ -51,7 +51,7 @@ class Movement(StateMachine):
         self.x_controller = PIDController(2.5, 0, 0)
         self.y_controller = PIDController(2.5, 0, 0)
         self.heading_controller = ProfiledPIDControllerRadians(
-            5, 0, 0, TrapezoidProfileRadians.Constraints(1, 1)
+            5.5, 0, 0, TrapezoidProfileRadians.Constraints(2, 2)
         )
         self.heading_controller.enableContinuousInput(math.pi, -math.pi)
 
@@ -96,7 +96,7 @@ class Movement(StateMachine):
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        k_spline = min(8, translation_distance * 2)
+        k_spline = min(12, translation_distance * 2.8)
 
         self.goal_spline = Spline3.ControlVector(
             (
@@ -125,10 +125,12 @@ class Movement(StateMachine):
             self.goal = goal
             self.goal_rotation = approach_direction
 
-            self.config = TrajectoryConfig(1, 3)
-            self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-            topRight = Translation2d(self.goal.X() + 0.25, self.goal.Y() + 0.25)
-            bottomLeft = Translation2d(self.goal.X() - 0.25, self.goal.Y() - 0.25)
+            self.config = TrajectoryConfig(2, 1.5)
+            self.config.addConstraint(CentripetalAccelerationConstraint(1))
+            topRight = Translation2d(
+                self.goal.X() + 0.25, self.goal.Y() + 0.25)
+            bottomLeft = Translation2d(
+                self.goal.X() - 0.25, self.goal.Y() - 0.25)
             self.config.addConstraint(
                 RectangularRegionConstraint(
                     bottomLeft, topRight, MaxVelocityConstraint(0.5)
@@ -175,7 +177,7 @@ class Movement(StateMachine):
     @state
     def score(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
-            self.set_goal(Pose2d(1.76, 1.46, 0), Rotation2d(math.pi))
+            self.set_goal(Pose2d(0.9, 0.9, 0), Rotation2d.fromDegrees(180))
             self.calc_trajectory = self.generate_trajectory()
 
         if self.is_at_goal():
@@ -198,7 +200,7 @@ class Movement(StateMachine):
     @state(first=True)
     def pickup(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
-            self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
+            self.set_goal(Pose2d(1.6, 2, math.pi), Rotation2d(math.pi))
             self.calc_trajectory = self.generate_trajectory()
 
         if self.is_at_goal():
@@ -231,7 +233,7 @@ class Movement(StateMachine):
     def arrived_at_score(self, state_tm: float, initial_call: bool) -> None:
         print("Arrived at score")
         if initial_call:
-            self.is_pickup = True
+            self.is_pickup = False
         if state_tm > 0.2:
             self.next_state("pickup")
 
