@@ -3,4 +3,4 @@ robotpy[apriltag,cscore]~=2023.2.1
 robotpy-ctre~=2023.0.0
 robotpy-navx~=2023.0.1
 robotpy-rev~=2023.1.0
-robotpy-photonvision~=2023.1.2
+robotpy-photonvision~=2023.2.1
