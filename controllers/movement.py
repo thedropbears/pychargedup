@@ -1,5 +1,6 @@
 from magicbot import StateMachine, state, default_state, tunable
 from components.chassis import Chassis
+from components.arm import Arm
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
     TrajectoryConfig,
@@ -24,6 +25,7 @@ from wpilib import Field2d
 
 class Movement(StateMachine):
     chassis: Chassis
+    arm: Arm
     field: Field2d
 
     # This vairable controls if trajectory generation will be set up for debugging

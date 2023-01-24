@@ -6,6 +6,7 @@ import magicbot
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
+from components.arm import Arm
 from utilities.scalers import rescale_js
 
 
@@ -16,6 +17,7 @@ class MyRobot(magicbot.MagicRobot):
     # Components
     chassis: Chassis
     vision: Vision
+    arm: Arm
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -38,6 +40,21 @@ class MyRobot(magicbot.MagicRobot):
 
         if drop_off:
             self.movement.do_trajectory()
+
+    def testInit(self) -> None:
+        self.arm.on_enable()
+
+    def testPeriodic(self) -> None:
+        right_trigger = self.gamepad.getRightTriggerAxis()
+        left_trigger = self.gamepad.getLeftTriggerAxis()
+        self.arm.rotation_motor.set((left_trigger - right_trigger) * 0.5)
+        # self.arm._rotation_motor_right.set((right_trigger - right_trigger) * 0.5)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
+
+        # self.arm.execute()
 
 
 if __name__ == "__main__":
