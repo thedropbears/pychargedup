@@ -235,14 +235,6 @@ class Movement(StateMachine):
         if state_tm > 0.2:
             self.next_state("pickup")
 
-    @state
-    def wait(self) -> None:
-        ...
-
-    @state
-    def comfirm_action(self) -> None:
-        ...
-
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         # Sets teleoperated drive inputs.
         self.inputs = (vx, vy, vz)
