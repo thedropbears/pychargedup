@@ -3,24 +3,23 @@ from rev import CANSparkMax, SparkMaxAbsoluteEncoder
 from ids import CanIds, PcmChannels
 import math
 from wpilib import Solenoid, PneumaticsModuleType
-from wpimath.controller import ProfiledPIDController, SimpleMotorFeedforwardMeters
+from wpimath.controller import (
+    ProfiledPIDController,
+    ArmFeedforward,
+    SimpleMotorFeedforwardMeters,
+)
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
 
 
 class Arm:
-    # masses used to calculate gravity feedforwards
-    ARM_END_MASS = 5  # kg
-    ARM_BASE_MASS = 1
-    ROTATE_GRAVITY_FEEDFORWARD = 1
-    EXTEND_GRAVITY_FEEDFORWARD = 1
-
     MIN_EXTENSION = 0.7  # meters
     MAX_EXTENSION = 1.3
 
     ROTATE_GEAR_RATIO = (60 / 25) * (60 / 25) * (70 / 20)
     SPOOL_DIAMETER = 0.05
     EXTEND_OUTPUT_RATIO = (1 / 7) * (math.pi * SPOOL_DIAMETER)  # converts to meters
+    EXTEND_GRAVITY_FEEDFORWARD = 0
 
     # Angle soft limits
     MIN_ANGLE = math.radians(-230)
@@ -32,6 +31,8 @@ class Arm:
 
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
+    # automatically retract the extension when rotating overhead
+    do_auto_retract = tunable(False)
 
     def __init__(self):
         # Create rotation things
@@ -66,8 +67,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=3
         )
         self.rotation_controller = ProfiledPIDController(5, 0, 0, rotation_constraints)
-        # ignore 'meters', theres no generic one
-        self.rotation_simple_ff = SimpleMotorFeedforwardMeters(0.1, 0.5, 1)
+        self.rotation_ff = ArmFeedforward(kS=0.1, kG=3, kV=2, kA=0)
 
         # Create extension things
         self.extension_motor = CANSparkMax(
@@ -101,9 +101,10 @@ class Arm:
         is_currently_up = (
             self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
         )
-        is_going_over or is_currently_up
-        # actual_extension_goal = self.MIN_EXTENSION if should_retract else self.goal_extension
-        actual_extension_goal = self.goal_extension
+        should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
+        actual_extension_goal = (
+            self.MIN_EXTENSION if should_retract else self.goal_extension
+        )
 
         # Calculate extension motor output
         pid_output = self.extension_controller.calculate(
@@ -127,22 +128,11 @@ class Arm:
     def calculate_rotation_feedforwards(self, next_speed: float) -> float:
         """Calculate feedforwards voltage.
         next_speed: speed in rps"""
-        # Calculate gravity feedforwards for rotation and extension
-        # idk if mass is the right word for this
-        arm_mass = (
-            self.ARM_BASE_MASS * self.MIN_EXTENSION
-            + self.ARM_END_MASS * self.get_extension()
-        )
-        total_arm_torque = arm_mass * 9.8 * math.cos(self.get_angle())
-        # TODO: work out proper math for feedforward with motor constant
-        rotate_ff_G = self.ROTATE_GRAVITY_FEEDFORWARD * total_arm_torque
-        return rotate_ff_G + self.rotation_simple_ff.calculate(
-            self.get_arm_speed(), next_speed, 0.02
-        )
+        accel = next_speed - self.get_arm_speed()
+        return self.rotation_ff.calculate(self.get_angle(), self.get_arm_speed(), accel)
 
     def calculate_extension_feedforward(self, next_speed) -> float:
-        arm_end_force = self.ARM_END_MASS * 9.8 * math.sin(-self.get_angle())
-        extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * arm_end_force
+        extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(-self.get_angle())
         extension_speed = self.extension_encoder.getVelocity()
         extend_ff_simple = self.extension_simple_ff.calculate(
             extension_speed, next_speed, 0.02
