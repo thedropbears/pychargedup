@@ -140,12 +140,11 @@ class Movement(StateMachine):
         target_state = trajectory.sample(
             state_tm
         )  # Grabbing the target position at the current point in time from the trajectory.
-        
+
         # Calculating the speeds required to get to the target position.
         chassis_speed = self.drive_controller.calculate(
             self.chassis.get_pose(),
             target_state,
-            
             self.goal.rotation(),
         )
         self.chassis.drive_local(
