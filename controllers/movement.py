@@ -48,15 +48,15 @@ class Movement(StateMachine):
         self.robot_object = self.field.getObject("auto_trajectory")
 
     def generate_trajectory(self) -> Trajectory:
-        self.x_controller = PIDController(2.5, 0, 0)
-        self.y_controller = PIDController(2.5, 0, 0)
-        self.heading_controller = ProfiledPIDControllerRadians(
+        x_controller = PIDController(2.5, 0, 0)
+        y_controller = PIDController(2.5, 0, 0)
+        heading_controller = ProfiledPIDControllerRadians(
             5.5, 0, 0, TrapezoidProfileRadians.Constraints(2, 2)
         )
-        self.heading_controller.enableContinuousInput(math.pi, -math.pi)
+        heading_controller.enableContinuousInput(math.pi, -math.pi)
 
         self.drive_controller = HolonomicDriveController(
-            self.x_controller, self.y_controller, self.heading_controller
+            x_controller, y_controller, heading_controller
         )
 
         chassis_velocity = self.chassis.get_velocity()
@@ -78,8 +78,8 @@ class Movement(StateMachine):
             # taking unnecessary turns before moving towards the goal.
             kD = 0.3
 
-            self.spline_start_momentum_x = translation.x * kD
-            self.spline_start_momentum_y = translation.y * kD
+            spline_start_momentum_x = translation.x * kD
+            spline_start_momentum_y = translation.y * kD
 
         else:
             # It is more efficient to make trajectories account for the robot's current momentum so
@@ -89,8 +89,8 @@ class Movement(StateMachine):
             kvx = 3
             kvy = 3
 
-            self.spline_start_momentum_x = chassis_velocity.vx * kvx
-            self.spline_start_momentum_y = chassis_velocity.vy * kvy
+            spline_start_momentum_x = chassis_velocity.vx * kvx
+            spline_start_momentum_y = chassis_velocity.vy * kvy
 
         # If the robot is close to the goal but still not enough, making the robot reverse to
         # approach the control vector is unnecessary; this constant scales the derivative of
@@ -107,8 +107,8 @@ class Movement(StateMachine):
         )
 
         start_point_spline = Spline3.ControlVector(
-            (pose.x, self.spline_start_momentum_x),
-            (pose.y, self.spline_start_momentum_y),
+            (pose.x, spline_start_momentum_x),
+            (pose.y, spline_start_momentum_y),
         )
 
         self.config.setStartVelocity(math.hypot(y_velocity, x_velocity))
@@ -140,11 +140,12 @@ class Movement(StateMachine):
         target_state = trajectory.sample(
             state_tm
         )  # Grabbing the target position at the current point in time from the trajectory.
-
+        
+        # Calculating the speeds required to get to the target position.
         chassis_speed = self.drive_controller.calculate(
             self.chassis.get_pose(),
             target_state,
-            # Calculating the speeds required to get to the target position.
+            
             self.goal.rotation(),
         )
         self.chassis.drive_local(
