@@ -32,16 +32,33 @@ class Movement(StateMachine):
     # When on False, a trajectory is only generated when needed to save robotRIO resources.
     debug_trajectory = tunable(False)
 
+    POSITION_TOLERANCE = 0.025
+    ANGLE_TOLERANCE = math.radians(2)
+
     def __init__(self) -> None:
         self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
 
+        self.goal = Pose2d(math.inf, math.inf, math.inf)
+        self.is_pickup = False
+        self.time_remaining = 3
         self.set_goal(Pose2d(3, 0, 0), Rotation2d(0))
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
 
     def generate_trajectory(self) -> Trajectory:
+        x_controller = PIDController(2.5, 0, 0)
+        y_controller = PIDController(2.5, 0, 0)
+        heading_controller = ProfiledPIDControllerRadians(
+            5.5, 0, 0, TrapezoidProfileRadians.Constraints(2, 2)
+        )
+        heading_controller.enableContinuousInput(math.pi, -math.pi)
+
+        self.drive_controller = HolonomicDriveController(
+            x_controller, y_controller, heading_controller
+        )
+
         chassis_velocity = self.chassis.get_velocity()
         pose = self.chassis.get_pose()
         x_velocity = chassis_velocity.vx
@@ -61,8 +78,8 @@ class Movement(StateMachine):
             # taking unnecessary turns before moving towards the goal.
             kD = 0.3
 
-            self.spline_start_momentum_x = translation.x * kD
-            self.spline_start_momentum_y = translation.y * kD
+            spline_start_momentum_x = translation.x * kD
+            spline_start_momentum_y = translation.y * kD
 
         else:
             # It is more efficient to make trajectories account for the robot's current momentum so
@@ -72,14 +89,14 @@ class Movement(StateMachine):
             kvx = 3
             kvy = 3
 
-            self.spline_start_momentum_x = chassis_velocity.vx * kvx
-            self.spline_start_momentum_y = chassis_velocity.vy * kvy
+            spline_start_momentum_x = chassis_velocity.vx * kvx
+            spline_start_momentum_y = chassis_velocity.vy * kvy
 
         # If the robot is close to the goal but still not enough, making the robot reverse to
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        k_spline = min(8, translation_distance * 2)
+        k_spline = min(12, translation_distance * 2.8)
 
         self.goal_spline = Spline3.ControlVector(
             (
@@ -90,8 +107,8 @@ class Movement(StateMachine):
         )
 
         start_point_spline = Spline3.ControlVector(
-            (pose.x, self.spline_start_momentum_x),
-            (pose.y, self.spline_start_momentum_y),
+            (pose.x, spline_start_momentum_x),
+            (pose.y, spline_start_momentum_y),
         )
 
         self.config.setStartVelocity(math.hypot(y_velocity, x_velocity))
@@ -104,16 +121,46 @@ class Movement(StateMachine):
         return self.auto_trajectory
 
     def set_goal(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
-        self.goal = goal
-        self.goal_rotation = approach_direction
+        if goal != self.goal:
+            self.goal = goal
+            self.goal_rotation = approach_direction
 
-        self.config = TrajectoryConfig(1, 1.5)
-        self.config.addConstraint(CentripetalAccelerationConstraint(1.5))
-        topRight = Translation2d(self.goal.X() + 2, self.goal.Y() - 2)
-        bottomLeft = Translation2d(self.goal.X() - 2, self.goal.Y() + 2)
-        self.config.addConstraint(
-            RectangularRegionConstraint(bottomLeft, topRight, MaxVelocityConstraint(1))
+            self.config = TrajectoryConfig(2, 1.5)
+            self.config.addConstraint(CentripetalAccelerationConstraint(1))
+            topRight = Translation2d(self.goal.X() + 0.25, self.goal.Y() + 0.25)
+            bottomLeft = Translation2d(self.goal.X() - 0.25, self.goal.Y() - 0.25)
+            self.config.addConstraint(
+                RectangularRegionConstraint(
+                    bottomLeft, topRight, MaxVelocityConstraint(0.5)
+                )
+            )
+
+    def execute_trajectory(self, trajectory: Trajectory, state_tm: float) -> None:
+
+        target_state = trajectory.sample(
+            state_tm
+        )  # Grabbing the target position at the current point in time from the trajectory.
+
+        # Calculating the speeds required to get to the target position.
+        chassis_speed = self.drive_controller.calculate(
+            self.chassis.get_pose(),
+            target_state,
+            self.goal.rotation(),
         )
+        self.chassis.drive_local(
+            chassis_speed.vx,
+            chassis_speed.vy,
+            chassis_speed.omega,
+        )
+
+        self.time_remaining = self.auto_trajectory.totalTime() - state_tm
+
+    def is_at_goal(self) -> bool:
+        return (
+            self.goal.translation() - self.chassis.get_pose().translation()
+        ).norm() < self.POSITION_TOLERANCE and abs(
+            (self.goal.rotation() - self.chassis.get_rotation()).radians()
+        ) < self.ANGLE_TOLERANCE
 
     # will execute if no other states are executing
     @default_state
@@ -125,58 +172,73 @@ class Movement(StateMachine):
         else:
             self.chassis.drive_field(*self.inputs)
 
-    @state(first=True)
-    def autodrive(self, state_tm: float, initial_call: bool) -> None:
+    @state
+    def score(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
-            # When the robot is following a trajectory, it doesn't need to re-define the
-            # PID controllers nor does it need to generate another trajectory.
-            # Therefore, this section of code only runs when the state is first active.
-            self.x_controller = PIDController(2.5, 0, 0)
-            self.y_controller = PIDController(2.5, 0, 0)
-            self.heading_controller = ProfiledPIDControllerRadians(
-                5, 0, 0, TrapezoidProfileRadians.Constraints(1, 1)
-            )
-            self.heading_controller.enableContinuousInput(0, math.tau)
+            self.set_goal(Pose2d(0.9, 0.9, 0), Rotation2d.fromDegrees(180))
+            self.calc_trajectory = self.generate_trajectory()
 
-            self.drive_controller = HolonomicDriveController(
-                self.x_controller, self.y_controller, self.heading_controller
-            )
-            self.trajectory = self.generate_trajectory()
+        if self.is_at_goal():
+            self.next_state("arrived_at_score")
+            return
+        elif self.is_pickup:
+            self.next_state("pickup")
 
-        target_state = self.trajectory.sample(
-            state_tm
-        )  # Grabbing the target position at the current point in time from the trajectory.
+        if self.time_remaining < 2 and self.time_remaining > 0.5:
+            # TODO Tell other components to prepare for scoring
+            print("Preparing for scoring")
+            pass
+        elif self.time_remaining <= 0.5:
+            # TODO Tell other components to begin scoring
+            print("Began scoring")
+            pass
 
-        chassis_speed = self.drive_controller.calculate(
-            self.chassis.get_pose(),
-            target_state,
-            self.goal.rotation(),  # Calculating the speeds required to get to the target position.
-        )
-        self.chassis.drive_local(
-            chassis_speed.vx,
-            chassis_speed.vy,
-            chassis_speed.omega,
-        )
+        self.execute_trajectory(self.calc_trajectory, state_tm)
+
+    @state(first=True)
+    def pickup(self, state_tm: float, initial_call: bool) -> None:
+        if initial_call:
+            self.set_goal(Pose2d(1.6, 2, math.pi), Rotation2d(math.pi))
+            self.calc_trajectory = self.generate_trajectory()
+
+        if self.is_at_goal():
+            self.next_state("arrived_at_pickup")
+            return
+        elif not self.is_pickup:
+            self.next_state("score")
+            return
+
+        if self.time_remaining < 2 and self.time_remaining > 0.5:
+            # TODO Tell other components to prepare for pickup
+            print("Preparing for pickup")
+            pass
+        elif self.time_remaining <= 0.5:
+            # TODO Tell other components to begin pickup
+            print("Began pickup")
+            pass
+
+        self.execute_trajectory(self.calc_trajectory, state_tm)
 
     @state
-    def score(self) -> None:
-        ...
+    def arrived_at_pickup(self, state_tm: float, initial_call: bool) -> None:
+        print("Arrived at pickup")
+        if initial_call:
+            self.is_pickup = False
+        if state_tm > 0.2:
+            self.next_state("score")
 
     @state
-    def pickup(self) -> None:
-        ...
-
-    @state
-    def comfirm_action(self) -> None:
-        ...
+    def arrived_at_score(self, state_tm: float, initial_call: bool) -> None:
+        print("Arrived at score")
+        if initial_call:
+            self.is_pickup = False
+        if state_tm > 0.2:
+            self.next_state("pickup")
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         # Sets teleoperated drive inputs.
         self.inputs = (vx, vy, vz)
         self.drive_local = local
 
-    def do_autodrive(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
-        # Sets the goal and execute the autodrive state.
-        if goal == self.goal:
-            self.set_goal(goal, approach_direction)
+    def do_trajectory(self) -> None:
         self.engage()

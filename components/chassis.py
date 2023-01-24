@@ -241,11 +241,12 @@ class Chassis:
         )
         self.sync_all()
         self.imu.zeroYaw()
+        self.imu.resetDisplacement()
         self.estimator = SwerveDrive4PoseEstimator(
             self.kinematics,
             self.imu.getRotation2d(),
             self.get_module_positions(),
-            Pose2d(0, 0, 0),
+            Pose2d(3, 0, 0),
             stateStdDevs=(0.5, 0.5, 0.1),
             visionMeasurementStdDevs=(0.4, 0.4, math.inf),
         )
@@ -295,6 +296,10 @@ class Chassis:
         self.update_odometry()
         self.update_pose_history()
         self.last_time = time.monotonic()
+
+    @magicbot.feedback
+    def get_imu_speed(self) -> float:
+        return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
 
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
@@ -367,6 +372,13 @@ class Chassis:
     def get_pose(self) -> Pose2d:
         """Get the current location of the robot relative to ???"""
         return self.estimator.getEstimatedPosition()
+
+    def get_gyro_pose(self) -> Pose2d:
+        return Pose2d(
+            self.imu.getDisplacementX(),
+            self.imu.getDisplacementY(),
+            self.imu.getRotation2d(),
+        )
 
     def get_rotation(self) -> Rotation2d:
         """Get the current heading of the robot."""
