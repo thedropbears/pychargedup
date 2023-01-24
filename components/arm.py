@@ -34,7 +34,7 @@ class Arm:
     # automatically retract the extension when rotating overhead
     do_auto_retract = tunable(False)
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Create rotation things
         # left motor is main
         self.rotation_motor = CANSparkMax(
