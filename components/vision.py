@@ -40,7 +40,6 @@ class Vision:
 
     field: wpilib.Field2d
     enabled = tunable(True)
-    use_resection = tunable(False)
 
     def __init__(self) -> None:
         self.camera = PhotonCamera("forward_camera")
