@@ -24,16 +24,12 @@ class Vision:
             wpilib.getDeployDirectory() + "/test_field_layout.json"
         )
     )
-    FORWARD_CAMERA_TRANSFORM = Transform3d(
-        Translation3d(-0.35, 0.01, 0.11), Rotation3d.fromDegrees(5, 0, 178)
-    )
     STD_DEV_CONSTANT = 5.0
     ANGULAR_STD_DEV_CONSTANT = 3.0
     ZERO_DIVISION_THRESHOLD = 1e-6
     POSE_AMBIGUITY_FACTOR = 2.5
     POSE_AMBIGUITY_THRESHOLD = 0.4
 
-    VELOCITY_SCALING_THRESHOLD = 0.5
     VELOCITY_SCALING_FACTOR = 2
 
     CONF_EXP_FILTER_ALPHA = 0.8
@@ -42,10 +38,19 @@ class Vision:
     enabled = tunable(True)
 
     def __init__(self) -> None:
-        self.camera = PhotonCamera("forward_camera")
-        self.has_targets = False
-        self.targets: list[PhotonTrackedTarget] = []
-        self.last_timestamp = 0
+        self.cameras = [  # (Camera object, camera-to-robot transform)
+            (
+                PhotonCamera(n),
+                Transform3d(
+                    Translation3d(x, y, z), Rotation3d.fromDegrees(roll, pitch, yaw)
+                ).inverse(),
+            )
+            for (n, x, y, z, roll, pitch, yaw) in [
+                ("camera_1", -0.35, 0.01, 0.11, 0.0, 0.0, 175),
+                ("camera_2", -0.35, 0.01, 0.11, 0.0, 0.0, 175),
+            ]
+        ]
+        self.timestamps = [0] * len(self.cameras)
         self.confidence_accs = [0.0] * 8
 
     def setup(self) -> None:
@@ -54,45 +59,40 @@ class Vision:
     def execute(self) -> None:
         if not self.enabled:
             return
-        results = self.camera.getLatestResult()
-        self.has_targets = results.hasTargets()
-        timestamp = results.getTimestamp()
+        estimated_poses = []
+        weights = []
+        for i, (c, trans) in enumerate(self.cameras):
+            if not (results := c.getLatestResult()).hasTargets():
+                continue
+            if (timestamp := results.getTimestamp()) == self.timestamps[
+                i
+            ] and wpilib.RobotBase.isReal():
+                continue
+            self.timestamps[i] = timestamp
+            for t in results.getTargets():
+                tag_id = t.getFiducialId()
+                if tag_id < 0 or tag_id > 8:
+                    print(f"Invalid ag id {tag_id}")
+                    continue
+                new_confidence = max(
+                    1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity(), 0.0
+                )
+                weight = self.confidence_accs[tag_id - 1] = (
+                    Vision.CONF_EXP_FILTER_ALPHA * self.confidence_accs[tag_id - 1]
+                    + (1 - Vision.CONF_EXP_FILTER_ALPHA) * new_confidence
+                )
+                if weight > Vision.ZERO_DIVISION_THRESHOLD and not (
+                    (pos := estimate_pos_from_apriltag(trans, t)) is None
+                ):
+                    estimated_poses.append(pos)
+                    weights.append(weight)
 
-        if not self.has_targets:
+        if len(estimated_poses) == 0:
             return
-        if timestamp == self.last_timestamp and wpilib.RobotBase.isReal():
-            return
-
-        self.last_timestamp = timestamp
-        self.targets = results.getTargets()
-
         estimated_pose = Pose2d()
         std_dev_x = std_dev_y = math.inf
-        estimated_poses = [
-            p
-            for p in (
-                estimate_pos_from_apriltag(Vision.FORWARD_CAMERA_TRANSFORM, t)
-                for t in self.targets
-            )
-            if p is not None
-        ]
-        weights = [0.0] * len(self.targets)
-        for i, t in enumerate(self.targets):
-            decr_tag_id = t.getFiducialId() - 1
-            new_confidence = 1.0 - Vision.POSE_AMBIGUITY_FACTOR * t.getPoseAmbiguity()
-            weights[i] = self.confidence_accs[decr_tag_id] = (
-                Vision.CONF_EXP_FILTER_ALPHA * self.confidence_accs[decr_tag_id]
-                + (1 - Vision.CONF_EXP_FILTER_ALPHA) * new_confidence
-            )
 
-        points = [
-            (p.x, p.y, w)
-            for (p, w) in zip(estimated_poses, weights)
-            if w > Vision.ZERO_DIVISION_THRESHOLD
-        ]
-        if len(points) == 0:
-            return
-        print(weights)
+        points = [(p.x, p.y, w) for (p, w) in zip(estimated_poses, weights)]
         mx, my, std_dev_x, std_dev_y = weighted_point_cloud_centroid(points)
         rotation_unit_vectors = [
             (p.rotation().cos(), p.rotation().sin()) for p in estimated_poses
@@ -115,13 +115,13 @@ class Vision:
 
         self.chassis.estimator.addVisionMeasurement(
             estimated_pose,
-            timestamp,
+            min(self.timestamps),
             (f * std_dev_x, f * std_dev_y, f * Vision.ANGULAR_STD_DEV_CONSTANT),
         )
 
 
 def estimate_pos_from_apriltag(
-    cam_trans: Transform3d, target: PhotonTrackedTarget
+    cam_to_robot: Transform3d, target: PhotonTrackedTarget
 ) -> Optional[Pose2d]:
     tag_id = target.getFiducialId()
     tag_pose = Vision.FIELD_LAYOUT.getTagPose(tag_id)
@@ -129,7 +129,7 @@ def estimate_pos_from_apriltag(
         return None
     return (
         tag_pose.transformBy(target.getBestCameraToTarget().inverse())
-        .transformBy(cam_trans.inverse())
+        .transformBy(cam_to_robot)
         .toPose2d()
     )
 
