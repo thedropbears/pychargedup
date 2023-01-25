@@ -25,27 +25,31 @@ class LedColours(Enum):
 
 
 class DisplayType(Enum):
-    PACMAN    = 0
-    RAINBOW   = 1
-    SOLID     = 2
-    PULSE     = 3
-    FLASH     = 4
-    IDK       = 5
-    HALF_HALF = 6
+    PACMAN = auto()
+    RAINBOW = auto()
+    SOLID = auto()
+    PULSE = auto()
+    FLASH = auto()
+    IDK = auto()
+    HALF_HALF = auto()
+
 
 class RobotState(Enum):
-    PICKED_UP_PIECE   = 0
-    LOOKING_FOR_PIECE = 2
-    OTHER             = 3
+    PICKED_UP_PIECE = auto()
+    LOOKING_FOR_PIECE = auto()
+    OTHER = auto()
+
 
 class Piece(Enum):
-    CONE = 0
-    CUBE = 1
-    NONE = 2
+    CONE = auto()
+    CUBE = auto()
+    NONE = auto()
+
 
 class PickupFromSide(Enum):
-    LEFT  = 0
-    RIGHT = 1
+    LEFT = auto()
+    RIGHT = auto()
+
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
@@ -86,24 +90,25 @@ class StatusLights:
         self.leds.setData(self.leds_data)
         self.leds.start()
 
-
     def set_color(self, color: tuple[int, int, int] | LedColours):
         self.color = color
 
     def set_piece(self, piece: Piece):
-        if piece == Piece.CONE:
-            self.set_color(LedColours.YELLOW)
-        elif piece == Piece.CUBE:
-            self.set_color(LedColours.VIOLET)
-        elif piece == Piece.NONE:
-            self.set_color(LedColours.OFF)
+        match piece:
+            case Piece.CONE:
+                self.set_color(LedColours.YELLOW)
+            case Piece.CUBE:
+                self.set_color(LedColours.VIOLET)
+            case Piece.NONE:
+                self.set_color(LedColours.OFF)
 
     def set_state(self, state: RobotState):
-        if state == RobotState.PICKED_UP_PIECE:
-            self.pattern = DisplayType.SOLID
-        elif state == RobotState.LOOKING_FOR_PIECE:
-            self.pattern = DisplayType.HALF_HALF
-        elif state == RobotState.OTHER:
+        match state:
+            case RobotState.PICKED_UP_PIECE:
+                self.pattern = DisplayType.SOLID
+            case RobotState.LOOKING_FOR_PIECE:
+                self.pattern = DisplayType.HALF_HALF
+            case RobotState.OTHER:
                 self.set_color(LedColours.OFF)
 
     def set_intake_side(self, side: PickupFromSide):
@@ -111,8 +116,14 @@ class StatusLights:
 
     def set_display_pattern(self, pattern: DisplayType):
         self.pattern = pattern
-        
-    def set(self, color: tuple[int, int, int], piece: Piece, state: RobotState, side: PickupFromSide):
+
+    def set(
+        self,
+        color: tuple[int, int, int],
+        piece: Piece,
+        state: RobotState,
+        side: PickupFromSide,
+    ):
         # self.set_color(color)
         self.set_piece(piece)
         self.set_state(state)
@@ -124,7 +135,11 @@ class StatusLights:
             if i < round(self.led_length / 2):
                 led_data.append(self.color)
             else:
-                led_data.append(LedColours.RED if self.side == PickupFromSide.LEFT else LedColours.GREEN)
+                led_data.append(
+                    LedColours.RED
+                    if self.side == PickupFromSide.LEFT
+                    else LedColours.GREEN
+                )
         self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
@@ -213,50 +228,62 @@ class StatusLights:
         # and so on?
 
         # make patter is redundant here but its easier to just keep it here
-        pattern = make_pattern([
-            (LedColours.BLUE, 1),
-            (LedColours.OFF, 1)
-        ])
-        position = round(scale_value(
-            elapsed_time % self.IDK_PERIOD,
-            0,
-            self.IDK_PERIOD,
-            self.led_length,
-            -len(pattern)
-        ))
+        pattern = make_pattern([(LedColours.BLUE, 1), (LedColours.OFF, 1)])
+        position = round(
+            scale_value(
+                elapsed_time % self.IDK_PERIOD,
+                0,
+                self.IDK_PERIOD,
+                self.led_length,
+                -len(pattern),
+            )
+        )
         led_data = []
         if position > 0:
             led_data.extend(
-                [wpilib.AddressableLED.LEDData(LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2]), wpilib.AddressableLED.LEDData(0, 0, 0)] * math.floor(position/2)
+                [
+                    wpilib.AddressableLED.LEDData(
+                        LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2]
+                    ),
+                    wpilib.AddressableLED.LEDData(0, 0, 0),
+                ]
+                * math.floor(position / 2)
             )
             led_data.extend(pattern)
         else:
             led_data.extend(pattern[-position:-1])
         leds_left = self.led_length - len(led_data)
         if leds_left > 0:
-            led_data.extend([wpilib.AddressableLED.LEDData(0, 0, 0), wpilib.AddressableLED.LEDData(LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2])] * (leds_left/2))
+            led_data.extend(
+                [
+                    wpilib.AddressableLED.LEDData(0, 0, 0),
+                    wpilib.AddressableLED.LEDData(
+                        LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2]
+                    ),
+                ]
+                * (leds_left / 2)
+            )
         self.leds.setData(led_data[: self.led_length])
 
     def execute(self):
-        if self.pattern == DisplayType.SOLID:
-            colors = self.calc_solid()
-        elif self.pattern == DisplayType.FLASH:
-            colors = self.calc_flash()
-        elif self.pattern == DisplayType.PULSE:
-            colors = self.calc_pulse()
-        elif self.pattern == DisplayType.RAINBOW:
-            colors = self.calc_rainb()
-        elif self.pattern == DisplayType.HALF_HALF:
-            self.calc_half()
-            return
-        elif self.pattern == DisplayType.PACMAN:
-            self.calc_pacma()
-            return # pacman sets LEDs 
-        elif self.pattern == DisplayType.IDK:
-                self.calc_idk() 
-                return # whatever this is sets LEDs
-        
+        match self.pattern:
+            case DisplayType.SOLID:
+                colors = self.calc_solid()
+            case DisplayType.FLASH:
+                colors = self.calc_flash()
+            case DisplayType.PULSE:
+                colors = self.calc_pulse()
+            case DisplayType.RAINBOW:
+                colors = self.calc_rainb()
+            case DisplayType.HALF_HALF:
+                self.calc_half()
+                return
+            case DisplayType.PACMAN:
+                self.calc_pacma()
+                return  # pacman sets LEDs
+            case DisplayType.IDK:
+                self.calc_idk()
+                return  # whatever this is sets LEDs
 
         self.single_led_data.setHSV(colors[0], colors[1], colors[2])
         self.leds.setData(self.leds_data)
-
