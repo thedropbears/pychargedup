@@ -91,21 +91,19 @@ class StatusLights:
         self.color = color
 
     def set_piece(self, piece: Piece):
-        match piece:
-            case Piece.CONE:
-                self.set_color(LedColours.YELLOW)
-            case Piece.CUBE:
-                self.set_color(LedColours.VIOLET)
-            case Piece.NONE:
-                self.set_color(LedColours.OFF)
+        if piece == Piece.CONE:
+            self.set_color(LedColours.YELLOW)
+        elif piece == Piece.CUBE:
+            self.set_color(LedColours.VIOLET)
+        elif piece == Piece.NONE:
+            self.set_color(LedColours.OFF)
 
     def set_state(self, state: RobotState):
-        match state:
-            case RobotState.PICKED_UP_PIECE:
-                self.pattern = DisplayType.SOLID
-            case RobotState.LOOKING_FOR_PIECE:
-                self.pattern = DisplayType.HALF_HALF
-            case RobotState.OTHER:
+        if state == RobotState.PICKED_UP_PIECE:
+            self.pattern = DisplayType.SOLID
+        elif state == RobotState.LOOKING_FOR_PIECE:
+            self.pattern = DisplayType.HALF_HALF
+        elif state == RobotState.OTHER:
                 self.set_color(LedColours.OFF)
 
     def set_intake_side(self, side: PickupFromSide):
@@ -240,24 +238,24 @@ class StatusLights:
         self.leds.setData(led_data[: self.led_length])
 
     def execute(self):
-        match self.pattern:
-            case DisplayType.SOLID:
-                colors = self.calc_solid()
-            case DisplayType.FLASH:
-                colors = self.calc_flash()
-            case DisplayType.PULSE:
-                colors = self.calc_pulse()
-            case DisplayType.RAINBOW:
-                colors = self.calc_rainb()
-            case DisplayType.HALF_HALF:
-                self.calc_half()
-                return
-            case DisplayType.PACMAN:
-                self.calc_pacma()
-                return # pacman sets LEDs 
-            case DisplayType.IDK:
+        if self.pattern == DisplayType.SOLID:
+            colors = self.calc_solid()
+        elif self.pattern == DisplayType.FLASH:
+            colors = self.calc_flash()
+        elif self.pattern == DisplayType.PULSE:
+            colors = self.calc_pulse()
+        elif self.pattern == DisplayType.RAINBOW:
+            colors = self.calc_rainb()
+        elif self.pattern == DisplayType.HALF_HALF:
+            self.calc_half()
+            return
+        elif self.pattern == DisplayType.PACMAN:
+            self.calc_pacma()
+            return # pacman sets LEDs 
+        elif self.pattern == DisplayType.IDK:
                 self.calc_idk() 
                 return # whatever this is sets LEDs
+        
 
         self.single_led_data.setHSV(colors[0], colors[1], colors[2])
         self.leds.setData(self.leds_data)
