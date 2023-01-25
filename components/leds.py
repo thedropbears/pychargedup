@@ -4,7 +4,7 @@ import random
 import time
 from enum import Enum, auto
 from typing import List, Optional, Tuple
-from utilities.scalers import scale_value
+from utilities.scalers import scale_value 
 
 
 MAX_BRIGHTNESS = 180  # Between 0-255 of Value on HSV scale
