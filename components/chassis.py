@@ -169,10 +169,11 @@ class SwerveModule:
 
 
 class Chassis:
-    # assumes square chassis
-    WIDTH = 0.6167  # meters between modules from CAD
-    # distace from center to wheels
-    WHEEL_DIST = math.sqrt(2) * WIDTH / 2
+    # metres between centre of left and right wheels
+    TRACK_WIDTH = 0.6167
+    # metres between centre of front and back wheels
+    WHEEL_BASE = 0.6167
+
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
 
@@ -199,24 +200,24 @@ class Chassis:
         self.modules = [
             # Front Left
             SwerveModule(
-                self.WIDTH / 2,
-                self.WIDTH / 2,
+                self.WHEEL_BASE / 2,
+                self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_1,
                 CanIds.Chassis.steer_1,
                 CanIds.Chassis.encoder_1,
             ),
             # Back Left
             SwerveModule(
-                -self.WIDTH / 2,
-                self.WIDTH / 2,
+                -self.WHEEL_BASE / 2,
+                self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_2,
                 CanIds.Chassis.steer_2,
                 CanIds.Chassis.encoder_2,
             ),
             # Back Right
             SwerveModule(
-                -self.WIDTH / 2,
-                -self.WIDTH / 2,
+                -self.WHEEL_BASE / 2,
+                -self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_3,
                 CanIds.Chassis.steer_3,
                 CanIds.Chassis.encoder_3,
@@ -224,8 +225,8 @@ class Chassis:
             ),
             # Front Right
             SwerveModule(
-                self.WIDTH / 2,
-                -self.WIDTH / 2,
+                self.WHEEL_BASE / 2,
+                -self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_4,
                 CanIds.Chassis.steer_4,
                 CanIds.Chassis.encoder_4,
