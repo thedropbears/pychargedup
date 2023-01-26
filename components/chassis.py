@@ -170,9 +170,9 @@ class SwerveModule:
 
 class Chassis:
     # metres between centre of left and right wheels
-    TRACK_WIDTH = 0.6167
+    TRACK_WIDTH = 0.54665
     # metres between centre of front and back wheels
-    WHEEL_BASE = 0.6167
+    WHEEL_BASE = 0.68665
 
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
