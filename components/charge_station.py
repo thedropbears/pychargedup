@@ -1,29 +1,27 @@
 import wpilib
-import numpy as np
 from enum import Enum, auto
 from controllers.movement import Movement
-from wpimath.geometry import Pose2d, Rotation2d
+from wpimath.geometry import Pose2d
 from components.chassis import Chassis
 
-def slippage(
-    value: int,
-    slippage: int,
-    wanted: int
-) -> bool:
+
+def slippage(value: int, slippage: int, wanted: int) -> bool:
     (min, max) = (value * (1 - (slippage / 100)), value * (1 + (slippage / 100)))
     return min < wanted < max
 
+
 class ChargeStationState(Enum):
-    OFF    = auto()
+    OFF = auto()
     MIDWAY = auto()
-    ON     = auto()
+    ON = auto()
+
 
 class ChargeStation:
     gyro: wpilib.interfaces.Gyro
     movement: Movement
 
     GYRO_CENTER = 1
-    GYRO_OFFSET = 1.
+    GYRO_OFFSET = 1.0
 
     TILTED_STATION_DEGREES = 11
 
@@ -41,7 +39,7 @@ class ChargeStation:
 
     def get_angle(self) -> float:
         return self.gyro.getAngle()
-    
+
     def set_state(self, state: ChargeStationState) -> None:
         self.state = state
 
@@ -53,8 +51,8 @@ class ChargeStation:
         # check if we are now on the charge station
         if slippage(
             self.get_angle(),
-            2, # 2% slippage, so if we are 2% of 11deg it still counts as being on the dashboard
-            11
+            2,  # 2% slippage, so if we are 2% of 11deg it still counts as being on the dashboard
+            11,
         ):
             self.state = ChargeStationState.MIDWAY
         else:
@@ -67,15 +65,15 @@ class ChargeStation:
         # check if the charge station is level
         if slippage(
             self.get_angle(),
-            2, # 2% slippage, so if we are 2% of 0deg it still counts as being on the dashboard
-            0
+            2,  # 2% slippage, so if we are 2% of 0deg it still counts as being on the dashboard
+            0,
         ):
             self.state = ChargeStationState.ON
         else:
             self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
 
     def move_on(self) -> None:
-        return # nothing to do here
+        return  # nothing to do here
 
     def execute(self) -> None:
         if self.state == ChargeStationState.OFF:
