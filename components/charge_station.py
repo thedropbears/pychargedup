@@ -10,17 +10,20 @@ Allows for {slippage}% error for value to be close to
 
 slippage goes both ways, so setting {slippage} to 1 would allow 1% error over {wanted} and 1% under {wanted}
 """
+
+
 def slippage(value: int, slippage: int, wanted: int) -> bool:
-    floor  = value * (1 - (slippage / 100))
+    floor = value * (1 - (slippage / 100))
     high = value * (1 + (slippage / 100))
     return floor < wanted < high
 
 
 class ChargeStationState(Enum):
     NOT_ALIGNED = auto()
-    OFF         = auto()
-    MIDWAY      = auto()
-    ON          = auto()
+    OFF = auto()
+    MIDWAY = auto()
+    ON = auto()
+
 
 class ChargeStation:
     chassis: Chassis
@@ -82,11 +85,11 @@ class ChargeStation:
             else:
                 self.steps += 1
         elif self.get_angle() < 0:
-            self.steps = 0 # set the steps at 0deg to 0
+            self.steps = 0  # set the steps at 0deg to 0
             (new_x, new_y) = (x, y - self.ADJUSTMENT_METERS)
             self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
         else:
-            self.steps = 0 # ''
+            self.steps = 0  # ''
             self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
 
     def start(self) -> None:
@@ -106,7 +109,10 @@ class ChargeStation:
             self.move_off()
         elif self.state == ChargeStationState.MIDWAY:
             self.move_midway()
-        elif self.state == ChargeStationState.ON or self.state == ChargeStationState.NOT_ALIGNED:
+        elif (
+            self.state == ChargeStationState.ON
+            or self.state == ChargeStationState.NOT_ALIGNED
+        ):
             return
             """
             ON means that we dont need to move, NOT_ALIGNED means that we are not aligned with the charge station and should not move
