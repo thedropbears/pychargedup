@@ -20,7 +20,7 @@ class Vision:
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 0.1
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 0.4
     ANGULAR_STD_DEV_CONSTANT = 0.5
 
     field: wpilib.Field2d
@@ -38,8 +38,8 @@ class Vision:
                 ).inverse(),
             )
             for (n, x, y, z, roll, pitch, yaw) in [
-                ("C922_Left", 369.86, 52.23, 220.41, 0.0, 21.65, 149.79),
-                ("C920_Right", 369.86, -52.23, 220.41, 0.0, 21.65, -149.79),
+                ("C922_Left", 0.36986, 0.05223, 0.22041, 0.0, 0.02165, 0.14979),
+                ("C920_Right", 0.36986, -0.05223, 0.22041, 0.0, 0.02165, -0.14979),
             ]
         ]
         self.timestamps = [0] * len(self.cameras)
