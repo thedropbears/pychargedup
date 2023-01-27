@@ -11,19 +11,13 @@ def slippage(value: int, slippage: int, wanted: int) -> bool:
 
 
 class ChargeStationState(Enum):
-<<<<<<< HEAD
     NOT_ALIGNED = auto()
     OFF         = auto()
     MIDWAY      = auto()
     ON          = auto()
-=======
-    OFF = auto()
-    MIDWAY = auto()
-    ON = auto()
-
->>>>>>> 2b1187c0fbee56d3b823ede909819e0260e4b16b
 
 class ChargeStation:
+    chassis: Chassis
     gyro: wpilib.interfaces.Gyro
     movement: Movement
 
@@ -38,18 +32,16 @@ class ChargeStation:
     """ steps at 0deg to count as level""" 
     steps = 0
 
-    def __init__(self, movement: Movement, chassis: Chassis):
-        self.gyro = chassis.imu
+    def __init__(self):
         self.state = ChargeStationState.OFF
-        self.movement = movement
 
     def setup(self) -> None:
-        self.gyro.initGyro()
-        self.gyro.calibrate()
+        self.chassis.imu.initGyro()
+        self.chassis.imu.calibrate()
         # self.gyro.reset() is this needed?
 
     def get_angle(self) -> float:
-        return self.gyro.getAngle()
+        return self.chassis.imu.getAngle()
 
     def set_state(self, state: ChargeStationState) -> None:
         self.state = state
