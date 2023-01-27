@@ -29,7 +29,7 @@ class Movement(StateMachine):
     field: Field2d
 
     # This vairable controls if trajectory generation will be set up for debugging
-    # When on True, a trajectory is genearted every code run and will consistently
+    # When on True, a trajectory is generated every code run and will consistently
     # be painted onto Glass' SmartDashboard.
     # When on False, a trajectory is only generated when needed to save robotRIO resources.
     debug_trajectory = tunable(False)
@@ -177,7 +177,7 @@ class Movement(StateMachine):
     @state
     def score(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
-            self.set_goal(Pose2d(0.9, 0.9, 0), Rotation2d.fromDegrees(180))
+            self.set_goal(Pose2d(2, 3.5, math.pi), Rotation2d.fromDegrees(180))
             self.calc_trajectory = self.generate_trajectory()
 
         if self.is_at_goal():
@@ -200,7 +200,7 @@ class Movement(StateMachine):
     @state(first=True)
     def pickup(self, state_tm: float, initial_call: bool) -> None:
         if initial_call:
-            self.set_goal(Pose2d(1.6, 2, math.pi), Rotation2d(math.pi))
+            self.set_goal(Pose2d(3, 2, 0), Rotation2d(0))
             self.calc_trajectory = self.generate_trajectory()
 
         if self.is_at_goal():
