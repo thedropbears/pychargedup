@@ -19,10 +19,6 @@ class Vision:
         robotpy_apriltag.loadAprilTagLayoutField(
             robotpy_apriltag.AprilTagField.k2023ChargedUp
         )
-        if False
-        else robotpy_apriltag.AprilTagFieldLayout(
-            wpilib.getDeployDirectory() + "/test_field_layout.json"
-        )
     )
 
     # TBD
