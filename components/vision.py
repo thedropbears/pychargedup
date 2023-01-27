@@ -44,8 +44,8 @@ class Vision:
                 ).inverse(),
             )
             for (n, x, y, z, roll, pitch, yaw) in [
-                ("forward_camera", -0.35, 0.01, 0.11, 5.0, 0.0, 178.0),
-                ("camera_2", -0.35, 0.01, 0.11, 5.0, 0.0, 178.0),
+                ("C922_Right", -369.86, -52.23, 220.41, 0.0, 21.65, 149.79),
+                ("C920_Left", 369.86, 52.23, 220.41, 0.0, 21.65, -149.79),
             ]
         ]
         self.timestamps = [0] * len(self.cameras)
