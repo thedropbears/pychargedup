@@ -3,6 +3,7 @@ from enum import Enum, auto
 from controllers.movement import Movement
 from wpimath.geometry import Pose2d
 from components.chassis import Chassis
+import navx
 
 
 """
@@ -24,11 +25,8 @@ class ChargeStationState(Enum):
 
 class ChargeStation:
     chassis: Chassis
-    gyro: wpilib.interfaces.Gyro
+    gyro: navx.AHRS
     movement: Movement
-
-    GYRO_CENTER = 1
-    GYRO_OFFSET = 1.0
 
     TILTED_STATION_DEGREES = 11
 
@@ -61,7 +59,7 @@ class ChargeStation:
         if slippage(
             self.get_angle(),
             2,  # 2% slippage, so if we are 2% of 11deg it still counts as being on the dashboard
-            11,
+            self.TILTED_STATION_DEGREES,
         ):
             self.state = ChargeStationState.MIDWAY
         else:
