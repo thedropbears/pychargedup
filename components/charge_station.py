@@ -1,4 +1,3 @@
-import wpilib
 from enum import Enum, auto
 from controllers.movement import Movement
 from wpimath.geometry import Pose2d
