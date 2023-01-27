@@ -100,14 +100,9 @@ class SwerveModule:
         self.drive.config_kI(0, 0, 10)
         self.drive.config_kD(0, 0, 10)
 
-        # Configure encoder
-        self.encoder.configFeedbackCoefficient(
-            math.tau / 4096, "rad", ctre.SensorTimeBase.PerSecond, timeoutMs=10
-        )
-
     def get_angle_absolute(self) -> float:
-        """Gets steer angle from absolute encoder"""
-        return self.encoder.getAbsolutePosition()
+        """Gets steer angle (radians) from absolute encoder"""
+        return math.radians(self.encoder.getAbsolutePosition())
 
     def get_angle_integrated(self) -> float:
         """Gets steer angle from motor's integrated relative encoder"""
@@ -221,7 +216,6 @@ class Chassis:
                 CanIds.Chassis.drive_3,
                 CanIds.Chassis.steer_3,
                 CanIds.Chassis.encoder_3,
-                drive_reversed=True,
             ),
             # Front Right
             SwerveModule(
@@ -230,7 +224,6 @@ class Chassis:
                 CanIds.Chassis.drive_4,
                 CanIds.Chassis.steer_4,
                 CanIds.Chassis.encoder_4,
-                drive_reversed=True,
             ),
         ]
 
