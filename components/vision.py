@@ -15,14 +15,12 @@ from photonvision import (
 class Vision:
     chassis: Chassis
 
-    FIELD_LAYOUT = (
-        robotpy_apriltag.loadAprilTagLayoutField(
-            robotpy_apriltag.AprilTagField.k2023ChargedUp
-        )
+    FIELD_LAYOUT = robotpy_apriltag.loadAprilTagLayoutField(
+        robotpy_apriltag.AprilTagField.k2023ChargedUp
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 1.0
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 0.1
     ANGULAR_STD_DEV_CONSTANT = 0.5
 
     field: wpilib.Field2d
@@ -81,7 +79,7 @@ class Vision:
                     ),
                 )
                 self.pose_log_entry.append(
-                    [pose.X(), pose.Y(), pose.rotation().radians()], timestamp
+                    [pose.X(), pose.Y(), pose.rotation().radians()], int(timestamp)
                 )
 
 
