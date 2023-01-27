@@ -69,15 +69,17 @@ class Vision:
                 pose = estimate_pos_from_apriltag(trans, t)
                 if pose is None:
                     continue
+
                 self.chassis.estimator.addVisionMeasurement(
                     pose,
-                    timestamp,
+                    timestamp*1,
                     (
                         Vision.X_STD_DEV_CONSTANT,
                         Vision.Y_STD_DEV_CONSTANT,
                         Vision.ANGULAR_STD_DEV_CONSTANT,
                     ),
                 )
+
                 self.pose_log_entry.append(
                     [pose.X(), pose.Y(), pose.rotation().radians()], int(timestamp)
                 )
