@@ -14,9 +14,10 @@ def slippage(
     return min < wanted < max
 
 class ChargeStationState(Enum):
-    OFF    = auto()
-    MIDWAY = auto()
-    ON     = auto()
+    NOT_ALIGNED = auto()
+    OFF         = auto()
+    MIDWAY      = auto()
+    ON          = auto()
 
 class ChargeStation:
     gyro: wpilib.interfaces.Gyro
@@ -28,6 +29,10 @@ class ChargeStation:
     TILTED_STATION_DEGREES = 11
 
     ADJUSTMENT_METERS = 0.1
+
+    REQUIRED_STEPS = 10
+    """ steps at 0deg to count as level""" 
+    steps = 0
 
     def __init__(self, movement: Movement, chassis: Chassis):
         self.gyro = chassis.imu
@@ -70,19 +75,30 @@ class ChargeStation:
             2, # 2% slippage, so if we are 2% of 0deg it still counts as being on the dashboard
             0
         ):
-            self.state = ChargeStationState.ON
+            if self.steps == 9:
+                self.state = ChargeStationState.ON
+            else:
+                self.steps += 1
+        elif self.get_angle() < 0: 
+            self.steps = 0 # set the steps at 0deg to 0
+            (new_x, new_y) = (x, y - self.ADJUSTMENT_METERS)
+            self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
         else:
+            self.steps = 0 # ''
             self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
 
-    def move_on(self) -> None:
-        return # nothing to do here
+    def start(self) -> None:
+        self.state = ChargeStationState.OFF
+
+    def done(self) -> None:
+        self.state = ChargeStationState.NOT_ALIGNED
 
     def execute(self) -> None:
         if self.state == ChargeStationState.OFF:
             self.move_off()
         elif self.state == ChargeStationState.MIDWAY:
             self.move_midway()
-        elif self.state == ChargeStationState.ON:
-            self.move_on()
+        elif self.state == ChargeStationState.ON or self.state == ChargeStationState.NOT_ALIGNED:
+            return
 
-        return
+        
