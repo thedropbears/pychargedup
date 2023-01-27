@@ -1,6 +1,6 @@
 from components.chassis import Chassis
 import wpilib
-import wpiutil
+import wpiutil.log
 import robotpy_apriltag
 from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
 from typing import Optional
@@ -52,7 +52,9 @@ class Vision:
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
-        self.pose_log_entry = wpiutil.log.FloatArrayLogEntry(self.data_log, "vision_pose")
+        self.pose_log_entry = wpiutil.log.FloatArrayLogEntry(
+            self.data_log, "vision_pose"
+        )
 
     def execute(self) -> None:
         if not self.enabled:
@@ -71,16 +73,20 @@ class Vision:
                     print(f"Invalid ag id {tag_id}")
                     continue
                 pose = estimate_pos_from_apriltag(trans, t)
+                if pose is None:
+                    continue
                 self.chassis.estimator.addVisionMeasurement(
                     pose,
                     timestamp,
-                    [
+                    (
                         Vision.X_STD_DEV_CONSTANT,
                         Vision.Y_STD_DEV_CONSTANT,
                         Vision.ANGULAR_STD_DEV_CONSTANT,
-                    ],
+                    ),
                 )
-                self.pose_log_entry.append([pose.X(), pose.Y(), pose.rotation().radians()], timestamp)
+                self.pose_log_entry.append(
+                    [pose.X(), pose.Y(), pose.rotation().radians()], timestamp
+                )
 
 
 def estimate_pos_from_apriltag(
