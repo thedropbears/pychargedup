@@ -42,7 +42,7 @@ class ChargeStation:
     def setup(self) -> None:
         self.gyro.initGyro()
         self.gyro.calibrate()
-        # self.gyro.reset()
+        # self.gyro.reset() is this needed?
 
     def get_angle(self) -> float:
         return self.gyro.getAngle()
@@ -88,9 +88,15 @@ class ChargeStation:
             self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
 
     def start(self) -> None:
+        """
+        a function to tell the controller to start moving onto the station
+        """
         self.state = ChargeStationState.OFF
 
     def done(self) -> None:
+        """
+        a function to tell the controller to stop moving onto the station
+        """
         self.state = ChargeStationState.NOT_ALIGNED
 
     def execute(self) -> None:
@@ -99,6 +105,10 @@ class ChargeStation:
         elif self.state == ChargeStationState.MIDWAY:
             self.move_midway()
         elif self.state == ChargeStationState.ON or self.state == ChargeStationState.NOT_ALIGNED:
-            return
+            return 
+            """
+            ON means that we dont need to move, NOT_ALIGNED means that we are not aligned with the charge station and should not move
+            these are different values for readability 
+            """
 
         
