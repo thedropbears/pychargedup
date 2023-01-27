@@ -35,7 +35,7 @@ class ChargeStation:
     ADJUSTMENT_METERS = 0.1
 
     REQUIRED_STEPS = 10
-    """ steps at 0deg to count as level""" 
+    """ steps at 0deg to count as level"""
     steps = 0
 
     def __init__(self, movement: Movement, chassis: Chassis):
@@ -83,7 +83,7 @@ class ChargeStation:
                 self.state = ChargeStationState.ON
             else:
                 self.steps += 1
-        elif self.get_angle() < 0: 
+        elif self.get_angle() < 0:
             self.steps = 0 # set the steps at 0deg to 0
             (new_x, new_y) = (x, y - self.ADJUSTMENT_METERS)
             self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
@@ -109,10 +109,8 @@ class ChargeStation:
         elif self.state == ChargeStationState.MIDWAY:
             self.move_midway()
         elif self.state == ChargeStationState.ON or self.state == ChargeStationState.NOT_ALIGNED:
-            return 
+            return
             """
             ON means that we dont need to move, NOT_ALIGNED means that we are not aligned with the charge station and should not move
-            these are different values for readability 
+            these are different values for readability
             """
-
-        
