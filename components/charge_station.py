@@ -5,9 +5,15 @@ from wpimath.geometry import Pose2d
 from components.chassis import Chassis
 
 
+"""
+Allows for {slippage}% error for value to be close to
+
+slippage goes both ways, so setting {slippage} to 1 would allow 1% error over {wanted} and 1% under {wanted}
+"""
 def slippage(value: int, slippage: int, wanted: int) -> bool:
-    (min, max) = (value * (1 - (slippage / 100)), value * (1 + (slippage / 100)))
-    return min < wanted < max
+    floor  = value * (1 - (slippage / 100))
+    high = value * (1 + (slippage / 100))
+    return floor < wanted < high
 
 
 class ChargeStationState(Enum):
