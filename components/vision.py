@@ -38,11 +38,11 @@ class Vision:
                 ).inverse(),
             )
             for (n, x, y, z, roll, pitch, yaw) in [
-                ("C922_Left", 0.36986, 0.05223, 0.22041, 0.0, 0.02165, 0.14979),
-                ("C920_Right", 0.36986, -0.05223, 0.22041, 0.0, 0.02165, -0.14979),
+                ("C922_Left", 0.36986, 0.05223, 0.22041, 0.0, 0, 149.79),
+                ("C920_Right", 0.36986, -0.05223, 0.22041, 0.0, 0, -149.79),
             ]
         ]
-        self.timestamps = [0] * len(self.cameras)
+        self.last_timestamps = [0] * len(self.cameras)
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
@@ -54,15 +54,21 @@ class Vision:
         if not self.enabled:
             return
         for i, (c, trans) in enumerate(self.cameras):
+            # if results didnt see any targets
             if not (results := c.getLatestResult()).hasTargets():
                 continue
-            if (timestamp := results.getTimestamp()) == self.timestamps[
+            # if we have already processed these results
+            if (timestamp := results.getTimestamp()) == self.last_timestamps[
                 i
             ] and wpilib.RobotBase.isReal():
                 continue
-            self.timestamps[i] = timestamp
+            # if the result is too old
+            if wpilib.Timer.getFPGATimestamp() - timestamp > 1.0:
+                continue
+            self.last_timestamps[i] = timestamp
             for t in results.getTargets():
                 tag_id = t.getFiducialId()
+                # tag isnt one thats on the field
                 if tag_id < 0 or tag_id > 8:
                     print(f"Invalid ag id {tag_id}")
                     continue
@@ -72,7 +78,7 @@ class Vision:
 
                 self.chassis.estimator.addVisionMeasurement(
                     pose,
-                    timestamp*1,
+                    timestamp,
                     (
                         Vision.X_STD_DEV_CONSTANT,
                         Vision.Y_STD_DEV_CONSTANT,
