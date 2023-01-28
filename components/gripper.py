@@ -5,16 +5,16 @@ class Gripper:
     gripper_solenoid: wpilib.DoubleSolenoid
 
     def __init__(self):
-        self.is_gripper_open = True
+        self.opened = False
 
     def open(self):
-        pass
+        self.opened = True
 
     def close(self):
-        pass
+        self.opened = False
 
     def execute(self):
-        if self.is_gripper_open:
+        if self.opened:
             self.gripper_solenoid.set(value=wpilib.DoubleSolenoid.Value.kForward)
         else:
             self.gripper_solenoid.set(value=wpilib.DoubleSolenoid.Value.kReverse)
