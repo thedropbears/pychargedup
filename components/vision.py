@@ -2,9 +2,10 @@ from components.chassis import Chassis
 import wpilib
 import wpiutil.log
 import robotpy_apriltag
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
+from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Quaternion
 from typing import Optional
 from magicbot import tunable
+import math
 
 from photonvision import (
     PhotonCamera,
@@ -30,16 +31,19 @@ class Vision:
     enabled = tunable(True)
 
     def __init__(self) -> None:
+        left_rot = Rotation3d(Quaternion(0.2679, -0.1853, 0.0304, -0.9449))
+        right_rot = Rotation3d(Quaternion(0.2679, 0.1853, 0.0304, -0.9449))
+        # flip to facing forwards
+        left_rot.rotateBy(Rotation3d(0, 0, math.pi))
+        right_rot.rotateBy(Rotation3d(0, 0, math.pi))
         self.cameras = [  # (Camera object, camera-to-robot transform)
             (
                 PhotonCamera(n),
-                Transform3d(
-                    Translation3d(x, y, z), Rotation3d.fromDegrees(roll, pitch, yaw)
-                ).inverse(),
+                Transform3d(Translation3d(x, y, z), rot).inverse(),
             )
-            for (n, x, y, z, roll, pitch, yaw) in [
-                ("C922_Left", 0.36986, 0.05223, 0.22041, 0.0, 0, 149.79),
-                ("C920_Right", 0.36986, -0.05223, 0.22041, 0.0, 0, -149.79),
+            for (n, x, y, z, rot) in [
+                ("C922_Left", 0.36986, 0.05223, 0.22041, left_rot),
+                ("C920_Right", 0.36986, -0.05223, 0.22041, right_rot),
             ]
         ]
         self.last_timestamps = [0] * len(self.cameras)
@@ -55,8 +59,6 @@ class Vision:
         )
 
     def execute(self) -> None:
-        if not self.enabled:
-            return
         for i, (c, trans) in enumerate(self.cameras):
             # if results didnt see any targets
             if not (results := c.getLatestResult()).hasTargets():
@@ -66,6 +68,7 @@ class Vision:
                 i
             ] and wpilib.RobotBase.isReal():
                 continue
+            print(timestamp, wpilib.Timer.getFPGATimestamp())
             # if the result is too old
             if abs(wpilib.Timer.getFPGATimestamp() - timestamp) > 0.5:
                 continue
@@ -81,15 +84,16 @@ class Vision:
                 if pose is None:
                     continue
 
-                self.chassis.estimator.addVisionMeasurement(
-                    pose,
-                    timestamp,
-                    (
-                        Vision.X_STD_DEV_CONSTANT,
-                        Vision.Y_STD_DEV_CONSTANT,
-                        Vision.ANGULAR_STD_DEV_CONSTANT,
-                    ),
-                )
+                if self.enabled:
+                    self.chassis.estimator.addVisionMeasurement(
+                        pose,
+                        timestamp,
+                        (
+                            Vision.X_STD_DEV_CONSTANT,
+                            Vision.Y_STD_DEV_CONSTANT,
+                            Vision.ANGULAR_STD_DEV_CONSTANT,
+                        ),
+                    )
                 if self.should_log:
                     cur_pose = self.chassis.get_pose()
                     self.pose_log_entry.append(
@@ -98,6 +102,7 @@ class Vision:
                     trans_error = cur_pose.translation().distance(pose.translation())
                     rot_error = cur_pose.rotation() - pose.rotation()
                     self.pose_error_log_entry.append([trans_error, rot_error.radians()])
+                self.field_pos_obj.setPose(pose)
 
 
 def estimate_pos_from_apriltag(
