@@ -14,7 +14,7 @@ class Claw:
     def close_gripper(self):
         is_gripper_open = False
 
-    def engage(self):
+    def execute(self):
         if self.is_gripper_open:
             self.gripper_solenoid.set(value=wpilib.DoubleSolenoid.Value.kForward)
         else:
