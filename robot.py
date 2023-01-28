@@ -2,12 +2,16 @@
 
 import wpilib
 import magicbot
+from rev import CANSparkMax
+import ids
+from wpilib import DoubleSolenoid
 
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm
 from utilities.scalers import rescale_js
+from components.intake import Intake
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -18,6 +22,7 @@ class MyRobot(magicbot.MagicRobot):
     chassis: Chassis
     vision: Vision
     arm: Arm
+    intake: Intake
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -27,6 +32,14 @@ class MyRobot(magicbot.MagicRobot):
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
+        self.intake_motor = CANSparkMax(
+            ids.CanIds.Intake.intake_motor, CANSparkMax.MotorType.kBrushless
+        )
+        self.intake_piston = DoubleSolenoid(
+            wpilib.PneumaticsModuleType.CTREPCM,
+            ids.PcmChannels.Intake.intake_piston_forward,
+            ids.PcmChannels.Intake.intake_piston_reverse,
+        )
 
     def teleopPeriodic(self) -> None:
         drop_off = self.gamepad.getAButton()
@@ -35,6 +48,12 @@ class MyRobot(magicbot.MagicRobot):
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
+
+        if self.gamepad.getYButtonPressed():
+            self.intake.retract()
+
+        if self.gamepad.getXButtonPressed():
+            self.intake.deploy()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
