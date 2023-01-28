@@ -27,6 +27,14 @@ class MyRobot(magicbot.MagicRobot):
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
+        self.intake_motor = CANSparkMax(
+            ids.CanIds.Intake.intake_motor, CANSparkMax.MotorType.kBrushless
+        )
+        self.intake_piston = DoubleSolenoid(
+            wpilib.PneumaticsModuleType.CTREPCM,
+            ids.PcmChannels.Intake.intake_piston_forward,
+            ids.PcmChannels.Intake.intake_piston_reverse,
+        )
 
     def teleopPeriodic(self) -> None:
         drop_off = self.gamepad.getAButton()
