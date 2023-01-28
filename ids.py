@@ -24,9 +24,16 @@ class CanIds:
         rotation_right = 14
         extension = 15
 
+    class Intake:
+        intake_motor = 16
+
 
 class PcmChannels:
     arm_brake = 4
+
+    class Intake:
+        intake_piston_forward = 6
+        intake_piston_reverse = 7
 
 
 class PwmChannels:
