@@ -36,6 +36,12 @@ class MyRobot(magicbot.MagicRobot):
     def teleopInit(self) -> None:
         self.vision.add_to_estimator = True
 
+        self.gripper_solenoid = DoubleSolenoid(
+            wpilib.PneumaticsModuleType.CTREPCM,
+            ids.PcmChannels.Gripper.gripper_solenoid_forward,
+            ids.PcmChannels.Gripper.gripper_solenoid_reverse,
+        )
+
     def teleopPeriodic(self) -> None:
         autodrive = self.gamepad.getAButton()
         spin_rate = 6
