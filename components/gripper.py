@@ -7,10 +7,10 @@ class Gripper:
     def __init__(self):
         self.is_gripper_open = True
 
-    def open_gripper(self):
+    def open(self):
         pass
 
-    def close_gripper(self):
+    def close(self):
         pass
 
     def execute(self):
