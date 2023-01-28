@@ -20,8 +20,8 @@ class Vision:
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 0.4
-    ANGULAR_STD_DEV_CONSTANT = 0.5
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 9999.0
+    ANGULAR_STD_DEV_CONSTANT = 99999.0
 
     field: wpilib.Field2d
 
@@ -43,11 +43,15 @@ class Vision:
             ]
         ]
         self.last_timestamps = [0] * len(self.cameras)
+        self.should_log = False
 
     def setup(self) -> None:
         self.field_pos_obj = self.field.getObject("vision_pose")
         self.pose_log_entry = wpiutil.log.FloatArrayLogEntry(
             self.data_log, "vision_pose"
+        )
+        self.pose_error_log_entry = wpiutil.log.FloatArrayLogEntry(
+            self.data_log, "vision_error"
         )
 
     def execute(self) -> None:
@@ -63,8 +67,9 @@ class Vision:
             ] and wpilib.RobotBase.isReal():
                 continue
             # if the result is too old
-            if wpilib.Timer.getFPGATimestamp() - timestamp > 1.0:
+            if abs(wpilib.Timer.getFPGATimestamp() - timestamp) > 0.5:
                 continue
+
             self.last_timestamps[i] = timestamp
             for t in results.getTargets():
                 tag_id = t.getFiducialId()
@@ -85,10 +90,14 @@ class Vision:
                         Vision.ANGULAR_STD_DEV_CONSTANT,
                     ),
                 )
-
-                self.pose_log_entry.append(
-                    [pose.X(), pose.Y(), pose.rotation().radians()], int(timestamp)
-                )
+                if self.should_log:
+                    cur_pose = self.chassis.get_pose()
+                    self.pose_log_entry.append(
+                        [pose.X(), pose.Y(), pose.rotation().radians()]
+                    )
+                    trans_error = cur_pose.translation().distance(pose.translation())
+                    rot_error = cur_pose.rotation() - pose.rotation()
+                    self.pose_error_log_entry.append([trans_error, rot_error.radians()])
 
 
 def estimate_pos_from_apriltag(
