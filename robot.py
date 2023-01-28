@@ -22,6 +22,7 @@ class MyRobot(magicbot.MagicRobot):
     chassis: Chassis
     vision: Vision
     arm: Arm
+    intake: Intake
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -47,6 +48,12 @@ class MyRobot(magicbot.MagicRobot):
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
+
+        if self.gamepad.getYButtonPressed():
+            self.intake.retract()
+
+        if self.gamepad.getXButtonPressed():
+            self.intake.deploy()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
