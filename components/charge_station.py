@@ -3,8 +3,7 @@ from enum import Enum, auto
 from controllers.movement import Movement
 from wpimath.geometry import Pose2d
 from components.chassis import Chassis
-import navx
-
+import time
 
 """
 Allows for {slippage}% error for value to be close to
@@ -21,32 +20,27 @@ def slippage(value: int, slippage: int, wanted: int) -> bool:
 
 class ChargeStationState(Enum):
     NOT_ALIGNED = auto()
-    OFF = auto()
-    MIDWAY = auto()
-    ON = auto()
+    OFF         = auto()
+    MIDWAY      = auto()
+    ON          = auto()
 
 
 class ChargeStation:
     chassis: Chassis
-    gyro: navx.AHRS
     movement: Movement
 
     TILTED_STATION_DEGREES = 11
 
     ADJUSTMENT_METERS = 0.1
 
-    REQUIRED_STEPS = 10
-    """ steps at 0deg to count as level"""
-    steps = 0
+    REQUIRED_SECONDS = 5.
+    """ seconds at 0deg to count as level"""
+    steps = 0.
+    start_time = 0.
 
     def __init__(self):
         self.state = ChargeStationState.OFF
-
-    def setup(self) -> None:
-        self.chassis.imu.initGyro()
-        self.chassis.imu.calibrate()
-        # self.gyro.reset() is this needed?
-
+        
     def get_angle(self) -> float:
         return self.chassis.imu.getAngle()
 
@@ -78,10 +72,12 @@ class ChargeStation:
             2,  # 2% slippage, so if we are 2% of 0deg it still counts as being on the dashboard
             0,
         ):
-            if self.steps == 9:
+            if self.steps == 0:
+                self.start_time = time.monotonic()
+            elif self.steps >= self.start_time + self.REQUIRED_SECONDS:
                 self.state = ChargeStationState.ON
             else:
-                self.steps += 1
+                self.steps = time.monotonic()
         elif self.get_angle() < 0:
             self.steps = 0  # set the steps at 0deg to 0
             (new_x, new_y) = (x, y - self.ADJUSTMENT_METERS)
