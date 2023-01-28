@@ -2,10 +2,9 @@ import wpilib
 
 
 class Claw:
+    gripper_solenoid: wpilib.DoubleSolenoid
+
     def __init__(self):
-        self.gripper_solenoid = wpilib.DoubleSolenoid(
-            wpilib.PneumaticsModuleType.CTREPCM, forwardChannel=0, reverseChannel=1
-        )
         self.is_gripper_open = True
 
     def open_gripper(self):
