@@ -41,7 +41,8 @@ class PcmChannels:
 
 
 class PwmChannels:
-    ...
+    class Gripper:
+        gripper_game_piece_switch = 0
 
 
 # recursively get all attributes

@@ -2,6 +2,9 @@
 
 import wpilib
 import magicbot
+from rev import CANSparkMax
+import ids
+from wpilib import DoubleSolenoid, DigitalInput
 
 
 from controllers.movement import Movement
@@ -42,6 +45,10 @@ class MyRobot(magicbot.MagicRobot):
             ids.PcmChannels.Gripper.gripper_solenoid_reverse,
         )
 
+        self.gripper_game_piece_switch = DigitalInput(
+            ids.PwmChannels.Gripper.gripper_game_piece_switch
+        )
+
     def teleopPeriodic(self) -> None:
         autodrive = self.gamepad.getAButton()
         spin_rate = 6
@@ -55,6 +62,12 @@ class MyRobot(magicbot.MagicRobot):
 
         if self.gamepad.getXButtonPressed():
             self.intake.deploy()
+
+        if self.gamepad.getAButtonPressed():
+            self.gripper.open()
+
+        if self.gripper.game_piece_in_reach():
+            self.gripper.close()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if autodrive:
