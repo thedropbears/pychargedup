@@ -19,9 +19,9 @@ def slippage(value: int, slippage: int, wanted: int) -> bool:
 
 class ChargeStationState(Enum):
     NOT_ALIGNED = auto()
-    OFF         = auto()
-    MIDWAY      = auto()
-    ON          = auto()
+    OFF = auto()
+    MIDWAY = auto()
+    ON = auto()
 
 
 class ChargeStation:
@@ -32,14 +32,14 @@ class ChargeStation:
 
     ADJUSTMENT_METERS = 0.1
 
-    REQUIRED_SECONDS = 5.
+    REQUIRED_SECONDS = 5.0
     """ seconds at 0deg to count as level"""
-    steps = 0.
-    start_time = 0.
+    steps = 0.0
+    start_time = 0.0
 
     def __init__(self):
         self.state = ChargeStationState.OFF
-        
+
     def get_angle(self) -> float:
         return self.chassis.imu.getAngle()
 
