@@ -1,17 +1,17 @@
 import wpilib
 
 
-class Claw:
+class Gripper:
     gripper_solenoid: wpilib.DoubleSolenoid
 
     def __init__(self):
         self.is_gripper_open = True
 
     def open_gripper(self):
-        is_gripper_open = True
+        pass
 
     def close_gripper(self):
-        is_gripper_open = False
+        pass
 
     def execute(self):
         if self.is_gripper_open:

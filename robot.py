@@ -10,7 +10,7 @@ from components.vision import Vision
 from components.arm import Arm
 from utilities.scalers import rescale_js
 from components.intake import Intake
-from components.claw import Claw
+from components.gripper import Gripper
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -22,7 +22,7 @@ class MyRobot(magicbot.MagicRobot):
     vision: Vision
     arm: Arm
     intake: Intake
-    claw: Claw
+    gripper: Gripper
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -71,9 +71,9 @@ class MyRobot(magicbot.MagicRobot):
         # self.arm.execute()
 
         if self.Xbox.getYButtonPressed():
-            self.claw.open_gripper()
+            self.gripper.open_gripper()
         if self.Xbox.getXButtonPressed():
-            self.claw.close_gripper()
+            self.gripper.close_gripper()
 
 
 if __name__ == "__main__":
