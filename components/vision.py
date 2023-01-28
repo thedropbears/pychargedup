@@ -21,14 +21,14 @@ class Vision:
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 9999.0
-    ANGULAR_STD_DEV_CONSTANT = 99999.0
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 1.0
+    ANGULAR_STD_DEV_CONSTANT = 1.0
 
     field: wpilib.Field2d
 
     data_log: wpiutil.log.DataLog
 
-    enabled = tunable(True)
+    enabled = tunable(False)
 
     def __init__(self) -> None:
         left_rot = Rotation3d(Quaternion(0.2679, -0.1853, 0.0304, -0.9449))
@@ -53,9 +53,6 @@ class Vision:
         self.field_pos_obj = self.field.getObject("vision_pose")
         self.pose_log_entry = wpiutil.log.FloatArrayLogEntry(
             self.data_log, "vision_pose"
-        )
-        self.pose_error_log_entry = wpiutil.log.FloatArrayLogEntry(
-            self.data_log, "vision_error"
         )
 
     def execute(self) -> None:
@@ -95,13 +92,33 @@ class Vision:
                         ),
                     )
                 if self.should_log:
-                    cur_pose = self.chassis.get_pose()
-                    self.pose_log_entry.append(
-                        [pose.X(), pose.Y(), pose.rotation().radians()]
+                    ground_truth_pose = self.chassis.get_pose()
+                    tag_frame_angle = t.getYaw()
+                    tag_skew = t.getSkew()
+                    tag_ambiguity = t.getPoseAmbiguity()
+                    trans_error = ground_truth_pose.translation().distance(
+                        pose.translation()
                     )
-                    trans_error = cur_pose.translation().distance(pose.translation())
-                    rot_error = cur_pose.rotation() - pose.rotation()
-                    self.pose_error_log_entry.append([trans_error, rot_error.radians()])
+                    rot_error: float = (
+                        ground_truth_pose.rotation() - pose.rotation()
+                    ).radians()
+                    tag_area = t.getArea()
+
+                    self.pose_log_entry.append(
+                        [
+                            pose.X(),
+                            pose.Y(),
+                            pose.rotation().radians(),
+                            trans_error,
+                            rot_error,
+                            ground_truth_pose.x,
+                            ground_truth_pose.y,
+                            tag_frame_angle,
+                            tag_skew,
+                            tag_ambiguity,
+                            tag_area,
+                        ]
+                    )
                 self.field_pos_obj.setPose(pose)
 
 
