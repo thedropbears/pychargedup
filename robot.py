@@ -2,12 +2,16 @@
 
 import wpilib
 import magicbot
+from rev import CANSparkMax
+import ids
+from wpilib import DoubleSolenoid
 
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm
 from utilities.scalers import rescale_js
+from components.intake import Intake
 
 
 class MyRobot(magicbot.MagicRobot):
