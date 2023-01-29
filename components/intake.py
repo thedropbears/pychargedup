@@ -1,10 +1,12 @@
 from rev import CANSparkMax
 from wpilib import DoubleSolenoid, PneumaticsModuleType
-from magicbot import tunable
+from magicbot import tunable, StateMachine, state, default_state
 import ids
 
 
-class Intake:
+class Intake(StateMachine):
+    intake_motor: CANSparkMax
+    intake_piston: DoubleSolenoid
     intake_speed = tunable(0.5)
 
     def __init__(self):
@@ -18,7 +20,7 @@ class Intake:
             ids.PcmChannels.Intake.intake_piston_reverse,
         )
 
-    def execute(self):
+    def update_intake(self):
         if self.deployed:
             self.piston.set(DoubleSolenoid.Value.kForward)
             self.motor.set(self.intake_speed)
@@ -26,8 +28,16 @@ class Intake:
             self.piston.set(DoubleSolenoid.Value.kReverse)
             self.motor.set(0.0)
 
-    def deploy(self):
+    @state
+    def intaking(self):
         self.deployed = True
+        self.update_intake()
 
-    def retract(self):
+    @default_state
+    def retracted(self):
         self.deployed = False
+        self.update_intake()
+    
+    def do_intake(self):
+        self.next_state("intaking")
+        self.engage()

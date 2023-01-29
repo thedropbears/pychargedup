@@ -39,10 +39,7 @@ class MyRobot(magicbot.MagicRobot):
         local_driving = self.gamepad.getBButton()
 
         if self.gamepad.getYButtonPressed():
-            self.intake.retract()
-
-        if self.gamepad.getXButtonPressed():
-            self.intake.deploy()
+            self.intake.do_intake()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
