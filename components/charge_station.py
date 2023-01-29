@@ -11,7 +11,7 @@ slippage goes both ways, so setting {slippage} to 1 would allow 1% error over {w
 """
 
 
-def slippage(value: int, slippage: int, wanted: int) -> bool:
+def slippage(value: float, slippage: float, wanted: float) -> bool:
     floor = value * (1 - (slippage / 100))
     high = value * (1 + (slippage / 100))
     return floor < wanted < high
@@ -26,11 +26,11 @@ class ChargeStationState(Enum):
 
 class ChargeStation:
     chassis: Chassis
-    movement: Movement
 
     TILTED_STATION_DEGREES = 11
 
-    ADJUSTMENT_METERS = 0.1
+    ADJUSTMENT = 1
+    """ The velocity to move the chassis at to adjust tha position """
 
     REQUIRED_SECONDS = 5.
     """ seconds at 0deg to count as level"""
@@ -47,10 +47,6 @@ class ChargeStation:
         self.state = state
 
     def move_off(self) -> None:
-        # assuming we are already aligned with the station
-        current_goal: Pose2d = self.movement.goal
-        (x, y) = (current_goal.X(), current_goal.Y())
-        (new_x, new_y) = (x, y + self.ADJUSTMENT_METERS)
         # check if we are now on the charge station
         if slippage(
             self.get_angle(),
@@ -59,12 +55,9 @@ class ChargeStation:
         ):
             self.state = ChargeStationState.MIDWAY
         else:
-            self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
+            self.chassis.drive_local(0, self.ADJUSTMENT, 0)
 
     def move_midway(self) -> None:
-        current_goal: Pose2d = self.movement.goal
-        (x, y) = (current_goal.X(), current_goal.Y())
-        (new_x, new_y) = (x, y + self.ADJUSTMENT_METERS)
         # check if the charge station is level
         if slippage(
             self.get_angle(),
@@ -79,11 +72,10 @@ class ChargeStation:
                 self.steps = time.monotonic()
         elif self.get_angle() < 0:
             self.steps = 0  # set the steps at 0deg to 0
-            (new_x, new_y) = (x, y - self.ADJUSTMENT_METERS)
-            self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
+            self.chassis.drive_local(0, -self.ADJUSTMENT, 0)
         else:
             self.steps = 0  # ''
-            self.movement.set_goal(Pose2d(new_x, new_y, current_goal.rotation()))
+            self.chassis.drive_local(0, self.ADJUSTMENT, 0)
 
     def start(self) -> None:
         """
