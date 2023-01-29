@@ -1,6 +1,6 @@
 from rev import CANSparkMax
-from wpilib import DoubleSolenoid
-from magicbot import tunable, StateMachine, state, default_state
+from wpilib import DoubleSolenoid, Timer
+from magicbot import tunable, StateMachine, state, default_state, feedback
 
 
 class Intake(StateMachine):
@@ -8,27 +8,27 @@ class Intake(StateMachine):
     intake_piston: DoubleSolenoid
     intake_speed = tunable(0.5)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.deployed = False
-
-    def update_intake(self):
-        if self.deployed:
-            self.intake_piston.set(DoubleSolenoid.Value.kForward)
-            self.intake_motor.set(self.intake_speed)
-        else:
-            self.intake_piston.set(DoubleSolenoid.Value.kReverse)
-            self.intake_motor.set(0.0)
+        self.last_x_status = False
 
     @state
-    def intaking(self):
-        self.deployed = True
-        self.update_intake()
+    def intake(self) -> None:
+        self.intake_piston.set(DoubleSolenoid.Value.kForward)
+        self.intake_motor.set(self.intake_speed)
 
-    @default_state
-    def retracted(self):
-        self.deployed = False
-        self.update_intake()
+    @state(first=True)
+    def retracted(self) -> None:
+        self.intake_piston.set(DoubleSolenoid.Value.kReverse)
+        self.intake_motor.set(0.0)
     
-    def do_intake(self):
-        self.next_state("intaking")
+    def do_intake(self, x_button) -> None:
+        if x_button:
+            if self.last_x_status == False:
+                self.deployed = not self.deployed
+            if self.deployed:
+                self.next_state("intake")
+            else:
+                self.next_state("retracted")
+        self.last_x_status = x_button
         self.engage()
