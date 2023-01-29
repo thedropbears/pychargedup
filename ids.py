@@ -41,6 +41,10 @@ class PcmChannels:
 
 
 class PwmChannels:
+    ...
+
+
+class DioChannels:
     class Gripper:
         gripper_game_piece_switch = 0
 

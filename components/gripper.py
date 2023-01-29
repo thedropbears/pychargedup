@@ -14,7 +14,7 @@ class Gripper:
         )
 
         self.game_piece_switch = DigitalInput(
-            ids.PwmChannels.Gripper.gripper_game_piece_switch
+            ids.DioChannels.Gripper.gripper_game_piece_switch
         )
 
     def open(self):
