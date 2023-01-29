@@ -1,12 +1,21 @@
-import wpilib
+from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
+
+import ids
 
 
 class Gripper:
-    solenoid: wpilib.DoubleSolenoid
-    game_piece_switch: wpilib.DigitalInput
-
     def __init__(self):
         self.opened = False
+
+        self.solenoid = DoubleSolenoid(
+            PneumaticsModuleType.CTREPCM,
+            ids.PcmChannels.Gripper.gripper_solenoid_forward,
+            ids.PcmChannels.Gripper.gripper_solenoid_reverse,
+        )
+
+        self.game_piece_switch = DigitalInput(
+            ids.PwmChannels.Gripper.gripper_game_piece_switch
+        )
 
     def open(self):
         self.opened = True
@@ -16,9 +25,9 @@ class Gripper:
 
     def execute(self):
         if self.opened:
-            self.solenoid.set(value=wpilib.DoubleSolenoid.Value.kForward)
+            self.solenoid.set(value=DoubleSolenoid.Value.kForward)
         else:
-            self.solenoid.set(value=wpilib.DoubleSolenoid.Value.kReverse)
+            self.solenoid.set(value=DoubleSolenoid.Value.kReverse)
 
     def game_piece_in_reach(self):
         return self.game_piece_switch.get()

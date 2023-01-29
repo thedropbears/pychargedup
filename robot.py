@@ -4,7 +4,7 @@ import wpilib
 import magicbot
 from rev import CANSparkMax
 import ids
-from wpilib import DoubleSolenoid, DigitalInput
+from wpilib import DoubleSolenoid
 
 
 from controllers.movement import Movement
@@ -38,16 +38,6 @@ class MyRobot(magicbot.MagicRobot):
 
     def teleopInit(self) -> None:
         self.vision.add_to_estimator = True
-
-        self.gripper_solenoid = DoubleSolenoid(
-            wpilib.PneumaticsModuleType.CTREPCM,
-            ids.PcmChannels.Gripper.gripper_solenoid_forward,
-            ids.PcmChannels.Gripper.gripper_solenoid_reverse,
-        )
-
-        self.gripper_game_piece_switch = DigitalInput(
-            ids.PwmChannels.Gripper.gripper_game_piece_switch
-        )
 
     def teleopPeriodic(self) -> None:
         autodrive = self.gamepad.getAButton()
