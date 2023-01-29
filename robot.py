@@ -89,9 +89,9 @@ class MyRobot(magicbot.MagicRobot):
 
         # self.arm.execute()
 
-        if self.Xbox.getYButtonPressed():
+        if self.gamepad.getYButtonPressed():
             self.gripper.open()
-        if self.Xbox.getXButtonPressed():
+        if self.gamepad.getXButtonPressed():
             self.gripper.close()
 
 
