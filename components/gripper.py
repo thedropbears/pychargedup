@@ -2,8 +2,8 @@ import wpilib
 
 
 class Gripper:
-    gripper_solenoid: wpilib.DoubleSolenoid
-    gripper_game_piece_switch: wpilib.DigitalInput
+    solenoid: wpilib.DoubleSolenoid
+    game_piece_switch: wpilib.DigitalInput
 
     def __init__(self):
         self.opened = False
@@ -16,9 +16,9 @@ class Gripper:
 
     def execute(self):
         if self.opened:
-            self.gripper_solenoid.set(value=wpilib.DoubleSolenoid.Value.kForward)
+            self.solenoid.set(value=wpilib.DoubleSolenoid.Value.kForward)
         else:
-            self.gripper_solenoid.set(value=wpilib.DoubleSolenoid.Value.kReverse)
+            self.solenoid.set(value=wpilib.DoubleSolenoid.Value.kReverse)
 
     def game_piece_in_reach(self):
-        return self.gripper_game_piece_switch.get()
+        return self.game_piece_switch.get()
