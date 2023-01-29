@@ -30,5 +30,7 @@ class Intake(StateMachine):
                 self.next_state("intake")
             else:
                 self.next_state("retracted")
-        self.last_x_status = x_button
+                
+        if self.last_x_status != x_button:
+            self.last_x_status = x_button
         self.engage()
