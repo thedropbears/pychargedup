@@ -3,6 +3,7 @@ from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
 from magicbot import tunable, StateMachine, state
 import ids
 
+
 class Intake(StateMachine):
     intake_speed = tunable(0.5)
 
@@ -28,10 +29,10 @@ class Intake(StateMachine):
     def retracted(self) -> None:
         self.piston.set(DoubleSolenoid.Value.kReverse)
         self.motor.set(0.0)
-    
+
     def do_intake(self, x_button) -> None:
         if x_button:
-            if self.last_x_status == False:
+            if self.last_x_status is False:
                 self.deployed = not self.deployed
 
         if self.deployed and self.current_state != "intake":
