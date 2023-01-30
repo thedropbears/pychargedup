@@ -1,3 +1,4 @@
+import math
 from components.chassis import Chassis
 import wpilib
 import wpiutil.log
@@ -110,24 +111,36 @@ class Vision:
                     )
                 if self.should_log:
                     ground_truth_pose = self.chassis.get_pose()
-                    trans_error = ground_truth_pose.translation().distance(
-                        pose.translation()
+                    trans_error1 = ground_truth_pose.translation().distance(
+                        poses[0].translation()
                     )
-                    rot_error: float = (
-                        ground_truth_pose.rotation() - pose.rotation()
+                    trans_error2 = ground_truth_pose.translation().distance(
+                        poses[1].translation()
+                    )
+                    rot_error1 = (
+                        ground_truth_pose.rotation() - poses[0].rotation()
                     ).radians()
+                    rot_error2 = (
+                        ground_truth_pose.rotation() - poses[1].rotation()
+                    ).radians()
+                    skew = get_target_skew(target)
 
                     self.pose_log_entry.append(
                         [
-                            pose.X(),
-                            pose.Y(),
-                            pose.rotation().radians(),
-                            trans_error,
-                            rot_error,
+                            poses[0].X(),
+                            poses[0].Y(),
+                            poses[0].rotation().radians(),
+                            trans_error1,  # error of main pose
+                            rot_error1,
+                            poses[1].X(),
+                            poses[1].Y(),
+                            poses[1].rotation().radians(),
+                            trans_error2,
+                            rot_error2,
                             ground_truth_pose.x,
                             ground_truth_pose.y,
                             target.getYaw(),
-                            0,  # TODO: get skew, photonvision dosent return it
+                            skew,
                             target.getPoseAmbiguity(),
                             target.getArea(),
                             target.getFiducialId(),
@@ -159,6 +172,11 @@ def estimate_poses_from_apriltag(
         .toPose2d()
     )
     return best_pose, alternate_pose
+
+
+def get_target_skew(target: PhotonTrackedTarget):
+    tag_to_cam = target.getBestCameraToTarget().inverse()
+    return math.atan2(tag_to_cam.y, tag_to_cam.x)
 
 
 def choose_pose(
