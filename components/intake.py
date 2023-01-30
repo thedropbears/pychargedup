@@ -21,7 +21,7 @@ class Intake():
 
     def do_intake(self) -> None:
         self.deployed = True
-    
+
     def end_intake(self) -> None:
         self.deployed = False
 
