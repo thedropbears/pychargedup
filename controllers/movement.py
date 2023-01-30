@@ -197,8 +197,8 @@ class Movement(StateMachine):
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """
-        vx, vy: velocities in meters/s
-        vz: rotational velocity in rads/s
+        vx, vy: velocities in m/s
+        vz: rotational velocity in rad/s
         local: drive reletive to robot frame rather than global frame
         """
         self.inputs = (vx, vy, vz)
