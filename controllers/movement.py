@@ -45,7 +45,6 @@ class Movement(StateMachine):
         self.set_goal(
             Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
         )
-        self.generate_trajectory()
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -120,15 +119,21 @@ class Movement(StateMachine):
         self.robot_object.setTrajectory(trajectory)
         return trajectory
 
-    def set_goal(self, goal: Pose2d, approach_direction: Rotation2d) -> None:
+    def set_goal(
+        self, goal: Pose2d, approach_direction: Rotation2d, slow_dist=0.5
+    ) -> None:
         if goal != self.goal:
             self.goal = goal
             self.goal_approach_dir = approach_direction
 
-            self.config = TrajectoryConfig(1.5, 1.5)
-            self.config.addConstraint(CentripetalAccelerationConstraint(1))
-            topRight = Translation2d(self.goal.X() + 0.5, self.goal.Y() + 0.5)
-            bottomLeft = Translation2d(self.goal.X() - 0.5, self.goal.Y() - 0.5)
+            self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
+            self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
+            topRight = Translation2d(
+                self.goal.X() + slow_dist, self.goal.Y() + slow_dist
+            )
+            bottomLeft = Translation2d(
+                self.goal.X() - slow_dist, self.goal.Y() - slow_dist
+            )
             self.config.addConstraint(
                 RectangularRegionConstraint(
                     bottomLeft, topRight, MaxVelocityConstraint(0.5)
@@ -176,6 +181,8 @@ class Movement(StateMachine):
         if initial_call:
             self.trajectory = self.generate_trajectory()
 
+        self.execute_trajectory(self.trajectory, state_tm)
+
         if self.is_at_goal():
             # self.done()
             ...
@@ -187,8 +194,6 @@ class Movement(StateMachine):
             # TODO Tell other components to prepare for action
             # print("Preparing for scoring")
             ...
-
-        self.execute_trajectory(self.trajectory, state_tm)
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """
