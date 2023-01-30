@@ -30,7 +30,13 @@ class Intake(StateMachine):
         self.piston.set(DoubleSolenoid.Value.kReverse)
         self.motor.set(0.0)
 
-    def do_intake(self, x_button) -> None:
+    def do_intake(self) -> None:
+        self.deployed = True
+    
+    def end_intake(self) -> None:
+        self.deployed = False
+
+    def check_state(self, x_button) -> None:
         if x_button and self.last_x_status is False:
             self.deployed = not self.deployed
 
