@@ -4,11 +4,11 @@ import wpilib
 import magicbot
 
 from controllers.movement import Movement
+from components.intake import Intake
 from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm
 from utilities.scalers import rescale_js
-from components.intake import Intake
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -39,7 +39,7 @@ class MyRobot(magicbot.MagicRobot):
         local_driving = self.gamepad.getBButton()
         x_button = self.gamepad.getXButton()
 
-        self.intake.check_state(x_button)
+        self.intake.update_component(x_button)
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
