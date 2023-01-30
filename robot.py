@@ -37,7 +37,7 @@ class MyRobot(magicbot.MagicRobot):
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
-        x_button = self.gamepad.getXButtonPressed()
+        x_button = self.gamepad.getXButton()
 
         self.intake.do_intake(x_button)
 

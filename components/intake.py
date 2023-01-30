@@ -33,12 +33,13 @@ class Intake(StateMachine):
         if x_button:
             if self.last_x_status == False:
                 self.deployed = not self.deployed
-            if self.deployed:
-                self.next_state("intake")
-            else:
-                self.next_state("retracted")
+
+        if self.deployed and self.current_state != "intake":
+            self.next_state("intake")
+        elif not self.deployed and self.current_state != "retracted":
+            self.next_state("retracted")
         
-        if self.break_beam.get() and self.current_state == "intake":
+        if not self.break_beam.get() and self.current_state == "intake":
             self.deployed = False
 
         if self.last_x_status != x_button:
