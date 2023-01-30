@@ -31,7 +31,6 @@ class MyRobot(magicbot.MagicRobot):
         wpilib.SmartDashboard.putData(self.field)
 
     def teleopInit(self) -> None:
-        self.arm.on_enable()
         self.vision.add_to_estimator = True
 
     def teleopPeriodic(self) -> None:
