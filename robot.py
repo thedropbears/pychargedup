@@ -30,8 +30,11 @@ class MyRobot(magicbot.MagicRobot):
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
+    def teleopInit(self) -> None:
+        self.vision.add_to_estimator = True
+
     def teleopPeriodic(self) -> None:
-        drop_off = self.gamepad.getAButton()
+        autodrive = self.gamepad.getAButton()
         spin_rate = 6
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * Chassis.max_wheel_speed
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
@@ -45,12 +48,12 @@ class MyRobot(magicbot.MagicRobot):
             self.intake.deploy()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
-
-        if drop_off:
-            self.movement.do_trajectory()
+        if autodrive:
+            self.movement.do_autodrive()
 
     def testInit(self) -> None:
         self.arm.on_enable()
+        self.vision.add_to_estimator = False
 
     def testPeriodic(self) -> None:
         right_trigger = self.gamepad.getRightTriggerAxis()
@@ -63,6 +66,14 @@ class MyRobot(magicbot.MagicRobot):
         # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
 
         # self.arm.execute()
+
+        self.vision.execute()
+
+    def disabledInit(self) -> None:
+        self.vision.add_to_estimator = False
+
+    def disabledPeriodic(self):
+        self.vision.execute()
 
 
 if __name__ == "__main__":
