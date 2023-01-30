@@ -1,6 +1,6 @@
 from rev import CANSparkMax
-from wpilib import DoubleSolenoid, Timer, DigitalInput, PneumaticsModuleType
-from magicbot import tunable, StateMachine, state, default_state, feedback
+from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
+from magicbot import tunable, StateMachine, state
 import ids
 
 class Intake(StateMachine):
@@ -12,10 +12,10 @@ class Intake(StateMachine):
         self.deployed = False
         self.last_x_status = False
         self.break_beam = DigitalInput(0)
-        self.motor = CANSparkMax(
+        self.inatke_motor = CANSparkMax(
             ids.CanIds.Intake.intake_motor, CANSparkMax.MotorType.kBrushless
         )
-        self.piston = DoubleSolenoid(
+        self.intake_piston = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,
             ids.PcmChannels.Intake.intake_piston_forward,
             ids.PcmChannels.Intake.intake_piston_reverse,
@@ -64,9 +64,6 @@ class Intake(StateMachine):
         if self.break_beam.get() and self.current_state == "intake":
             self.deployed = False
 
-        if self.last_x_status != x_button:
-            self.last_x_status = x_button
-        self.engage()
         if self.last_x_status != x_button:
             self.last_x_status = x_button
         self.engage()
