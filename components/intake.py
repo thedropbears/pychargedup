@@ -33,5 +33,5 @@ class Intake():
             self.piston.set(DoubleSolenoid.Value.kReverse)
             self.motor.set(0.0)
 
-    def get_sensor_state(self) -> bool:
+    def get_break_beam_sensor_state(self) -> bool:
         return self.break_beam.get()
