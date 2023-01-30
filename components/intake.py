@@ -4,7 +4,7 @@ from magicbot import tunable
 import ids
 
 
-class Intake():
+class Intake:
     intake_speed = tunable(0.5)
 
     def __init__(self) -> None:
