@@ -3,14 +3,11 @@ from wpilib import DoubleSolenoid, Timer, DigitalInput, PneumaticsModuleType
 from magicbot import tunable, StateMachine, state, default_state, feedback
 import ids
 
-
-class Intake(StateMachine):
 class Intake(StateMachine):
     intake_motor: CANSparkMax
     intake_piston: DoubleSolenoid
     intake_speed = tunable(0.5)
 
-    def __init__(self) -> None:
     def __init__(self) -> None:
         self.deployed = False
         self.last_x_status = False
