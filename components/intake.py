@@ -31,15 +31,14 @@ class Intake(StateMachine):
         self.motor.set(0.0)
 
     def do_intake(self, x_button) -> None:
-        if x_button:
-            if self.last_x_status is False:
-                self.deployed = not self.deployed
+        if x_button and self.last_x_status is False:
+            self.deployed = not self.deployed
 
         if self.deployed and self.current_state != "intake":
             self.next_state("intake")
         elif not self.deployed and self.current_state != "retracted":
             self.next_state("retracted")
-        
+
         if not self.break_beam.get() and self.current_state == "intake":
             self.deployed = False
 
