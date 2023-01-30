@@ -1,5 +1,5 @@
 from rev import CANSparkMax
-from wpilib import DoubleSolenoid, Timer
+from wpilib import DoubleSolenoid, Timer, DigitalInput
 from magicbot import tunable, StateMachine, state, default_state, feedback
 
 
@@ -11,6 +11,7 @@ class Intake(StateMachine):
     def __init__(self) -> None:
         self.deployed = False
         self.last_x_status = False
+        self.break_beam = DigitalInput(0)
 
     @state
     def intake(self) -> None:
@@ -30,7 +31,10 @@ class Intake(StateMachine):
                 self.next_state("intake")
             else:
                 self.next_state("retracted")
-                
+        
+        if self.break_beam.get() and self.current_state == "intake":
+            self.deployed = False
+
         if self.last_x_status != x_button:
             self.last_x_status = x_button
         self.engage()
