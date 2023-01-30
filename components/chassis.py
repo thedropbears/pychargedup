@@ -127,7 +127,7 @@ class SwerveModule:
             self.state = desired_state
         self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
 
-        if abs(self.state.speed) < 1e-3:
+        if abs(self.state.speed) < 0.01:
             self.drive.set(ctre.ControlMode.Velocity, 0)
             self.steer.set(ctre.ControlMode.PercentOutput, 0)
             return
@@ -248,7 +248,7 @@ class Chassis:
         self.module_objs: list[wpilib.FieldObject2d] = []
         for idx, _module in enumerate(self.modules):
             self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
-        self.set_pose(Pose2d(0, 0, Rotation2d.fromDegrees(0)))
+        self.set_pose(Pose2d(4, 3.5, Rotation2d.fromDegrees(180)))
 
     def drive_field(self, vx: float, vy: float, omega: float) -> None:
         """Field oriented drive commands"""
