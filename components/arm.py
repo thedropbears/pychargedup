@@ -1,5 +1,5 @@
 from magicbot import feedback, tunable
-from rev import CANSparkMax, SparkMaxAbsoluteEncoder
+from rev import CANSparkMax
 from ids import CanIds, PcmChannels
 import math
 from wpilib import Solenoid, PneumaticsModuleType
@@ -10,17 +10,23 @@ from wpimath.controller import (
 )
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
+from utilities.rev import SparkMaxAbsoluteEncoderWrapper
 from dataclasses import dataclass
 
 
 class Arm:
+    # height of the center of rotation off the ground
+    HEIGHT = 1
     MIN_EXTENSION = 0.7  # meters
     MAX_EXTENSION = 1.3
 
     ROTATE_GEAR_RATIO = (60 / 25) * (60 / 25) * (70 / 20)
-    SPOOL_DIAMETER = 0.05
-    EXTEND_OUTPUT_RATIO = (1 / 7) * (math.pi * SPOOL_DIAMETER)  # converts to meters
+    SPOOL_DIAMETER = 0.05  # cm
+    EXTEND_GEAR_RATIO = 7 / 1
+    # converts from motor rotations to meters
+    EXTEND_OUTPUT_RATIO = 1 / EXTEND_GEAR_RATIO * math.pi * SPOOL_DIAMETER
     EXTEND_GRAVITY_FEEDFORWARD = 0
+    ROTATE_GRAVITY_FEEDFORWARDS = 0.5
 
     # Angle soft limits
     MIN_ANGLE = math.radians(-230)
@@ -51,24 +57,29 @@ class Arm:
         self._rotation_motor_right.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_right.setInverted(False)
 
-        self.rotation_encoder = self.rotation_motor.getAbsoluteEncoder(
-            SparkMaxAbsoluteEncoder.Type.kDutyCycle
+        self.rotation_encoder = SparkMaxAbsoluteEncoderWrapper(self.rotation_motor)
+        self.rotation_encoder.real_encoder.setZeroOffset(0)
+        self.rotation_encoder.real_encoder.setInverted(False)
+        # output position is conversion factor * motor rotations
+        # should be < 1
+        self.rotation_encoder.real_encoder.setPositionConversionFactor(
+            1 / self.ROTATE_GEAR_RATIO
         )
-        self.rotation_encoder.setZeroOffset(0)
-        self.rotation_encoder.setInverted(False)
-        # output position = conversion factor * motor rotations
-        self.rotation_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
-        # also go from RPM to RPS
-        self.rotation_encoder.setVelocityConversionFactor(self.ROTATE_GEAR_RATIO * 60)
+        # /60 to go from RPM to RPS
+        self.rotation_encoder.real_encoder.setVelocityConversionFactor(
+            1 / self.ROTATE_GEAR_RATIO / 60
+        )
 
         # TODO: get pid and feedforward values for arm and extension from sysid
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=3, maxAcceleration=3
+            maxVelocity=3, maxAcceleration=5
         )
-        self.rotation_controller = ProfiledPIDController(5, 0, 0, rotation_constraints)
-        self.rotation_ff = ArmFeedforward(kS=0.1, kG=3, kV=2, kA=0)
+        self.rotation_controller = ProfiledPIDController(2, 0, 0, rotation_constraints)
+        self.rotation_ff = ArmFeedforward(
+            kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=0, kA=1
+        )
 
         # Create extension things
         self.extension_motor = CANSparkMax(
@@ -92,24 +103,14 @@ class Arm:
             PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
         )
 
-    def execute(self) -> None:
-        # Clamp extension to not break max height rules
-        is_angle_forwards = math.copysign(self.get_angle() + math.pi / 2, 1)
-        is_goal_forwards = math.copysign(self.goal_angle + math.pi / 2, 1)
-        # if we plan on rotating overhead
-        is_going_over = is_angle_forwards != is_goal_forwards
-        # if we are currently overhead
-        is_currently_up = (
-            self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
-        )
-        should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
-        actual_extension_goal = (
-            self.MIN_EXTENSION if should_retract else self.goal_extension
-        )
+    def setup(self):
+        self.set_setpoint(Setpoints.PICKUP_CONE)
 
+    def execute(self) -> None:
+        extension_goal = self.get_max_extension()
         # Calculate extension motor output
         pid_output = self.extension_controller.calculate(
-            self.get_extension(), actual_extension_goal
+            self.get_extension(), extension_goal
         )
         setpoint: TrapezoidProfile.State = self.extension_controller.getSetpoint()
         self.calculate_extension_feedforward(setpoint.velocity)
@@ -121,10 +122,25 @@ class Arm:
             return
 
         # Calculate rotation motor output
-        pid_output = self.rotation_controller.calculate(self.get_angle())
+        pid_output = self.rotation_controller.calculate(
+            self.get_angle(), self.goal_angle
+        )
         setpoint = self.rotation_controller.getSetpoint()
         rotation_ff = self.calculate_rotation_feedforwards(setpoint.velocity)
         self.rotation_motor.set(pid_output + rotation_ff)
+
+    def get_max_extension(self):
+        """Gets the max extension to not exceed the height limit for the current angle and goal"""
+        is_angle_forwards = math.copysign(self.get_angle() + math.pi / 2, 1)
+        is_goal_forwards = math.copysign(self.goal_angle + math.pi / 2, 1)
+        # if we plan on rotating overhead
+        is_going_over = is_angle_forwards != is_goal_forwards
+        # if we are currently overhead
+        is_currently_up = (
+            self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
+        )
+        should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
+        return self.MIN_EXTENSION if should_retract else self.goal_extension
 
     def calculate_rotation_feedforwards(self, next_speed: float) -> float:
         """Calculate feedforwards voltage.
@@ -162,7 +178,11 @@ class Arm:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, self.MIN_EXTENSION, self.MAX_EXTENSION)
 
-    DEFAULT_ALLOWABLE_ANGLE_ERROR = math.radians(5)
+    def set_setpoint(self, value: "Setpoint"):
+        self.set_length(value.extension)
+        self.set_angle(value.angle)
+
+    DEFAULT_ALLOWABLE_ANGLE_ERROR = math.radians(2)
 
     def at_goal_angle(
         self, allowable_error: float = DEFAULT_ALLOWABLE_ANGLE_ERROR
@@ -190,7 +210,7 @@ class Arm:
 @dataclass
 class Setpoint:
     # arm angle in radians
-    # angle of 0 points towards positive x i.e. at the intake
+    # angle of 0 points towards positive X, at the intake
     # positive counterclockwise when looking at the left side of the robot
     angle: float
     # extension in meters, length from center of rotation to center of where pieces are held in the end effector

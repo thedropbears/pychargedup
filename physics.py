@@ -4,9 +4,12 @@ import math
 import typing
 
 import ctre
-import wpilib.simulation
+import wpilib
+from wpilib.simulation import SingleJointedArmSim, SimDeviceSim
 from pyfrc.physics.core import PhysicsInterface
 from wpimath.kinematics import SwerveDrive4Kinematics
+from wpimath.system.plant import DCMotor
+from wpimath.trajectory import TrapezoidProfile
 
 from components.chassis import SwerveModule
 from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
@@ -65,11 +68,52 @@ class PhysicsEngine:
             )
             for module in robot.chassis.modules
         ]
+        self.arm = robot.arm
+        arm_motors_sim = DCMotor.NEO(2)
+        arm_len = (robot.arm.MIN_EXTENSION + robot.arm.MAX_EXTENSION) / 2
+        arm_mass = 5
+        moi = SingleJointedArmSim.estimateMOI(arm_len, arm_mass)
+        self.arm_sim = SingleJointedArmSim(
+            arm_motors_sim,
+            robot.arm.ROTATE_GEAR_RATIO,
+            moi,
+            arm_len,
+            -robot.arm.MAX_ANGLE,
+            -robot.arm.MIN_ANGLE,
+            arm_mass,
+            True,
+            [math.radians(0.01)],
+        )
 
-        self.imu = wpilib.simulation.SimDeviceSim("navX-Sensor", 4)
+        self.arm_mech2d = wpilib.Mechanism2d(3, 2)
+        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", robot.arm.HEIGHT, 1.5)
+        arm_pivot.appendLigament("ArmTower", robot.arm.HEIGHT - 0.05, -90)
+        self.arm_ligament = arm_pivot.appendLigament(
+            "Arm", robot.arm.MIN_EXTENSION, self.arm_sim.getAngleDegrees()
+        )
+        self.arm_goal_ligament = arm_pivot.appendLigament(
+            "Arm_goal",
+            robot.arm.MIN_EXTENSION,
+            self.arm_sim.getAngleDegrees(),
+            3,
+            wpilib.Color8Bit(235 // 2, 137 // 2, 52 // 2),
+        )
+        wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
+
+        self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
 
     def update_sim(self, now: float, tm_diff: float) -> None:
+        self.arm_sim.setInputVoltage(
+            -self.arm.rotation_motor.get() * wpilib.RobotController.getBatteryVoltage()
+        )
+        self.arm_sim.update(tm_diff)
+        self.arm.rotation_encoder.set_position(-self.arm_sim.getAngle())
+        self.arm.rotation_encoder.set_velocity(-self.arm_sim.getVelocity())
+        self.arm_ligament.setAngle(self.arm_sim.getAngleDegrees())
+        s: TrapezoidProfile.State = self.arm.rotation_controller.getSetpoint()
+        self.arm_goal_ligament.setAngle(-math.degrees(s.position))
+
         for wheel in self.wheels:
             wheel.update(tm_diff)
         for steer in self.steer:
