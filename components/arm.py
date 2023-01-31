@@ -10,6 +10,7 @@ from wpimath.controller import (
 )
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
+from dataclasses import dataclass
 
 
 class Arm:
@@ -145,7 +146,7 @@ class Arm:
         return self.rotation_encoder.getPosition()
 
     def get_arm_speed(self) -> float:
-        """Get the speed of the arm in RPS"""
+        """Get the speed of the arm in Rotations/s"""
         return self.rotation_encoder.getVelocity()
 
     @feedback
@@ -172,7 +173,7 @@ class Arm:
         return abs(self.get_extension() - self.goal_extension) < allowable_error
 
     def is_angle_still(self, allowable_speed=0.01) -> bool:
-        """Is the arm currently not moving, allowable speed is in RPS"""
+        """Is the arm currently not moving, allowable speed is in Rotations/s"""
         return abs(self.get_arm_speed()) < allowable_speed
 
     def brake(self):
@@ -181,54 +182,42 @@ class Arm:
     def unbrake(self):
         self.brake_solenoid.set(False)
 
-    def set_target(self, x: float, z: float) -> None:
-        """Set a position in terms of x and y to move the arm to.
-        x: the x position to move the arm to
-        z: the z position to move the arm to
-        """
-        *target, reachable = self.get_arm_from_target(x, z)
-
-        self.set_angle(target[0])
-        self.set_length(target[1])
-
-    def get_arm_from_target(self, x: float, z: float) -> tuple[float, float, bool]:
-        """z (1.3m)
-                        |
-                        |
-        (-1.3m) --------o------- x (1.3m)
-                        |
-                        |
-                        z (-1.3m)
-
-        o is the center of the arm
-
-        x, z: the forward (x) and vertical (z) position to move the arm to in meters reletive
-            to the center of the arm
-
-        returns (
-            radians needed to get to (x,z),
-            arm length needed to get to (x,z)
-            If the position is reachable
-        )
-        If the position is not reachable it clamps it to something that is and gives False
-        """
-        reachable = True
-        # first, get the arm length needed
-        arm_extension = math.sqrt(x**2 + z**2)
-        if arm_extension < self.MIN_EXTENSION or arm_extension > self.MAX_EXTENSION:
-            reachable = False
-            arm_extension = clamp(arm_extension, self.MIN_EXTENSION, self.MAX_EXTENSION)
-
-        # then, get the angle needed from the origin
-        arm_angle = math.atan2(z, x)
-
-        # if the arm can't move to angle_from_origin, return none values
-        if arm_angle > self.MAX_ANGLE or arm_angle < self.MIN_ANGLE:
-            reachable = False
-            arm_angle = clamp(arm_angle, self.MIN_ANGLE, self.MAX_ANGLE)
-
-        return (arm_angle, arm_extension, reachable)
-
     def on_enable(self):
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
+
+
+@dataclass
+class Setpoint:
+    # arm angle in radians
+    # angle of 0 points towards positive x i.e. at the intake
+    # positive counterclockwise when looking at the left side of the robot
+    angle: float
+    # extension in meters, length from center of rotation to center of where pieces are held in the end effector
+    extension: float
+
+    def __init__(self, angle: float, extension: float):
+        self.extension = clamp(extension, Arm.MIN_EXTENSION, Arm.MAX_EXTENSION)
+        if angle > Arm.MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
+            angle -= math.tau
+        self.angle = clamp(angle, Arm.MIN_ANGLE, Arm.MAX_ANGLE)
+
+        if self.angle != angle or self.extension != extension:
+            print(
+                "SETPOINT WAS CLAMPED", (angle, extension), (self.angle, self.extension)
+            )
+            raise ValueError()
+
+    @staticmethod
+    def fromCartesian(x: float, z: float) -> "Setpoint":
+        """Sets a cartesian goal reletive to the arms axle"""
+        return Setpoint(math.atan2(-z, x), math.hypot(x, z))
+
+
+class Setpoints:
+    PICKUP_CONE = Setpoint(-math.pi, Arm.MIN_EXTENSION + 0.05)
+    HANDOFF = Setpoint(Arm.MAX_ANGLE, Arm.MIN_EXTENSION)
+    SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
+    SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
+    SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.42)
+    SCORE_CUBE_HIGH = Setpoint.fromCartesian(-1.22, 0.10)
