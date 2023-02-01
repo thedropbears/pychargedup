@@ -1,5 +1,7 @@
+import typing
 from magicbot import feedback, tunable
 from rev import CANSparkMax
+import wpilib
 from ids import CanIds, PcmChannels, DioChannels
 import math
 from wpilib import (
@@ -81,7 +83,7 @@ class Arm:
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=3, maxAcceleration=3
+            maxVelocity=4, maxAcceleration=5
         )
         self.rotation_controller = ProfiledPIDController(24, 0, 0, rotation_constraints)
         self.rotation_ff = ArmFeedforward(
@@ -102,7 +104,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(self.MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            48, 0, 0, TrapezoidProfile.Constraints(maxVelocity=2.5, maxAcceleration=5)
+            48, 0, 0, TrapezoidProfile.Constraints(maxVelocity=3.0, maxAcceleration=6)
         )
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=2)
 
@@ -118,21 +120,52 @@ class Arm:
         self.chooser.addOption("Handoff", Setpoints.HANDOFF)
         self.chooser.setDefaultOption("Handoff", Setpoints.HANDOFF)
         SmartDashboard.putData(self.chooser)
+        self.last_selection = None
+
+        # Create arm display
+        self.arm_mech2d = wpilib.Mechanism2d(5, 3)
+        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, self.HEIGHT)
+        arm_pivot.appendLigament("ArmTower", self.HEIGHT - 0.05, -90)
+        self.arm_ligament = arm_pivot.appendLigament("Arm", self.MIN_EXTENSION, 0)
+        self.arm_goal_ligament = arm_pivot.appendLigament(
+            "Arm_goal",
+            self.MIN_EXTENSION,
+            0,
+            3,
+            wpilib.Color8Bit(117, 68, 26),
+        )
+        self.arm_extend_ligament = self.arm_ligament.appendLigament(
+            "ArmExtend",
+            0.5,
+            0,
+            8,
+            wpilib.Color8Bit(137, 235, 52),
+        )
+        self.arm_extend_goal_ligament = self.arm_ligament.appendLigament(
+            "ArmExtend_goal",
+            0.1,
+            0,
+            4,
+            wpilib.Color8Bit(68, 117, 26),
+        )
+        wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self):
         self.set_setpoint(Setpoints.SCORE_CONE_HIGH)
 
     def execute(self) -> None:
-        s = self.chooser.getSelected()
-        self.set_setpoint(s)
+        setpoint = typing.cast(Setpoint, self.chooser.getSelected())
+        if setpoint != self.last_selection:
+            self.set_setpoint(setpoint)
+        self.last_selection = setpoint
 
         extension_goal = self.get_max_extension()
         # Calculate extension motor output
         pid_output = self.extension_controller.calculate(
             self.get_extension(), extension_goal
         )
-        setpoint: TrapezoidProfile.State = self.extension_controller.getSetpoint()
-        extension_ff = self.calculate_extension_feedforward(setpoint.velocity)
+        state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
+        extension_ff = self.calculate_extension_feedforward(state.velocity)
         self.extension_motor.setVoltage(pid_output + extension_ff)
 
         if self.at_goal_angle() and self.is_angle_still():
@@ -149,6 +182,14 @@ class Arm:
         setpoint = self.rotation_controller.getSetpoint()
         rotation_ff = self.calculate_rotation_feedforwards(setpoint.velocity)
         self.rotation_motor.setVoltage(pid_output + rotation_ff)
+
+        # Update display
+        self.arm_ligament.setAngle(-math.degrees(self.get_angle()))
+        state: TrapezoidProfile.State = self.rotation_controller.getSetpoint()
+        self.arm_goal_ligament.setAngle(-math.degrees(state.position))
+        self.arm_extend_ligament.setLength(self.get_extension() - self.MIN_EXTENSION)
+        state = self.extension_controller.getSetpoint()
+        self.arm_extend_goal_ligament.setLength(state.position - self.MIN_EXTENSION)
 
     def get_max_extension(self):
         """Gets the max extension to not exceed the height limit for the current angle and goal"""

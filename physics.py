@@ -14,7 +14,6 @@ from wpilib.simulation import (
 from pyfrc.physics.core import PhysicsInterface
 from wpimath.kinematics import SwerveDrive4Kinematics
 from wpimath.system.plant import DCMotor
-from wpimath.trajectory import TrapezoidProfile
 
 from components.chassis import SwerveModule
 from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
@@ -104,36 +103,6 @@ class PhysicsEngine:
         )
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
 
-        # Create arm display
-        self.arm_mech2d = wpilib.Mechanism2d(5, 3)
-        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, robot.arm.HEIGHT)
-        arm_pivot.appendLigament("ArmTower", robot.arm.HEIGHT - 0.05, -90)
-        self.arm_ligament = arm_pivot.appendLigament(
-            "Arm", robot.arm.MIN_EXTENSION, self.arm_sim.getAngleDegrees()
-        )
-        self.arm_goal_ligament = arm_pivot.appendLigament(
-            "Arm_goal",
-            robot.arm.MIN_EXTENSION,
-            self.arm_sim.getAngleDegrees(),
-            3,
-            wpilib.Color8Bit(235 // 2, 137 // 2, 52 // 2),
-        )
-        self.arm_extend_ligament = self.arm_ligament.appendLigament(
-            "ArmExtend",
-            0.5,
-            self.arm_sim.getAngleDegrees(),
-            8,
-            wpilib.Color8Bit(137, 235, 52),
-        )
-        self.arm_extend_goal_ligament = self.arm_ligament.appendLigament(
-            "ArmExtend_goal",
-            0.1,
-            self.arm_sim.getAngleDegrees(),
-            4,
-            wpilib.Color8Bit(137 // 2, 235 // 2, 52 // 2),
-        )
-        wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
-
         self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
 
@@ -152,14 +121,6 @@ class PhysicsEngine:
         )
         self.extension_sim.update(tm_diff)
         self.arm.extension_encoder.setPosition(self.extension_sim.getPosition())
-
-        # Update display
-        self.arm_ligament.setAngle(self.arm_sim.getAngleDegrees())
-        s: TrapezoidProfile.State = self.arm.rotation_controller.getSetpoint()
-        self.arm_goal_ligament.setAngle(-math.degrees(s.position))
-        self.arm_extend_ligament.setLength(self.arm.extension_encoder.getPosition())
-        s = self.arm.extension_controller.getSetpoint()
-        self.arm_extend_goal_ligament.setLength(s.position - self.arm.MIN_EXTENSION)
 
         for wheel in self.wheels:
             wheel.update(tm_diff)
