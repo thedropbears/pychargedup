@@ -3,7 +3,6 @@
 import wpilib
 import magicbot
 
-
 from controllers.movement import Movement
 from components.chassis import Chassis
 from components.vision import Vision
@@ -75,6 +74,14 @@ class MyRobot(magicbot.MagicRobot):
         # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
 
         # self.arm.execute()
+
+        self.vision.execute()
+
+    def disabledInit(self) -> None:
+        self.vision.add_to_estimator = False
+
+    def disabledPeriodic(self):
+        self.vision.execute()
 
 
 if __name__ == "__main__":

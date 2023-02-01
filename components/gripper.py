@@ -17,17 +17,17 @@ class Gripper:
             ids.DioChannels.Gripper.gripper_game_piece_switch
         )
 
-    def open(self):
+    def open(self) -> None:
         self.opened = True
 
-    def close(self):
+    def close(self) -> None:
         self.opened = False
 
-    def execute(self):
+    def execute(self) -> None:
         if self.opened:
             self.solenoid.set(DoubleSolenoid.Value.kForward)
         else:
             self.solenoid.set(DoubleSolenoid.Value.kReverse)
 
-    def game_piece_in_reach(self):
+    def game_piece_in_reach(self) -> bool:
         return self.game_piece_switch.get()
