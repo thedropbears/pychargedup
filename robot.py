@@ -47,17 +47,17 @@ class MyRobot(magicbot.MagicRobot):
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
 
-        if self.gamepad.getYButtonPressed():
+        if self.gamepad.getLeftBumper():
             self.intake.retract()
 
-        if self.gamepad.getXButtonPressed():
+        if self.gamepad.getRightBumper():
             self.intake.deploy()
-
-        if self.gamepad.getAButtonPressed():
-            self.gripper.open()
 
         if self.gripper.game_piece_in_reach():
             self.gripper.close()
+
+        if self.gamepad.getXButton():
+            self.gripper.open()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if autodrive:
@@ -78,11 +78,6 @@ class MyRobot(magicbot.MagicRobot):
         # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
 
         # self.arm.execute()
-
-        if self.gamepad.getYButtonPressed():
-            self.gripper.open()
-        if self.gamepad.getXButtonPressed():
-            self.gripper.close()
 
 
 if __name__ == "__main__":
