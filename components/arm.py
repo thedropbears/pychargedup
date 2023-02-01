@@ -120,7 +120,7 @@ class Arm:
         self.chooser.addOption("Handoff", Setpoints.HANDOFF)
         self.chooser.setDefaultOption("Handoff", Setpoints.HANDOFF)
         SmartDashboard.putData(self.chooser)
-        self.last_selection = None
+        self.last_selection = Setpoint(0, 0)
 
         # Create arm display
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)
@@ -150,7 +150,7 @@ class Arm:
         )
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
-    def setup(self):
+    def setup(self) -> None:
         self.set_setpoint(Setpoints.SCORE_CONE_HIGH)
 
     def execute(self) -> None:
@@ -164,8 +164,8 @@ class Arm:
         pid_output = self.extension_controller.calculate(
             self.get_extension(), extension_goal
         )
-        state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
-        extension_ff = self.calculate_extension_feedforward(state.velocity)
+        extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
+        extension_ff = self.calculate_extension_feedforward(extend_state.velocity)
         self.extension_motor.setVoltage(pid_output + extension_ff)
 
         if self.at_goal_angle() and self.is_angle_still():
@@ -179,19 +179,19 @@ class Arm:
         pid_output = self.rotation_controller.calculate(
             self.get_angle(), self.goal_angle
         )
-        setpoint = self.rotation_controller.getSetpoint()
-        rotation_ff = self.calculate_rotation_feedforwards(setpoint.velocity)
+        rotate_state = self.rotation_controller.getSetpoint()
+        rotation_ff = self.calculate_rotation_feedforwards(rotate_state.velocity)
         self.rotation_motor.setVoltage(pid_output + rotation_ff)
 
         # Update display
         self.arm_ligament.setAngle(-math.degrees(self.get_angle()))
-        state: TrapezoidProfile.State = self.rotation_controller.getSetpoint()
-        self.arm_goal_ligament.setAngle(-math.degrees(state.position))
+        self.arm_goal_ligament.setAngle(-math.degrees(rotate_state.position))
         self.arm_extend_ligament.setLength(self.get_extension() - self.MIN_EXTENSION)
-        state = self.extension_controller.getSetpoint()
-        self.arm_extend_goal_ligament.setLength(state.position - self.MIN_EXTENSION)
+        self.arm_extend_goal_ligament.setLength(
+            extend_state.position - self.MIN_EXTENSION
+        )
 
-    def get_max_extension(self):
+    def get_max_extension(self) -> float:
         """Gets the max extension to not exceed the height limit for the current angle and goal"""
         is_angle_forwards = math.copysign(1, self.get_angle() + (math.pi / 2))
         is_goal_forwards = math.copysign(1, self.goal_angle + (math.pi / 2))
@@ -210,7 +210,7 @@ class Arm:
         accel = next_speed - self.get_arm_speed()
         return self.rotation_ff.calculate(self.get_angle(), self.get_arm_speed(), accel)
 
-    def calculate_extension_feedforward(self, next_speed) -> float:
+    def calculate_extension_feedforward(self, next_speed: float) -> float:
         extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(-self.get_angle())
         accel = next_speed - self.get_extension_speed()
         extend_ff_simple = self.extension_simple_ff.calculate(next_speed, accel)
@@ -243,7 +243,7 @@ class Arm:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, self.MIN_EXTENSION, self.MAX_EXTENSION)
 
-    def set_setpoint(self, value: "Setpoint"):
+    def set_setpoint(self, value: "Setpoint") -> None:
         self.set_length(value.extension)
         self.set_angle(value.angle)
 
@@ -261,13 +261,13 @@ class Arm:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
         return abs(self.get_arm_speed()) < allowable_speed
 
-    def brake(self):
+    def brake(self) -> None:
         self.brake_solenoid.set(False)
 
-    def unbrake(self):
+    def unbrake(self) -> None:
         self.brake_solenoid.set(True)
 
-    def on_enable(self):
+    def on_enable(self) -> None:
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
 
@@ -281,7 +281,7 @@ class Setpoint:
     # extension in meters, length from center of rotation to center of where pieces are held in the end effector
     extension: float
 
-    def __init__(self, angle: float, extension: float):
+    def __init__(self, angle: float, extension: float) -> None:
         self.extension = clamp(extension, Arm.MIN_EXTENSION, Arm.MAX_EXTENSION)
         if angle > Arm.MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
             angle -= math.tau
@@ -291,7 +291,6 @@ class Setpoint:
             print(
                 "SETPOINT WAS CLAMPED", (angle, extension), (self.angle, self.extension)
             )
-            raise ValueError()
 
     @staticmethod
     def fromCartesian(x: float, z: float) -> "Setpoint":

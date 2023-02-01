@@ -98,7 +98,7 @@ class PhysicsEngine:
             robot.arm.SPOOL_DIAMETER / 2,
             0,
             robot.arm.MAX_EXTENSION - robot.arm.MIN_EXTENSION,
-            True,
+            False,
             [0.001],
         )
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
