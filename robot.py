@@ -2,9 +2,6 @@
 
 import wpilib
 import magicbot
-from rev import CANSparkMax
-import ids
-from wpilib import DoubleSolenoid
 
 
 from controllers.movement import Movement

@@ -4,7 +4,7 @@ import ids
 
 
 class Gripper:
-    def __init__(self):
+    def __init__(self) -> None:
         self.opened = False
 
         self.solenoid = DoubleSolenoid(
@@ -25,9 +25,9 @@ class Gripper:
 
     def execute(self):
         if self.opened:
-            self.solenoid.set(value=DoubleSolenoid.Value.kForward)
+            self.solenoid.set(DoubleSolenoid.Value.kForward)
         else:
-            self.solenoid.set(value=DoubleSolenoid.Value.kReverse)
+            self.solenoid.set(DoubleSolenoid.Value.kReverse)
 
     def game_piece_in_reach(self):
         return self.game_piece_switch.get()
