@@ -5,7 +5,12 @@ import typing
 
 import ctre
 import wpilib
-from wpilib.simulation import SingleJointedArmSim, SimDeviceSim
+from wpilib.simulation import (
+    SingleJointedArmSim,
+    ElevatorSim,
+    SimDeviceSim,
+    DutyCycleEncoderSim,
+)
 from pyfrc.physics.core import PhysicsInterface
 from wpimath.kinematics import SwerveDrive4Kinematics
 from wpimath.system.plant import DCMotor
@@ -68,7 +73,9 @@ class PhysicsEngine:
             )
             for module in robot.chassis.modules
         ]
+
         self.arm = robot.arm
+        # Create arm simulation
         arm_motors_sim = DCMotor.NEO(2)
         arm_len = (robot.arm.MIN_EXTENSION + robot.arm.MAX_EXTENSION) / 2
         arm_mass = 5
@@ -84,9 +91,22 @@ class PhysicsEngine:
             True,
             [math.radians(0.01)],
         )
+        extension_motors_sim = DCMotor.NEO550(1)
+        self.extension_sim = ElevatorSim(
+            extension_motors_sim,
+            robot.arm.EXTEND_GEAR_RATIO,
+            4,
+            robot.arm.SPOOL_DIAMETER / 2,
+            0,
+            robot.arm.MAX_EXTENSION - robot.arm.MIN_EXTENSION,
+            True,
+            [0.001],
+        )
+        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
 
-        self.arm_mech2d = wpilib.Mechanism2d(3, 2)
-        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", robot.arm.HEIGHT, 1.5)
+        # Create arm display
+        self.arm_mech2d = wpilib.Mechanism2d(5, 3)
+        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, robot.arm.HEIGHT)
         arm_pivot.appendLigament("ArmTower", robot.arm.HEIGHT - 0.05, -90)
         self.arm_ligament = arm_pivot.appendLigament(
             "Arm", robot.arm.MIN_EXTENSION, self.arm_sim.getAngleDegrees()
@@ -98,21 +118,48 @@ class PhysicsEngine:
             3,
             wpilib.Color8Bit(235 // 2, 137 // 2, 52 // 2),
         )
+        self.arm_extend_ligament = self.arm_ligament.appendLigament(
+            "ArmExtend",
+            0.5,
+            self.arm_sim.getAngleDegrees(),
+            8,
+            wpilib.Color8Bit(137, 235, 52),
+        )
+        self.arm_extend_goal_ligament = self.arm_ligament.appendLigament(
+            "ArmExtend_goal",
+            0.1,
+            self.arm_sim.getAngleDegrees(),
+            4,
+            wpilib.Color8Bit(137 // 2, 235 // 2, 52 // 2),
+        )
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
         self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
 
     def update_sim(self, now: float, tm_diff: float) -> None:
+        # Update rotation sim
         self.arm_sim.setInputVoltage(
             -self.arm.rotation_motor.get() * wpilib.RobotController.getBatteryVoltage()
         )
-        self.arm_sim.update(tm_diff)
-        self.arm.rotation_encoder.set_position(-self.arm_sim.getAngle())
-        self.arm.rotation_encoder.set_velocity(-self.arm_sim.getVelocity())
+        if self.arm.brake_solenoid.get():
+            self.arm_sim.update(tm_diff)
+        self.arm_abs_encoder.set(-self.arm_sim.getAngle() / math.tau)
+        self.arm.relative_encoder.set_velocity(-self.arm_sim.getVelocity())
+        # Update extension sim
+        self.extension_sim.setInputVoltage(
+            self.arm.extension_motor.get() * wpilib.RobotController.getBatteryVoltage()
+        )
+        self.extension_sim.update(tm_diff)
+        self.arm.extension_encoder.setPosition(self.extension_sim.getPosition())
+
+        # Update display
         self.arm_ligament.setAngle(self.arm_sim.getAngleDegrees())
         s: TrapezoidProfile.State = self.arm.rotation_controller.getSetpoint()
         self.arm_goal_ligament.setAngle(-math.degrees(s.position))
+        self.arm_extend_ligament.setLength(self.arm.extension_encoder.getPosition())
+        s = self.arm.extension_controller.getSetpoint()
+        self.arm_extend_goal_ligament.setLength(s.position - self.arm.MIN_EXTENSION)
 
         for wheel in self.wheels:
             wheel.update(tm_diff)

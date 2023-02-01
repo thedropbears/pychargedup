@@ -47,6 +47,8 @@ class PwmChannels:
 class DioChannels:
     class Gripper:
         gripper_game_piece_switch = 0
+    class Arm:
+        absolute_encoder = 1
 
 
 # recursively get all attributes
