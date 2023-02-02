@@ -27,7 +27,7 @@ class Arm:
     MIN_EXTENSION = 0.7  # meters
     MAX_EXTENSION = 1.3
 
-    ROTATE_GEAR_RATIO = (60 / 25) * (60 / 25) * (70 / 20)
+    ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
     SPOOL_DIAMETER = 0.05  # cm
     EXTEND_GEAR_RATIO = 7 / 1
     # converts from motor rotations to meters
