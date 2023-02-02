@@ -5,11 +5,12 @@ import ids
 
 
 class Intake:
+    ids = ids
     intake_speed = tunable(0.5)
 
     def __init__(self) -> None:
         self.deployed = False
-        self.break_beam = DigitalInput(0)
+        self.break_beam = DigitalInput(self.ids.DioChannels.Intake.break_beam_sensor)
         self.motor = CANSparkMax(
             ids.CanIds.Intake.intake_motor, CANSparkMax.MotorType.kBrushless
         )
@@ -29,7 +30,7 @@ class Intake:
         if self.deployed:
             self.piston.set(DoubleSolenoid.Value.kForward)
             self.motor.set(self.intake_speed)
-        elif not self.deployed:
+        else:
             self.piston.set(DoubleSolenoid.Value.kReverse)
             self.motor.set(0.0)
 
