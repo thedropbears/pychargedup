@@ -1,4 +1,3 @@
-import typing
 from magicbot import feedback, tunable
 from rev import CANSparkMax
 import wpilib
@@ -64,15 +63,8 @@ class Arm:
         self._rotation_motor_right.follow(self.rotation_motor, invert=True)
         self._rotation_motor_right.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_right.setInverted(False)
-        self.relative_encoder = SparkMaxEncoderWrapper(self.rotation_motor)
-        # ouput position is conversion factor * motor rotations
-        # should be < 1
-        self.relative_encoder.real_encoder.setPositionConversionFactor(
-            1 / self.ROTATE_GEAR_RATIO
-        )
-        # /60 to go from RPM to RPS
-        self.relative_encoder.real_encoder.setVelocityConversionFactor(
-            1 / self.ROTATE_GEAR_RATIO / 60
+        self.relative_encoder = SparkMaxEncoderWrapper(
+            self.rotation_motor, 1 / self.ROTATE_GEAR_RATIO
         )
 
         self.absolute_encoder = DutyCycleEncoder(DioChannels.Arm.absolute_encoder)
@@ -111,7 +103,6 @@ class Arm:
         self.brake_solenoid = Solenoid(
             PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
         )
-
         self.chooser = SendableChooser()
         self.chooser.addOption("Score Cone High", Setpoints.SCORE_CONE_HIGH)
         self.chooser.addOption("Score Cube High", Setpoints.SCORE_CUBE_HIGH)
@@ -154,7 +145,7 @@ class Arm:
         self.set_setpoint(Setpoints.SCORE_CONE_HIGH)
 
     def execute(self) -> None:
-        setpoint = typing.cast(Setpoint, self.chooser.getSelected())
+        setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
         if setpoint != self.last_selection:
             self.set_setpoint(setpoint)
         self.last_selection = setpoint
