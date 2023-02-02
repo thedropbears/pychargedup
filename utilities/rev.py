@@ -16,10 +16,7 @@ class SparkMaxEncoderWrapper:
         self.sim_velocity = 0.0
 
     def getPosition(self) -> float:
-        if wpilib.RobotBase.isReal():
-            return self.real_encoder.getPosition()
-        else:
-            return self.sim_position
+        return self.real_encoder.getPosition()
 
     def getVelocity(self) -> float:
         if wpilib.RobotBase.isReal():
@@ -27,8 +24,8 @@ class SparkMaxEncoderWrapper:
         else:
             return self.sim_velocity
 
-    def set_position(self, position: float) -> None:
+    def setPosition(self, position: float) -> None:
         self.real_encoder.setPosition(position)
 
-    def set_velocity(self, velocity: float) -> None:
+    def setVelocity(self, velocity: float) -> None:
         self.sim_velocity = velocity

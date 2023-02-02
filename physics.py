@@ -4,6 +4,7 @@ import math
 import typing
 
 import ctre
+import numpy as np
 import wpilib
 from wpilib.simulation import (
     SingleJointedArmSim,
@@ -96,11 +97,12 @@ class PhysicsEngine:
             robot.arm.EXTEND_GEAR_RATIO,
             4,
             robot.arm.SPOOL_DIAMETER / 2,
-            0,
-            robot.arm.MAX_EXTENSION - robot.arm.MIN_EXTENSION,
+            robot.arm.MIN_EXTENSION,
+            robot.arm.MAX_EXTENSION,
             False,
             [0.001],
         )
+        self.extension_sim.setState(np.array([[robot.arm.MIN_EXTENSION], [0]]))
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
 
         self.imu = SimDeviceSim("navX-Sensor", 4)
@@ -114,13 +116,14 @@ class PhysicsEngine:
         if self.arm.brake_solenoid.get():
             self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.set(-self.arm_sim.getAngle() / math.tau)
-        self.arm.relative_encoder.set_velocity(-self.arm_sim.getVelocity())
+        self.arm.relative_encoder.setVelocity(-self.arm_sim.getVelocity())
         # Update extension sim
         self.extension_sim.setInputVoltage(
             self.arm.extension_motor.get() * wpilib.RobotController.getBatteryVoltage()
         )
         self.extension_sim.update(tm_diff)
         self.arm.extension_encoder.setPosition(self.extension_sim.getPosition())
+        self.arm.extension_encoder.setVelocity(self.extension_sim.getVelocity())
 
         for wheel in self.wheels:
             wheel.update(tm_diff)

@@ -88,10 +88,8 @@ class Arm:
         )
         self.extension_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.extension_motor.setInverted(False)
-        self.extension_encoder = self.extension_motor.getEncoder()
-        self.extension_encoder.setPositionConversionFactor(self.EXTEND_OUTPUT_RATIO)
-        self.extension_encoder.setVelocityConversionFactor(
-            self.EXTEND_OUTPUT_RATIO * 60
+        self.extension_encoder = SparkMaxEncoderWrapper(
+            self.extension_motor, self.EXTEND_OUTPUT_RATIO
         )
         # assume retracted starting position
         self.extension_encoder.setPosition(self.MIN_EXTENSION)
@@ -110,7 +108,7 @@ class Arm:
         self.chooser.addOption("Score Cube mid", Setpoints.SCORE_CUBE_MID)
         self.chooser.addOption("Handoff", Setpoints.HANDOFF)
         self.chooser.setDefaultOption("Handoff", Setpoints.HANDOFF)
-        SmartDashboard.putData(self.chooser)
+        SmartDashboard.putData("Arm Setpoint Chooser", self.chooser)
         self.last_selection = Setpoint(0, 0)
 
         # Create arm display
@@ -145,6 +143,17 @@ class Arm:
         self.set_setpoint(Setpoints.SCORE_CONE_HIGH)
 
     def execute(self) -> None:
+        extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
+        rotate_state = self.rotation_controller.getSetpoint()
+
+        # Update display
+        self.arm_ligament.setAngle(-math.degrees(self.get_angle()))
+        self.arm_goal_ligament.setAngle(-math.degrees(rotate_state.position))
+        self.arm_extend_ligament.setLength(self.get_extension() - self.MIN_EXTENSION)
+        self.arm_extend_goal_ligament.setLength(
+            extend_state.position - self.MIN_EXTENSION
+        )
+
         setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
         if setpoint != self.last_selection:
             self.set_setpoint(setpoint)
@@ -155,7 +164,6 @@ class Arm:
         pid_output = self.extension_controller.calculate(
             self.get_extension(), extension_goal
         )
-        extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
         extension_ff = self.calculate_extension_feedforward(extend_state.velocity)
         self.extension_motor.setVoltage(pid_output + extension_ff)
 
@@ -170,17 +178,8 @@ class Arm:
         pid_output = self.rotation_controller.calculate(
             self.get_angle(), self.goal_angle
         )
-        rotate_state = self.rotation_controller.getSetpoint()
         rotation_ff = self.calculate_rotation_feedforwards(rotate_state.velocity)
         self.rotation_motor.setVoltage(pid_output + rotation_ff)
-
-        # Update display
-        self.arm_ligament.setAngle(-math.degrees(self.get_angle()))
-        self.arm_goal_ligament.setAngle(-math.degrees(rotate_state.position))
-        self.arm_extend_ligament.setLength(self.get_extension() - self.MIN_EXTENSION)
-        self.arm_extend_goal_ligament.setLength(
-            extend_state.position - self.MIN_EXTENSION
-        )
 
     def get_max_extension(self) -> float:
         """Gets the max extension to not exceed the height limit for the current angle and goal"""
@@ -219,8 +218,8 @@ class Arm:
 
     @feedback
     def get_extension(self) -> float:
-        """Gets the extension length in meters"""
-        return self.MIN_EXTENSION + self.extension_encoder.getPosition()
+        """Gets the extension length in meters from axle"""
+        return self.extension_encoder.getPosition()
 
     def get_extension_speed(self) -> float:
         """Gets the extension speed in m/s"""
