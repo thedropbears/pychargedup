@@ -85,9 +85,6 @@ class ScoreController(StateMachine):
     @state
     def score_cone(self):
         ...
-        
-    def get_time_to_goal(self) -> float:
-        ...
 
     @state
     def score_cube(self):
@@ -101,6 +98,10 @@ class ScoreController(StateMachine):
     def gripper_open(self) -> None:
         self.has_piece = False # if the gripper is open, there is 100% no piece in our control
         self.gripper.open()
+
+    @feedback
+    def get_time_to_goal(self) -> float: #returns the updated time for the robot to get to the goal according to the trajectory
+        return self.movement.time_to_goal 
 
     @feedback
     def has_piece_grabbed(self) -> bool:

@@ -40,7 +40,10 @@ class Movement(StateMachine):
         self.goal = Pose2d(math.inf, math.inf, math.inf)
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
-        self.time_remaining = 3
+        self.time_to_goal = 3
+        self.set_goal(
+            Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
+        )
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -160,7 +163,7 @@ class Movement(StateMachine):
             chassis_speed.omega,
         )
 
-        self.time_remaining = trajectory.totalTime() - state_tm
+        self.time_to_goal = trajectory.totalTime() - state_tm
 
     def is_at_goal(self) -> bool:
         return (
@@ -189,11 +192,11 @@ class Movement(StateMachine):
         if self.is_at_goal():
             # self.done()
             ...
-        elif self.time_remaining < 0.2:
+        elif self.time_to_goal < 0.2:
             # TODO Tell other components to begin action
             # print("Began scoring")
             ...
-        elif self.time_remaining < 1:
+        elif self.time_to_goal < 1:
             # TODO Tell other components to prepare for action
             # print("Preparing for scoring")
             ...
