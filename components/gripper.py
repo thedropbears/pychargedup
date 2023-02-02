@@ -26,10 +26,10 @@ class Gripper:
     def close(self) -> None:
         self.close_time = time.monotonic()
         self.opened = False
-    
+
     @feedback
     def get_full_closed(self) -> bool:
-        return (time.monotonic() - self.close_time ) <= 0.5
+        return (time.monotonic() - self.close_time) <= 0.5
 
     def execute(self) -> None:
         if self.opened:
