@@ -20,6 +20,7 @@ class MyRobot(magicbot.MagicRobot):
     vision: Vision
     arm: Arm
     intake: Intake
+    gripper: Gripper
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -30,8 +31,11 @@ class MyRobot(magicbot.MagicRobot):
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
+    def teleopInit(self) -> None:
+        self.vision.add_to_estimator = True
+
     def teleopPeriodic(self) -> None:
-        drop_off = self.gamepad.getAButton()
+        autodrive = self.gamepad.getAButton()
         spin_rate = 6
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * Chassis.max_wheel_speed
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
@@ -44,26 +48,22 @@ class MyRobot(magicbot.MagicRobot):
 
         if self.gamepad.getXButtonPressed():
             self.intake.do_intake()
+            
+        if self.gamepad.getLeftBumper():
+            self.intake.end_intake()
+
+        if self.gamepad.getRightBumper():
+            self.intake.do_intake()
+
+        if self.gripper.game_piece_in_reach():
+            self.gripper.close()
+
+        if self.gamepad.getXButton():
+            self.gripper.open()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
-
-        if drop_off:
-            self.movement.do_trajectory()
-
-    def testInit(self) -> None:
-        self.arm.on_enable()
-
-    def testPeriodic(self) -> None:
-        right_trigger = self.gamepad.getRightTriggerAxis()
-        left_trigger = self.gamepad.getLeftTriggerAxis()
-        self.arm.rotation_motor.set((left_trigger - right_trigger) * 0.5)
-        # self.arm._rotation_motor_right.set((right_trigger - right_trigger) * 0.5)
-        # self.arm.extension_motor.set(left_trigger * 0.1)
-        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
-        # self.arm.extension_motor.set(left_trigger * 0.1)
-        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
-
-        # self.arm.execute()
+        if autodrive:
+            self.movement.do_autodrive()
 
 
 if __name__ == "__main__":

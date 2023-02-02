@@ -38,9 +38,18 @@ class PcmChannels:
         intake_piston_forward = 6
         intake_piston_reverse = 7
 
+    class Gripper:
+        gripper_solenoid_forward = 0
+        gripper_solenoid_reverse = 1
+
 
 class PwmChannels:
     ...
+
+
+class DioChannels:
+    class Gripper:
+        gripper_game_piece_switch = 0
 
 
 # recursively get all attributes
