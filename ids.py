@@ -47,7 +47,7 @@ class DioChannels:
     class Gripper:
         gripper_game_piece_switch = 0
     class Intake:
-        break_beam_sensor = 0
+        break_beam_sensor = 1
 
 
 # recursively get all attributes
