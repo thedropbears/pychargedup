@@ -33,6 +33,8 @@ class ScoreController(StateMachine):
     MOVE_FORWARD = 1
     # the distance that a cone will be at when we pick it up (meters)
     CONE_DISTANCE = 0.3
+
+    has_piece: bool
     
     def __init__(self) -> None:
         self.has_piece = False
@@ -96,16 +98,18 @@ class ScoreController(StateMachine):
         ...
 
 
-    @state
     def gripper_open(self) -> None:
         self.has_piece = False # if the gripper is open, there is 100% no piece in our control
         self.gripper.open()
 
-    @state
+    @feedback
+    def has_piece_grabbed(self) -> bool:
+        return self.has_piece and self.gripper.get_full_closed()
+
     def gripper_close(self) -> None:
-        if self.game_piece_in_reach():
-            self.has_piece = True
         self.gripper.close()
+        if self.game_piece_in_reach() and self.gripper.get_full_closed():
+            self.has_piece = True
 
     @feedback
     def game_piece_in_reach(self) -> bool:
