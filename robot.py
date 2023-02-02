@@ -48,7 +48,7 @@ class MyRobot(magicbot.MagicRobot):
 
         if self.gamepad.getXButtonPressed():
             self.intake.do_intake()
-            
+
         if self.gamepad.getLeftBumper():
             self.intake.end_intake()
 
