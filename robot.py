@@ -20,7 +20,6 @@ class MyRobot(magicbot.MagicRobot):
     vision: Vision
     arm: Arm
     intake: Intake
-    gripper: Gripper
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -54,12 +53,6 @@ class MyRobot(magicbot.MagicRobot):
 
         if self.gamepad.getRightBumper():
             self.intake.do_intake()
-
-        if self.gripper.game_piece_in_reach():
-            self.gripper.close()
-
-        if self.gamepad.getXButton():
-            self.gripper.open()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if autodrive:
