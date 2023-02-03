@@ -29,7 +29,7 @@ class MyRobot(magicbot.MagicRobot):
         self.gamepad = wpilib.XboxController(0)
         self.joystick = wpilib.Joystick(1)
 
-        self.leds = wpilib.AddressableLED(2)
+        self.leds = wpilib.AddressableLED(0)
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
