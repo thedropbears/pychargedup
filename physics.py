@@ -77,7 +77,6 @@ class PhysicsEngine:
         ]
 
         # Create arm simulation
-        self.arm = robot.arm
         arm_motors_sim = DCMotor.NEO(2)
         arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
         arm_mass = 5
@@ -106,13 +105,19 @@ class PhysicsEngine:
         )
         self.extension_sim.setState(np.array([[arm.MIN_EXTENSION], [0]]))
 
+        # Get arm objects
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
+        self.arm_brake_real = robot.arm.brake_solenoid
+
         self.arm_motor = SimDeviceSim("SPARK MAX ", CanIds.Arm.rotation_main)
         self.arm_motor_pos = self.arm_motor.getDouble("Position")
         self.arm_motor_vel = self.arm_motor.getDouble("Velocity")
+        self.arm_motor_real = robot.arm.rotation_motor
+
         self.arm_extension = SimDeviceSim("SPARK MAX ", CanIds.Arm.extension)
         self.arm_extension_pos = self.arm_extension.getDouble("Position")
         self.arm_extension_vel = self.arm_extension.getDouble("Velocity")
+        self.arm_extension_real = robot.arm.extension_motor
 
         self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
@@ -120,15 +125,15 @@ class PhysicsEngine:
     def update_sim(self, now: float, tm_diff: float) -> None:
         # Update rotation sim
         self.arm_sim.setInputVoltage(
-            -self.arm.rotation_motor.get() * wpilib.RobotController.getBatteryVoltage()
+            -self.arm_motor_real.get() * wpilib.RobotController.getBatteryVoltage()
         )
-        if self.arm.brake_solenoid.get():
+        if self.arm_brake_real.get():
             self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
         self.arm_motor_vel.set(-self.arm_sim.getVelocity())
         # Update extension sim
         self.extension_sim.setInputVoltage(
-            self.arm.extension_motor.get() * wpilib.RobotController.getBatteryVoltage()
+            self.arm_extension_real.get() * wpilib.RobotController.getBatteryVoltage()
         )
         self.extension_sim.update(tm_diff)
         self.arm_extension_pos.set(self.extension_sim.getPosition())
