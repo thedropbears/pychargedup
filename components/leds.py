@@ -282,7 +282,7 @@ class StatusLights:
         elif self.pattern == DisplayType.HALF_HALF:
             self.calc_half()
             return
-        elif DisplayType.PACMAN:
+        elif self.pattern == DisplayType.PACMAN:
             self.calc_pacma()
             return  # pacman sets LEDs
         elif self.pattern == DisplayType.ALTERNATING:
