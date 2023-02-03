@@ -49,7 +49,7 @@ class PickupFromSide(Enum):
     LEFT = auto()
     RIGHT = auto()
 
-    def color(self) -> LedColours:
+    def colour(self) -> LedColours:
         if self._value_ == 1:
             return LedColours.GREEN
         elif self._value_ == 2:
@@ -82,7 +82,7 @@ class StatusLights:
 
         self.start_time = time.monotonic()
 
-        self.color = (0, 0, 0)
+        self.colour = (0, 0, 0)
 
         self.pattern = DisplayType.SOLID
 
@@ -95,16 +95,16 @@ class StatusLights:
         self.leds.setData(self.leds_data)
         self.leds.start()
 
-    def set_color(self, color: LedColours):
-        self.color = color.value
+    def set_colour(self, colour: LedColours):
+        self.colour = colour.value
 
     def set_piece(self, piece: Piece):
         if piece == Piece.CONE:
-            self.set_color(LedColours.YELLOW)
+            self.set_colour(LedColours.YELLOW)
         elif piece == Piece.CUBE:
-            self.set_color(LedColours.VIOLET)
+            self.set_colour(LedColours.VIOLET)
         elif piece == Piece.NONE:
-            self.set_color(LedColours.OFF)
+            self.set_colour(LedColours.OFF)
 
     def set_state(self, state: RobotState):
         if state == RobotState.PICKED_UP_PIECE:
@@ -112,7 +112,7 @@ class StatusLights:
         elif state == RobotState.LOOKING_FOR_PIECE:
             self.pattern = DisplayType.HALF_HALF
         elif RobotState.OTHER:
-            self.set_color(LedColours.OFF)
+            self.set_colour(LedColours.OFF)
 
     def set_intake_side(self, side: PickupFromSide):
         self.side = side
@@ -134,18 +134,20 @@ class StatusLights:
         led_data = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
-                led_data.append(self.color)
+                led_data.append(wpilib.AddressableLED.LEDData(*self.colour))
             else:
-                led_data.append(self.side.color())
+                led_data.append(
+                    wpilib.AddressableLED.LEDData(*self.side.colour().value)
+                )
         self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
-        return self.color
+        return self.colour
 
     def calc_flash(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
-        return (self.color[0], self.color[1], self.color[2] * round(brightness))
+        return (self.colour[0], self.colour[1], self.colour[2] * round(brightness))
 
     def calc_rainb(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
@@ -216,7 +218,7 @@ class StatusLights:
     def calc_pulse(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
-        return (self.color[0], self.color[1], round(self.color[2] * brightness))
+        return (self.colour[0], self.colour[1], round(self.colour[2] * brightness))
 
     def calc_idk(self):
         elapsed_time = time.monotonic() - self.start_time
@@ -264,14 +266,14 @@ class StatusLights:
 
     def execute(self):
         if self.pattern == DisplayType.SOLID:
-            colors = self.calc_solid()
+            colour = self.calc_solid()
         elif self.pattern == DisplayType.FLASH:
-            colors = self.calc_flash()
+            colour = self.calc_flash()
         elif self.pattern == DisplayType.PULSE:
-            colors = self.calc_pulse()
+            colour = self.calc_pulse()
         elif self.pattern == DisplayType.RAINBOW:
-            colors = self.calc_rainb()
-        elif DisplayType.HALF_HALF:
+            colour = self.calc_rainb()
+        elif self.pattern == DisplayType.HALF_HALF:
             self.calc_half()
             return
         elif DisplayType.PACMAN:
@@ -281,5 +283,5 @@ class StatusLights:
             self.calc_idk()
             return  # whatever this is sets LEDs
 
-        self.single_led_data.setHSV(colors[0], colors[1], colors[2])
+        self.single_led_data.setHSV(colour[0], colour[1], colour[2])
         self.leds.setData(self.leds_data)
