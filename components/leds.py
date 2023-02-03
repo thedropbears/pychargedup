@@ -29,7 +29,7 @@ class DisplayType(Enum):
     SOLID = auto()
     PULSE = auto()
     FLASH = auto()
-    IDK = auto()
+    ALTERNATING = auto()
     HALF_HALF = auto()
 
 
@@ -75,7 +75,7 @@ class StatusLights:
     PULSE_PERIOD = 1
     PACMAN_PERIOD = 60
     RAINBOW_PERIOD = 15
-    IDK_PERIOD = 60
+    ALTERNATING_PERIOD = 60
 
     def __init__(self):
         self.led_length = 60
@@ -220,7 +220,7 @@ class StatusLights:
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
         return (self.colour[0], self.colour[1], round(self.colour[2] * brightness))
 
-    def calc_idk(self):
+    def calc_alternating(self):
         elapsed_time = time.monotonic() - self.start_time
         # flash, but only every second led
         # then, the other leds flash
@@ -230,9 +230,9 @@ class StatusLights:
         pattern = make_pattern([(LedColours.BLUE, 1), (LedColours.OFF, 1)])
         position = round(
             scale_value(
-                elapsed_time % self.IDK_PERIOD,
+                elapsed_time % self.ALTERNATING_PERIOD,
                 0,
-                self.IDK_PERIOD,
+                self.ALTERNATING_PERIOD,
                 self.led_length,
                 -len(pattern),
             )
@@ -279,9 +279,9 @@ class StatusLights:
         elif DisplayType.PACMAN:
             self.calc_pacma()
             return  # pacman sets LEDs
-        elif DisplayType.IDK:
-            self.calc_idk()
-            return  # whatever this is sets LEDs
+        elif self.pattern == DisplayType.ALTERNATING:
+            self.calc_alternating()
+            return  # alternating sets LEDs
 
         self.single_led_data.setHSV(colour[0], colour[1], colour[2])
         self.leds.setData(self.leds_data)
