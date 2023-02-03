@@ -27,6 +27,7 @@ class CanIds:
     class Intake:
         intake_motor = 16
 
+
 class PcmChannels:
     arm_brake = 4
 
@@ -46,6 +47,7 @@ class PwmChannels:
 class DioChannels:
     class Gripper:
         gripper_game_piece_switch = 0
+
     class Intake:
         break_beam_sensor = 1
 
