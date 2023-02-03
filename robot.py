@@ -49,7 +49,6 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButtonPressed():
             self.intake.retract()
 
-
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if autodrive:
             self.movement.do_autodrive()
