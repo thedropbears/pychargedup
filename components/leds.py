@@ -4,6 +4,7 @@ import time
 from enum import Enum, auto
 from typing import List, Tuple
 from utilities.scalers import scale_value
+import random
 
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
@@ -31,6 +32,7 @@ class DisplayType(Enum):
     FLASH = auto()
     ALTERNATING = auto()
     HALF_HALF = auto()
+    MORSE = auto()
 
 
 class RobotState(Enum):
@@ -79,7 +81,7 @@ class StatusLights:
     ALTERNATING_PERIOD = 60
 
     def __init__(self):
-        self.led_length = 60
+        self.led_length = 131
 
         self.start_time = time.monotonic()
 
@@ -89,7 +91,10 @@ class StatusLights:
 
         self.side = PickupFromSide.RIGHT
 
+        self._morse_message = ""
+
     def setup(self) -> None:
+        self.choose_morse_message()
         self.leds.setLength(self.led_length)
         self.single_led_data = wpilib.AddressableLED.LEDData()
         self.leds_data = [self.single_led_data] * self.led_length
@@ -131,8 +136,18 @@ class StatusLights:
         self.set_state(state)
         self.set_intake_side(side)
 
+    def set_disabled(self):
+        if self.cur_pattern not in [
+            DisplayType.MORSE,
+            DisplayType.PACMAN,
+            DisplayType.RAINBOW,
+        ]:
+            self.cur_pattern = DisplayType.MORSE
+            self.choose_morse_message("GGEZ")
+            self.pattern_start_time = time.monotonic()
+
     def calc_half(self):
-        led_data = []
+        led_data: list[wpilib.AddressableLED.LEDData] = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
                 led_data.append(wpilib.AddressableLED.LEDData(*self.colour))
@@ -268,6 +283,101 @@ class StatusLights:
                 * (leds_left // 2)
             )
         self.leds.setData(led_data[: self.led_length])
+
+    @property
+    def _morse_length(self) -> int:
+        # A dash is three times as long as a dot
+        # A space between characters is three dots
+        # A space between dots and dashes is one dot
+        # A space between words is 7 dots
+        return (
+            self._morse_message.count(".")
+            + 3 * self._morse_message.count("-")
+            + 3 * self._morse_message.count(" ")
+        )
+
+    def _morse_calculation(self) -> Tuple[int, int, int]:
+        # Work out how far through the message we are
+        DOT_LENGTH = 0.15  # seconds
+        total_time = self._morse_length * DOT_LENGTH
+        elapsed_time = time.monotonic() - self.pattern_start_time
+        if elapsed_time > total_time:
+            self.set(DisplayType.RAINBOW)
+        running_total = 0.0
+        for token in self._morse_message:
+            if token == ".":
+                running_total += 1.0 * DOT_LENGTH
+            if token == "-" or token == " ":
+                running_total += 3.0 * DOT_LENGTH
+            if running_total > elapsed_time:
+                # This is the current character
+                if token == " ":
+                    return LedColours.OFF.value
+                else:
+                    return LedColours.BLUE.value
+        # Default - should never be hit
+        return LedColours.OFF.value
+
+    def choose_morse_message(self, _message=None) -> None:
+        # Choose a morse message at random, unless specific message requested
+        # Only use lowercase and spaces
+        MESSAGES = [
+            "KILL ALL HUMANS",
+            "MORSE CODE IS FOR NERDS",
+            "HONEYBADGER DONT CARE",
+            "GLHF",
+        ]
+        if _message is None:
+            message = random.choice(MESSAGES)
+        else:
+            message = _message.upper()
+        # Convert to dots and dashes
+        MORSE_CODE_DICT = {
+            "A": ".-",
+            "B": "-...",
+            "C": "-.-.",
+            "D": "-..",
+            "E": ".",
+            "F": "..-.",
+            "G": "--.",
+            "H": "....",
+            "I": "..",
+            "J": ".---",
+            "K": "-.-",
+            "L": ".-..",
+            "M": "--",
+            "N": "-.",
+            "O": "---",
+            "P": ".--.",
+            "Q": "--.-",
+            "R": ".-.",
+            "S": "...",
+            "T": "-",
+            "U": "..-",
+            "V": "...-",
+            "W": ".--",
+            "X": "-..-",
+            "Y": "-.--",
+            "Z": "--..",
+            "1": ".----",
+            "2": "..---",
+            "3": "...--",
+            "4": "....-",
+            "5": ".....",
+            "6": "-....",
+            "7": "--...",
+            "8": "---..",
+            "9": "----.",
+            "0": "-----",
+        }
+        self._morse_message = ""
+        for character in message:
+            if character != " ":
+                self._morse_message += " ".join(MORSE_CODE_DICT[character]) + "  "
+            else:
+                self._morse_message += "     "
+        # Add more space at the end
+        self._morse_message += "  "
 
     def execute(self):
         colour = self.calc_solid()
