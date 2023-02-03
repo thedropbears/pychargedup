@@ -1,5 +1,13 @@
 import wpilib
-from components.leds import StatusLights, LedColours, DisplayType, RobotState, Piece, PickupFromSide
+from components.leds import (
+    StatusLights,
+    LedColours,
+    DisplayType,
+    RobotState,
+    Piece,
+    PickupFromSide,
+)
+
 
 class LedController:
     status_lights: StatusLights
@@ -15,3 +23,5 @@ class LedController:
 
     def execute(self) -> None:
         ...
+        self.status_lights.set_color(LedColours.RED)
+        self.status_lights.set_display_pattern(DisplayType.PULSE)
