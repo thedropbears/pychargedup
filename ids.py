@@ -20,8 +20,8 @@ class CanIds:
         encoder_4 = 12
 
     class Arm:
-        rotation_left = 13
-        rotation_right = 14
+        rotation_main = 13
+        rotation_follower = 14
         extension = 15
 
     class Intake:

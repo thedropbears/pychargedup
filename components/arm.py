@@ -17,15 +17,52 @@ from wpimath.controller import (
 )
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
-from utilities.rev import SparkMaxEncoderWrapper
-from dataclasses import dataclass
+
+MIN_EXTENSION = 0.7  # meters
+MAX_EXTENSION = 1.3
+
+# Angle soft limits
+MIN_ANGLE = math.radians(-230)
+MAX_ANGLE = math.radians(70)
+
+
+class Setpoint:
+    # arm angle in radians
+    # angle of 0 points towards positive X, at the intake
+    # positive counterclockwise when looking at the left side of the robot
+    angle: float
+    # extension in meters, length from center of rotation to center of where pieces are held in the end effector
+    extension: float
+
+    def __init__(self, angle: float, extension: float) -> None:
+        self.extension = clamp(extension, MIN_EXTENSION, MAX_EXTENSION)
+        if angle > MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
+            angle -= math.tau
+        self.angle = clamp(angle, MIN_ANGLE, MAX_ANGLE)
+
+        if self.angle != angle or self.extension != extension:
+            print(
+                "SETPOINT WAS CLAMPED", (angle, extension), (self.angle, self.extension)
+            )
+
+    @classmethod
+    def fromCartesian(cls, x: float, z: float) -> "Setpoint":
+        """Sets a cartesian goal reletive to the arms axle"""
+        return cls(math.atan2(-z, x), math.hypot(x, z))
+
+
+class Setpoints:
+    PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
+    HANDOFF = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.1)
+    SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
+    SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
+    SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.42)
+    SCORE_CUBE_HIGH = Setpoint.fromCartesian(-1.22, 0.10)
 
 
 class Arm:
     # height of the center of rotation off the ground
     HEIGHT = 1
-    MIN_EXTENSION = 0.7  # meters
-    MAX_EXTENSION = 1.3
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
     SPOOL_DIAMETER = 0.05  # cm
@@ -34,10 +71,6 @@ class Arm:
     EXTEND_OUTPUT_RATIO = 1 / EXTEND_GEAR_RATIO * math.pi * SPOOL_DIAMETER
     EXTEND_GRAVITY_FEEDFORWARD = 0
     ROTATE_GRAVITY_FEEDFORWARDS = 6
-
-    # Angle soft limits
-    MIN_ANGLE = math.radians(-230)
-    MAX_ANGLE = math.radians(70)
 
     # how far either side of vertical will the arm retract if it is in
     # too avoid exceeding the max hieght
@@ -50,21 +83,22 @@ class Arm:
 
     def __init__(self) -> None:
         # Create rotation things
-        # left motor is main
         self.rotation_motor = CANSparkMax(
-            CanIds.Arm.rotation_left, CANSparkMax.MotorType.kBrushless
+            CanIds.Arm.rotation_main, CANSparkMax.MotorType.kBrushless
         )
         self.rotation_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.rotation_motor.setInverted(False)
         # setup second motor to follow first
-        self._rotation_motor_right = CANSparkMax(
-            CanIds.Arm.rotation_right, CANSparkMax.MotorType.kBrushless
+        self._rotation_motor_follower = CANSparkMax(
+            CanIds.Arm.rotation_follower, CANSparkMax.MotorType.kBrushless
         )
-        self._rotation_motor_right.follow(self.rotation_motor, invert=True)
-        self._rotation_motor_right.setIdleMode(CANSparkMax.IdleMode.kCoast)
-        self._rotation_motor_right.setInverted(False)
-        self.relative_encoder = SparkMaxEncoderWrapper(
-            self.rotation_motor, 1 / self.ROTATE_GEAR_RATIO
+        self._rotation_motor_follower.follow(self.rotation_motor, invert=True)
+        self._rotation_motor_follower.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self._rotation_motor_follower.setInverted(False)
+        self.relative_encoder = self.rotation_motor.getEncoder()
+        self.relative_encoder.setPositionConversionFactor(1 / self.ROTATE_GEAR_RATIO)
+        self.relative_encoder.setVelocityConversionFactor(
+            1 / self.ROTATE_GEAR_RATIO / 60
         )
 
         self.absolute_encoder = DutyCycleEncoder(DioChannels.Arm.absolute_encoder)
@@ -88,11 +122,13 @@ class Arm:
         )
         self.extension_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.extension_motor.setInverted(False)
-        self.extension_encoder = SparkMaxEncoderWrapper(
-            self.extension_motor, self.EXTEND_OUTPUT_RATIO
+        self.extension_encoder = self.extension_motor.getEncoder()
+        self.extension_encoder.setPositionConversionFactor(1 / self.EXTEND_OUTPUT_RATIO)
+        self.extension_encoder.setVelocityConversionFactor(
+            1 / self.EXTEND_OUTPUT_RATIO / 60
         )
         # assume retracted starting position
-        self.extension_encoder.setPosition(self.MIN_EXTENSION)
+        self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
             48, 0, 0, TrapezoidProfile.Constraints(maxVelocity=3.0, maxAcceleration=6)
         )
@@ -115,10 +151,10 @@ class Arm:
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)
         arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, self.HEIGHT)
         arm_pivot.appendLigament("ArmTower", self.HEIGHT - 0.05, -90)
-        self.arm_ligament = arm_pivot.appendLigament("Arm", self.MIN_EXTENSION, 0)
+        self.arm_ligament = arm_pivot.appendLigament("Arm", MIN_EXTENSION, 0)
         self.arm_goal_ligament = arm_pivot.appendLigament(
             "Arm_goal",
-            self.MIN_EXTENSION,
+            MIN_EXTENSION,
             0,
             3,
             wpilib.Color8Bit(117, 68, 26),
@@ -149,10 +185,8 @@ class Arm:
         # Update display
         self.arm_ligament.setAngle(-math.degrees(self.get_angle()))
         self.arm_goal_ligament.setAngle(-math.degrees(rotate_state.position))
-        self.arm_extend_ligament.setLength(self.get_extension() - self.MIN_EXTENSION)
-        self.arm_extend_goal_ligament.setLength(
-            extend_state.position - self.MIN_EXTENSION
-        )
+        self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
+        self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
         setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
         if setpoint != self.last_selection:
@@ -192,7 +226,7 @@ class Arm:
             self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
         )
         should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
-        return self.MIN_EXTENSION if should_retract else self.goal_extension
+        return MIN_EXTENSION if should_retract else self.goal_extension
 
     def calculate_rotation_feedforwards(self, next_speed: float) -> float:
         """Calculate feedforwards voltage.
@@ -211,6 +245,7 @@ class Arm:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
         return self.absolute_encoder.getDistance()
 
+    @feedback
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
@@ -221,19 +256,20 @@ class Arm:
         """Gets the extension length in meters from axle"""
         return self.extension_encoder.getPosition()
 
+    @feedback
     def get_extension_speed(self) -> float:
         """Gets the extension speed in m/s"""
         return self.extension_encoder.getVelocity()
 
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""
-        self.goal_angle = clamp(value, self.MIN_ANGLE, self.MAX_ANGLE)
+        self.goal_angle = clamp(value, MIN_ANGLE, MAX_ANGLE)
 
     def set_length(self, value: float) -> None:
         """Sets a goal length to go to in meters"""
-        self.goal_extension = clamp(value, self.MIN_EXTENSION, self.MAX_EXTENSION)
+        self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
 
-    def set_setpoint(self, value: "Setpoint") -> None:
+    def set_setpoint(self, value: Setpoint) -> None:
         self.set_length(value.extension)
         self.set_angle(value.angle)
 
@@ -260,38 +296,3 @@ class Arm:
     def on_enable(self) -> None:
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
-
-
-@dataclass
-class Setpoint:
-    # arm angle in radians
-    # angle of 0 points towards positive X, at the intake
-    # positive counterclockwise when looking at the left side of the robot
-    angle: float
-    # extension in meters, length from center of rotation to center of where pieces are held in the end effector
-    extension: float
-
-    def __init__(self, angle: float, extension: float) -> None:
-        self.extension = clamp(extension, Arm.MIN_EXTENSION, Arm.MAX_EXTENSION)
-        if angle > Arm.MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
-            angle -= math.tau
-        self.angle = clamp(angle, Arm.MIN_ANGLE, Arm.MAX_ANGLE)
-
-        if self.angle != angle or self.extension != extension:
-            print(
-                "SETPOINT WAS CLAMPED", (angle, extension), (self.angle, self.extension)
-            )
-
-    @staticmethod
-    def fromCartesian(x: float, z: float) -> "Setpoint":
-        """Sets a cartesian goal reletive to the arms axle"""
-        return Setpoint(math.atan2(-z, x), math.hypot(x, z))
-
-
-class Setpoints:
-    PICKUP_CONE = Setpoint(-math.pi, Arm.MIN_EXTENSION + 0.05)
-    HANDOFF = Setpoint(Arm.MAX_ANGLE, Arm.MIN_EXTENSION + 0.1)
-    SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
-    SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
-    SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.42)
-    SCORE_CUBE_HIGH = Setpoint.fromCartesian(-1.22, 0.10)
