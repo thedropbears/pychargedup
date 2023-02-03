@@ -8,6 +8,7 @@ from components.intake import Intake
 from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm
+from components.gripper import Gripper
 from utilities.scalers import rescale_js
 
 
@@ -20,6 +21,7 @@ class MyRobot(magicbot.MagicRobot):
     vision: Vision
     arm: Arm
     intake: Intake
+    gripper: Gripper
 
     def createObjects(self) -> None:
         self.data_log = wpilib.DataLogManager.getLog()
@@ -43,16 +45,16 @@ class MyRobot(magicbot.MagicRobot):
         self.gamepad.getXButton()
 
         if self.gamepad.getYButtonPressed():
-            self.intake.end_intake()
+            self.intake.deploy()
 
         if self.gamepad.getXButtonPressed():
-            self.intake.do_intake()
+            self.intake.retract()
 
         if self.gamepad.getLeftBumper():
-            self.intake.end_intake()
+            self.intake.deploy()
 
         if self.gamepad.getRightBumper():
-            self.intake.do_intake()
+            self.intake.retract()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if autodrive:

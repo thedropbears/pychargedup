@@ -20,10 +20,10 @@ class Intake:
             ids.PcmChannels.Intake.intake_piston_reverse,
         )
 
-    def do_intake(self) -> None:
+    def deploy(self) -> None:
         self.deployed = True
 
-    def end_intake(self) -> None:
+    def retract(self) -> None:
         self.deployed = False
 
     def execute(self) -> None:
