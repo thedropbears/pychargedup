@@ -70,7 +70,7 @@ class Arm:
     # converts from motor rotations to meters
     EXTEND_OUTPUT_RATIO = 1 / EXTEND_GEAR_RATIO * math.pi * SPOOL_DIAMETER
     EXTEND_GRAVITY_FEEDFORWARD = 0
-    ROTATE_GRAVITY_FEEDFORWARDS = 6
+    ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
     # how far either side of vertical will the arm retract if it is in
     # too avoid exceeding the max hieght
@@ -80,6 +80,8 @@ class Arm:
     goal_extension = tunable(MIN_EXTENSION)
     # automatically retract the extension when rotating overhead
     do_auto_retract = tunable(True)
+
+    control_loop_wait_time: float
 
     def __init__(self) -> None:
         # Create rotation things
@@ -111,10 +113,11 @@ class Arm:
         rotation_constraints = TrapezoidProfile.Constraints(
             maxVelocity=4, maxAcceleration=5
         )
-        self.rotation_controller = ProfiledPIDController(24, 0, 0, rotation_constraints)
+        self.rotation_controller = ProfiledPIDController(10, 0, 0, rotation_constraints)
         self.rotation_ff = ArmFeedforward(
-            kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=0, kA=12
+            kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
         )
+        self.rotation_last_setpoint_vel = 0
 
         # Create extension things
         self.extension_motor = CANSparkMax(
@@ -130,9 +133,10 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            48, 0, 0, TrapezoidProfile.Constraints(maxVelocity=3.0, maxAcceleration=6)
+            10, 0, 0, TrapezoidProfile.Constraints(maxVelocity=3.0, maxAcceleration=6)
         )
-        self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=2)
+        self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
+        self.extension_last_setpoint_vel = 0
 
         self.brake_solenoid = Solenoid(
             PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
@@ -198,7 +202,7 @@ class Arm:
         pid_output = self.extension_controller.calculate(
             self.get_extension(), extension_goal
         )
-        extension_ff = self.calculate_extension_feedforward(extend_state.velocity)
+        extension_ff = self.calculate_extension_feedforward()
         self.extension_motor.setVoltage(pid_output + extension_ff)
 
         if self.at_goal_angle() and self.is_angle_still():
@@ -212,7 +216,7 @@ class Arm:
         pid_output = self.rotation_controller.calculate(
             self.get_angle(), self.goal_angle
         )
-        rotation_ff = self.calculate_rotation_feedforwards(rotate_state.velocity)
+        rotation_ff = self.calculate_rotation_feedforwards()
         self.rotation_motor.setVoltage(pid_output + rotation_ff)
 
     def get_max_extension(self) -> float:
@@ -228,16 +232,24 @@ class Arm:
         should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
         return MIN_EXTENSION if should_retract else self.goal_extension
 
-    def calculate_rotation_feedforwards(self, next_speed: float) -> float:
+    def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
         next_speed: speed in rps"""
-        accel = next_speed - self.get_arm_speed()
-        return self.rotation_ff.calculate(self.get_angle(), self.get_arm_speed(), accel)
+        state: TrapezoidProfile.State = self.rotation_controller.getSetpoint()
+        accel = (
+            state.velocity - self.rotation_last_setpoint_vel
+        ) / self.control_loop_wait_time
+        self.rotation_last_setpoint_vel = state.velocity
+        return self.rotation_ff.calculate(self.get_angle(), state.velocity, accel)
 
-    def calculate_extension_feedforward(self, next_speed: float) -> float:
-        extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(-self.get_angle())
-        accel = next_speed - self.get_extension_speed()
-        extend_ff_simple = self.extension_simple_ff.calculate(next_speed, accel)
+    def calculate_extension_feedforward(self) -> float:
+        state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
+        accel = (
+            state.velocity - self.extension_last_setpoint_vel
+        ) / self.control_loop_wait_time
+        self.extension_last_setpoint_vel = state.velocity
+        extend_ff_simple = self.extension_simple_ff.calculate(state.velocity, accel)
+        extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(self.get_angle())
         return extend_ff_G + extend_ff_simple
 
     @feedback
