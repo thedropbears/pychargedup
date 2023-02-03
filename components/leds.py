@@ -3,10 +3,10 @@ import wpilib
 import time
 from enum import Enum, auto
 from typing import List, Tuple
-from utilities.scalers import scale_value 
+from utilities.scalers import scale_value
 
 
-MAX_BRIGHTNESS = 180  # Between 0-255 of Value on HSV scale
+MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
 
 
 class LedColours(Enum):
@@ -78,7 +78,7 @@ class StatusLights:
     IDK_PERIOD = 60
 
     def __init__(self):
-        self.led_length = 1
+        self.led_length = 60
 
         self.start_time = time.monotonic()
 
@@ -95,8 +95,8 @@ class StatusLights:
         self.leds.setData(self.leds_data)
         self.leds.start()
 
-    def set_color(self, color: tuple[int, int, int] | LedColours):
-        self.color = color
+    def set_color(self, color: LedColours):
+        self.color = color.value
 
     def set_piece(self, piece: Piece):
         if piece == Piece.CONE:
@@ -122,12 +122,10 @@ class StatusLights:
 
     def set(
         self,
-        color: tuple[int, int, int],
         piece: Piece,
         state: RobotState,
         side: PickupFromSide,
     ):
-        # self.set_color(color)
         self.set_piece(piece)
         self.set_state(state)
         self.set_intake_side(side)
