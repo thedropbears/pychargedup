@@ -17,7 +17,9 @@ from wpimath.kinematics import SwerveDrive4Kinematics
 from wpimath.system.plant import DCMotor
 
 from components.chassis import SwerveModule
+from components import arm
 from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
+from ids import CanIds
 
 if typing.TYPE_CHECKING:
     from robot import MyRobot
@@ -74,10 +76,10 @@ class PhysicsEngine:
             for module in robot.chassis.modules
         ]
 
-        self.arm = robot.arm
         # Create arm simulation
+        self.arm = robot.arm
         arm_motors_sim = DCMotor.NEO(2)
-        arm_len = (robot.arm.MIN_EXTENSION + robot.arm.MAX_EXTENSION) / 2
+        arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
         arm_mass = 5
         moi = SingleJointedArmSim.estimateMOI(arm_len, arm_mass)
         self.arm_sim = SingleJointedArmSim(
@@ -85,8 +87,8 @@ class PhysicsEngine:
             robot.arm.ROTATE_GEAR_RATIO,
             moi,
             arm_len,
-            -robot.arm.MAX_ANGLE,
-            -robot.arm.MIN_ANGLE,
+            -arm.MAX_ANGLE,
+            -arm.MIN_ANGLE,
             arm_mass,
             True,
             [math.radians(0.01)],
@@ -97,13 +99,20 @@ class PhysicsEngine:
             robot.arm.EXTEND_GEAR_RATIO,
             4,
             robot.arm.SPOOL_DIAMETER / 2,
-            robot.arm.MIN_EXTENSION,
-            robot.arm.MAX_EXTENSION,
+            arm.MIN_EXTENSION,
+            arm.MAX_EXTENSION,
             False,
             [0.001],
         )
-        self.extension_sim.setState(np.array([[robot.arm.MIN_EXTENSION], [0]]))
+        self.extension_sim.setState(np.array([[arm.MIN_EXTENSION], [0]]))
+
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
+        self.arm_motor = SimDeviceSim("SPARK MAX ", CanIds.Arm.rotation_main)
+        self.arm_motor_pos = self.arm_motor.getDouble("Position")
+        self.arm_motor_vel = self.arm_motor.getDouble("Velocity")
+        self.arm_extension = SimDeviceSim("SPARK MAX ", CanIds.Arm.extension)
+        self.arm_extension_pos = self.arm_extension.getDouble("Position")
+        self.arm_extension_vel = self.arm_extension.getDouble("Velocity")
 
         self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
@@ -115,15 +124,15 @@ class PhysicsEngine:
         )
         if self.arm.brake_solenoid.get():
             self.arm_sim.update(tm_diff)
-        self.arm_abs_encoder.set(-self.arm_sim.getAngle() / math.tau)
-        self.arm.relative_encoder.setVelocity(-self.arm_sim.getVelocity())
+        self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
+        self.arm_motor_vel.set(-self.arm_sim.getVelocity())
         # Update extension sim
         self.extension_sim.setInputVoltage(
             self.arm.extension_motor.get() * wpilib.RobotController.getBatteryVoltage()
         )
         self.extension_sim.update(tm_diff)
-        self.arm.extension_encoder.setPosition(self.extension_sim.getPosition())
-        self.arm.extension_encoder.setVelocity(self.extension_sim.getVelocity())
+        self.arm_extension_pos.set(self.extension_sim.getPosition())
+        self.arm_extension_vel.set(self.extension_sim.getVelocity())
 
         for wheel in self.wheels:
             wheel.update(tm_diff)
