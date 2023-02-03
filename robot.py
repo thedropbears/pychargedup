@@ -42,7 +42,6 @@ class MyRobot(magicbot.MagicRobot):
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
-        self.gamepad.getXButton()
 
         if self.gamepad.getYButtonPressed():
             self.intake.deploy()
@@ -50,11 +49,6 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButtonPressed():
             self.intake.retract()
 
-        if self.gamepad.getLeftBumper():
-            self.intake.deploy()
-
-        if self.gamepad.getRightBumper():
-            self.intake.retract()
 
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
         if autodrive:

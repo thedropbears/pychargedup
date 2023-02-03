@@ -34,5 +34,5 @@ class Intake:
             self.piston.set(DoubleSolenoid.Value.kReverse)
             self.motor.set(0.0)
 
-    def get_break_beam_sensor_state(self) -> bool:
-        return self.break_beam.get()
+    def is_game_piece_present(self) -> bool:
+        return not self.break_beam.get()
