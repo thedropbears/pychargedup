@@ -54,6 +54,7 @@ class PickupFromSide(Enum):
             return LedColours.GREEN
         elif self._value_ == 2:
             return LedColours.RED
+        return LedColours.PINK
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
@@ -242,7 +243,9 @@ class StatusLights:
             led_data.extend(
                 [
                     wpilib.AddressableLED.LEDData(
-                        LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2]
+                        LedColours.BLUE.value[0],
+                        LedColours.BLUE.value[1],
+                        LedColours.BLUE.value[2],
                     ),
                     wpilib.AddressableLED.LEDData(0, 0, 0),
                 ]
@@ -257,14 +260,17 @@ class StatusLights:
                 [
                     wpilib.AddressableLED.LEDData(0, 0, 0),
                     wpilib.AddressableLED.LEDData(
-                        LedColours.BLUE[0], LedColours.BLUE[1], LedColours.BLUE[2]
+                        LedColours.BLUE.value[0],
+                        LedColours.BLUE.value[1],
+                        LedColours.BLUE.value[2],
                     ),
                 ]
-                * (leds_left / 2)
+                * (leds_left // 2)
             )
         self.leds.setData(led_data[: self.led_length])
 
     def execute(self):
+        colour = self.calc_solid()
         if self.pattern == DisplayType.SOLID:
             colour = self.calc_solid()
         elif self.pattern == DisplayType.FLASH:
