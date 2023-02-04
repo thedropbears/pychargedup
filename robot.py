@@ -83,5 +83,6 @@ class MyRobot(magicbot.MagicRobot):
     def disabledPeriodic(self):
         self.vision.execute()
 
+
 if __name__ == "__main__":
     wpilib.run(MyRobot)
