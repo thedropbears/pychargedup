@@ -59,6 +59,29 @@ class MyRobot(magicbot.MagicRobot):
         if autodrive:
             self.movement.do_autodrive()
 
+    def testInit(self) -> None:
+        self.arm.on_enable()
+        self.vision.add_to_estimator = False
+
+    def testPeriodic(self) -> None:
+        right_trigger = self.gamepad.getRightTriggerAxis()
+        left_trigger = self.gamepad.getLeftTriggerAxis()
+        self.arm.rotation_motor.set((left_trigger - right_trigger) * 0.5)
+        # self.arm._rotation_motor_right.set((right_trigger - right_trigger) * 0.5)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
+
+        # self.arm.execute()
+
+        self.vision.execute()
+
+    def disabledInit(self) -> None:
+        self.vision.add_to_estimator = False
+
+    def disabledPeriodic(self):
+        self.vision.execute()
 
 if __name__ == "__main__":
     wpilib.run(MyRobot)
