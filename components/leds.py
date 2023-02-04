@@ -2,7 +2,6 @@ import math
 import wpilib
 import time
 from enum import Enum, auto
-from typing import List, Tuple
 from utilities.scalers import scale_value
 import random
 
@@ -140,9 +139,7 @@ class StatusLights:
             if i < round(self.led_length / 2):
                 led_data.append(wpilib.AddressableLED.LEDData(*self.color))
             else:
-                led_data.append(
-                    wpilib.AddressableLED.LEDData(*self.side.value)
-                )
+                led_data.append(wpilib.AddressableLED.LEDData(*self.side.value))
         self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
@@ -365,7 +362,9 @@ class StatusLights:
         self._morse_message += "  "
 
     def execute(self):
-        color = self.color # use the current color as a fallback if (for whatever reason) there is no pattern set.
+        color = (
+            self.color
+        )  # use the current color as a fallback if (for whatever reason) there is no pattern set.
         if self.pattern == DisplayType.SOLID:
             color = self.calc_solid()
         elif self.pattern == DisplayType.FLASH:
@@ -376,7 +375,7 @@ class StatusLights:
             color = self.calc_rainbow()
         elif self.pattern == DisplayType.HALF_HALF:
             self.calc_half()
-            return # sets LEDs
+            return  # sets LEDs
         elif self.pattern == DisplayType.PACMAN:
             self.calc_pacman()
             return  # ''
