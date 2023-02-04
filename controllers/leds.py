@@ -12,9 +12,15 @@ class LedController:
         self.enabled = False
 
     def on_enabled(self):
+        """
+        Turn lights on
+        """
         self.enabled = True
 
     def on_disabled(self):
+        """
+        Turn lights on
+        """
         self.enabled = False
 
     def execute(self) -> None:
