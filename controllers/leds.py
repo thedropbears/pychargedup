@@ -18,5 +18,8 @@ class LedController:
         self.enabled = False
 
     def execute(self) -> None:
+        if not self.enabled:
+            self.status_lights.set_color(LedColors.OFF)
+            self.status_lights.set_display_pattern(DisplayType.SOLID)
         self.status_lights.set_color(LedColors.RED)
         self.status_lights.set_display_pattern(DisplayType.PULSE)
