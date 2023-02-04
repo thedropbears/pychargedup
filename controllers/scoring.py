@@ -84,10 +84,24 @@ class ScoreController(StateMachine):
         
     @state
     def score_cone(self):
+                '''goto_correct_state()
+            get place to score cone and get movement goal to it
+            if gripper has piece and time to goal < 3:
+                arm goto score cone @ mid or high
+            if time to goal > 4:
+                arm goto stow'''
         ...
 
     @state
     def score_cube(self):
+        '''    goto_correct_state()
+            get place to score cube and set movement goal to it
+            if gripper has piece and time to goal < 3:
+                arm goto score cube @ mid or high
+            if gripper dosent have piece or time to goal > 4:
+                arm goto handoff
+            if cube in reach of claw:
+                close claw'''
         ...
 
     @state(must_finish=True)
