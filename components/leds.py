@@ -10,7 +10,7 @@ import random
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
 
 
-class LedColours(Enum):
+class LedColors(Enum):
     # Use HSV to get nicer fading, hues are 0-180 so half usual hue
     RED = (0, 255, MAX_BRIGHTNESS)
     ORANGE = (20, 255, MAX_BRIGHTNESS)
@@ -48,25 +48,18 @@ class Piece(Enum):
 
 
 class PickupFromSide(Enum):
-    LEFT = auto()
-    RIGHT = auto()
-
-    def colour(self) -> LedColours:
-        if self._value_ == 1:
-            return LedColours.GREEN
-        elif self._value_ == 2:
-            return LedColours.RED
-        return LedColours.PINK
+    LEFT = LedColors.GREEN
+    RIGHT = LedColors.RED
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
-    data: list[tuple[LedColours, int]]
+    data: list[tuple[LedColors, int]]
 ) -> list[wpilib.AddressableLED.LEDData]:
     pattern_data = []
-    for colour, number in data:
+    for color, number in data:
         x = wpilib.AddressableLED.LEDData()
-        x.setHSV(*colour.value)
+        x.setHSV(*color.value)
         pattern_data += [x] * number
     return pattern_data
 
@@ -85,7 +78,7 @@ class StatusLights:
 
         self.start_time = time.monotonic()
 
-        self.colour = (0, 0, 0)
+        self.color = (0, 0, 0)
 
         self.pattern = DisplayType.SOLID
 
@@ -101,16 +94,11 @@ class StatusLights:
         self.leds.setData(self.leds_data)
         self.leds.start()
 
-    def set_colour(self, colour: LedColours):
-        self.colour = colour.value
+    def set_color(self, color: LedColors):
+        self.color = color.value
 
     def set_piece(self, piece: Piece):
-        if piece == Piece.CONE:
-            self.set_colour(LedColours.YELLOW)
-        elif piece == Piece.CUBE:
-            self.set_colour(LedColours.VIOLET)
-        elif piece == Piece.NONE:
-            self.set_colour(LedColours.OFF)
+        self.set_color(piece.value)
 
     def set_state(self, state: RobotState):
         if state == RobotState.PICKED_UP_PIECE:
@@ -118,7 +106,7 @@ class StatusLights:
         elif state == RobotState.LOOKING_FOR_PIECE:
             self.pattern = DisplayType.HALF_HALF
         elif RobotState.OTHER:
-            self.set_colour(LedColours.OFF)
+            self.set_color(LedColors.OFF)
 
     def set_intake_side(self, side: PickupFromSide):
         self.side = side
@@ -150,20 +138,20 @@ class StatusLights:
         led_data: list[wpilib.AddressableLED.LEDData] = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
-                led_data.append(wpilib.AddressableLED.LEDData(*self.colour))
+                led_data.append(wpilib.AddressableLED.LEDData(*self.color))
             else:
                 led_data.append(
-                    wpilib.AddressableLED.LEDData(*self.side.colour().value)
+                    wpilib.AddressableLED.LEDData(*self.side.value)
                 )
         self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
-        return self.colour
+        return self.color
 
     def calc_flash(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
-        return (self.colour[0], self.colour[1], self.colour[2] * round(brightness))
+        return (self.color[0], self.color[1], self.color[2] * round(brightness))
 
     def calc_rainb(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
@@ -171,21 +159,21 @@ class StatusLights:
         hue = round(180 * (elapsed_time / loop_time % 1))
         return (hue, 255, MAX_BRIGHTNESS)
 
-    def calc_pacma(self):
+    def calc_pacman(self):
         elapsed_time = time.monotonic() - self.start_time
         # find the pattern of leds and its position
         if elapsed_time % self.PACMAN_PERIOD < self.PACMAN_PERIOD / 2:
             pattern = make_pattern(
                 [
-                    (LedColours.ORANGE, 2),
-                    (LedColours.OFF, 2),
-                    (LedColours.PINK, 2),
-                    (LedColours.OFF, 2),
-                    (LedColours.CYAN, 2),
-                    (LedColours.OFF, 2),
-                    (LedColours.RED, 2),
-                    (LedColours.OFF, 5),
-                    (LedColours.YELLOW, 3),
+                    (LedColors.ORANGE, 2),
+                    (LedColors.OFF, 2),
+                    (LedColors.PINK, 2),
+                    (LedColors.OFF, 2),
+                    (LedColors.CYAN, 2),
+                    (LedColors.OFF, 2),
+                    (LedColors.RED, 2),
+                    (LedColors.OFF, 5),
+                    (LedColors.YELLOW, 3),
                 ]
             )
             pacman_position = scale_value(
@@ -198,15 +186,15 @@ class StatusLights:
         else:
             pattern = make_pattern(
                 [
-                    (LedColours.BLUE, 2),
-                    (LedColours.OFF, 2),
-                    (LedColours.BLUE, 2),
-                    (LedColours.OFF, 2),
-                    (LedColours.BLUE, 2),
-                    (LedColours.OFF, 2),
-                    (LedColours.BLUE, 2),
-                    (LedColours.OFF, 5),
-                    (LedColours.YELLOW, 3),
+                    (LedColors.BLUE, 2),
+                    (LedColors.OFF, 2),
+                    (LedColors.BLUE, 2),
+                    (LedColors.OFF, 2),
+                    (LedColors.BLUE, 2),
+                    (LedColors.OFF, 2),
+                    (LedColors.BLUE, 2),
+                    (LedColors.OFF, 5),
+                    (LedColors.YELLOW, 3),
                 ]
             )
             pacman_position = scale_value(
@@ -234,7 +222,7 @@ class StatusLights:
     def calc_pulse(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
-        return (self.colour[0], self.colour[1], round(self.colour[2] * brightness))
+        return (self.color[0], self.color[1], round(self.color[2] * brightness))
 
     def calc_alternating(self):
         elapsed_time = time.monotonic() - self.start_time
@@ -243,7 +231,7 @@ class StatusLights:
         # and so on?
 
         # make patter is redundant here but its easier to just keep it here
-        pattern = make_pattern([(LedColours.BLUE, 1), (LedColours.OFF, 1)])
+        pattern = make_pattern([(LedColors.BLUE, 1), (LedColors.OFF, 1)])
         position = round(
             scale_value(
                 elapsed_time % self.ALTERNATING_PERIOD,
@@ -258,9 +246,9 @@ class StatusLights:
             led_data.extend(
                 [
                     wpilib.AddressableLED.LEDData(
-                        LedColours.BLUE.value[0],
-                        LedColours.BLUE.value[1],
-                        LedColours.BLUE.value[2],
+                        LedColors.BLUE.value[0],
+                        LedColors.BLUE.value[1],
+                        LedColors.BLUE.value[2],
                     ),
                     wpilib.AddressableLED.LEDData(0, 0, 0),
                 ]
@@ -275,9 +263,9 @@ class StatusLights:
                 [
                     wpilib.AddressableLED.LEDData(0, 0, 0),
                     wpilib.AddressableLED.LEDData(
-                        LedColours.BLUE.value[0],
-                        LedColours.BLUE.value[1],
-                        LedColours.BLUE.value[2],
+                        LedColors.BLUE.value[0],
+                        LedColors.BLUE.value[1],
+                        LedColors.BLUE.value[2],
                     ),
                 ]
                 * (leds_left // 2)
@@ -312,11 +300,11 @@ class StatusLights:
             if running_total > elapsed_time:
                 # This is the current character
                 if token == " ":
-                    return LedColours.OFF.value
+                    return LedColors.OFF.value
                 else:
-                    return LedColours.BLUE.value
+                    return LedColors.BLUE.value
         # Default - should never be hit
-        return LedColours.OFF.value
+        return LedColors.OFF.value
 
     def choose_morse_message(self, _message=None) -> None:
         # Choose a morse message at random, unless specific message requested
@@ -327,10 +315,7 @@ class StatusLights:
             "HONEYBADGER DONT CARE",
             "GLHF",
         ]
-        if _message is None:
-            message = random.choice(MESSAGES)
-        else:
-            message = _message.upper()
+        message = random.choice(MESSAGES) if _message is None else _message.upper()
         # Convert to dots and dashes
         MORSE_CODE_DICT = {
             "A": ".-",
@@ -380,24 +365,24 @@ class StatusLights:
         self._morse_message += "  "
 
     def execute(self):
-        colour = self.calc_solid()
+        color = self.calc_solid()
         if self.pattern == DisplayType.SOLID:
-            colour = self.calc_solid()
+            color = self.calc_solid()
         elif self.pattern == DisplayType.FLASH:
-            colour = self.calc_flash()
+            color = self.calc_flash()
         elif self.pattern == DisplayType.PULSE:
-            colour = self.calc_pulse()
+            color = self.calc_pulse()
         elif self.pattern == DisplayType.RAINBOW:
-            colour = self.calc_rainb()
+            color = self.calc_rainb()
         elif self.pattern == DisplayType.HALF_HALF:
             self.calc_half()
             return
         elif self.pattern == DisplayType.PACMAN:
-            self.calc_pacma()
+            self.calc_pacman()
             return  # pacman sets LEDs
         elif self.pattern == DisplayType.ALTERNATING:
             self.calc_alternating()
             return  # alternating sets LEDs
 
-        self.single_led_data.setHSV(colour[0], colour[1], colour[2])
+        self.single_led_data.setHSV(color[0], color[1], color[2])
         self.leds.setData(self.leds_data)
