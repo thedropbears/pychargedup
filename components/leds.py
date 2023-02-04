@@ -375,6 +375,6 @@ class StatusLights:
         elif self.pattern == DisplayType.ALTERNATING:
             self.calc_alternating()
             return  # ''
-    
+
         self.single_led_data.setHSV(color[0], color[1], color[2])
         self.leds.setData(self.leds_data)
