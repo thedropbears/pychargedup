@@ -43,10 +43,10 @@ class MyRobot(magicbot.MagicRobot):
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
 
-        if self.gamepad.getYButtonPressed():
+        if self.gamepad.getLeftBumperPressed():
             self.intake.deploy()
 
-        if self.gamepad.getXButtonPressed():
+        if self.gamepad.getRightBumperPressed():
             self.intake.retract()
 
         if self.gripper.game_piece_in_reach():
