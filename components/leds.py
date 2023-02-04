@@ -153,7 +153,7 @@ class StatusLights:
         brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
         return (self.color[0], self.color[1], self.color[2] * round(brightness))
 
-    def calc_rainb(self) -> tuple[int, int, int]:
+    def calc_rainbow(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
         loop_time = self.RAINBOW_PERIOD / 3
         hue = round(180 * (elapsed_time / loop_time % 1))
@@ -284,13 +284,13 @@ class StatusLights:
             + 3 * self._morse_message.count(" ")
         )
 
-    def _morse_calculation(self) -> Tuple[int, int, int]:
+    def _morse_calculation(self) -> tuple[int, int, int]:
         # Work out how far through the message we are
         DOT_LENGTH = 0.15  # seconds
         total_time = self._morse_length * DOT_LENGTH
         elapsed_time = time.monotonic() - self.pattern_start_time
         if elapsed_time > total_time:
-            self.set(DisplayType.RAINBOW)
+            self.set_display_pattern(DisplayType.RAINBOW)
         running_total = 0.0
         for token in self._morse_message:
             if token == ".":
@@ -365,7 +365,7 @@ class StatusLights:
         self._morse_message += "  "
 
     def execute(self):
-        color = self.calc_solid()
+        color = self.color # use the current color as a fallback if (for whatever reason) there is no pattern set.
         if self.pattern == DisplayType.SOLID:
             color = self.calc_solid()
         elif self.pattern == DisplayType.FLASH:
@@ -373,16 +373,16 @@ class StatusLights:
         elif self.pattern == DisplayType.PULSE:
             color = self.calc_pulse()
         elif self.pattern == DisplayType.RAINBOW:
-            color = self.calc_rainb()
+            color = self.calc_rainbow()
         elif self.pattern == DisplayType.HALF_HALF:
             self.calc_half()
-            return
+            return # sets LEDs
         elif self.pattern == DisplayType.PACMAN:
             self.calc_pacman()
-            return  # pacman sets LEDs
+            return  # ''
         elif self.pattern == DisplayType.ALTERNATING:
             self.calc_alternating()
-            return  # alternating sets LEDs
+            return  # ''
 
         self.single_led_data.setHSV(color[0], color[1], color[2])
         self.leds.setData(self.leds_data)
