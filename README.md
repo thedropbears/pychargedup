@@ -6,30 +6,40 @@ The Drop Bears' robot code for _FIRST_ Charged Up (FRC 2023)
 
 ### Install Dependencies
 
-`pip install -r requirements-dev.txt`
+```
+pip install -r requirements-dev.txt
+```
 
 ### Setup pre-commit
 
 Pre-commit is setup to automatically run formatters and linters when you commit.
 
-`pre-commit install`
+```
+pre-commit install
+```
 
 
 ## Run
 
 ### Simulation
 
-`python robot.py sim`
+```
+python robot.py sim
+```
 
 ### Deploy to Robot
 
 Once on robots network
 
-`python robot.py deploy`
+```
+python robot.py deploy
+```
 
 ### Test
 
-`python robot.py test`
+```
+python robot.py test
+```
 
 
 ## Code Structure

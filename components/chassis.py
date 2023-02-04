@@ -100,14 +100,9 @@ class SwerveModule:
         self.drive.config_kI(0, 0, 10)
         self.drive.config_kD(0, 0, 10)
 
-        # Configure encoder
-        self.encoder.configFeedbackCoefficient(
-            math.tau / 4096, "rad", ctre.SensorTimeBase.PerSecond, timeoutMs=10
-        )
-
     def get_angle_absolute(self) -> float:
-        """Gets steer angle from absolute encoder"""
-        return self.encoder.getAbsolutePosition()
+        """Gets steer angle (radians) from absolute encoder"""
+        return math.radians(self.encoder.getAbsolutePosition())
 
     def get_angle_integrated(self) -> float:
         """Gets steer angle from motor's integrated relative encoder"""
@@ -132,7 +127,7 @@ class SwerveModule:
             self.state = desired_state
         self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
 
-        if abs(self.state.speed) < 1e-3:
+        if abs(self.state.speed) < 0.01:
             self.drive.set(ctre.ControlMode.Velocity, 0)
             self.steer.set(ctre.ControlMode.PercentOutput, 0)
             return
@@ -169,10 +164,11 @@ class SwerveModule:
 
 
 class Chassis:
-    # assumes square chassis
-    WIDTH = 0.6167  # meters between modules from CAD
-    # distace from center to wheels
-    WHEEL_DIST = math.sqrt(2) * WIDTH / 2
+    # metres between centre of left and right wheels
+    TRACK_WIDTH = 0.54665
+    # metres between centre of front and back wheels
+    WHEEL_BASE = 0.68665
+
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
 
@@ -199,37 +195,35 @@ class Chassis:
         self.modules = [
             # Front Left
             SwerveModule(
-                self.WIDTH / 2,
-                self.WIDTH / 2,
+                self.WHEEL_BASE / 2,
+                self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_1,
                 CanIds.Chassis.steer_1,
                 CanIds.Chassis.encoder_1,
             ),
             # Back Left
             SwerveModule(
-                -self.WIDTH / 2,
-                self.WIDTH / 2,
+                -self.WHEEL_BASE / 2,
+                self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_2,
                 CanIds.Chassis.steer_2,
                 CanIds.Chassis.encoder_2,
             ),
             # Back Right
             SwerveModule(
-                -self.WIDTH / 2,
-                -self.WIDTH / 2,
+                -self.WHEEL_BASE / 2,
+                -self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_3,
                 CanIds.Chassis.steer_3,
                 CanIds.Chassis.encoder_3,
-                drive_reversed=True,
             ),
             # Front Right
             SwerveModule(
-                self.WIDTH / 2,
-                -self.WIDTH / 2,
+                self.WHEEL_BASE / 2,
+                -self.TRACK_WIDTH / 2,
                 CanIds.Chassis.drive_4,
                 CanIds.Chassis.steer_4,
                 CanIds.Chassis.encoder_4,
-                drive_reversed=True,
             ),
         ]
 
@@ -241,19 +235,20 @@ class Chassis:
         )
         self.sync_all()
         self.imu.zeroYaw()
+        self.imu.resetDisplacement()
         self.estimator = SwerveDrive4PoseEstimator(
             self.kinematics,
             self.imu.getRotation2d(),
             self.get_module_positions(),
-            Pose2d(0, 0, 0),
-            stateStdDevs=(0.5, 0.5, 0.1),
+            Pose2d(3, 0, 0),
+            stateStdDevs=(0.05, 0.05, 0.01),
             visionMeasurementStdDevs=(0.4, 0.4, math.inf),
         )
         self.field_obj = self.field.getObject("fused_pose")
         self.module_objs: list[wpilib.FieldObject2d] = []
         for idx, _module in enumerate(self.modules):
             self.module_objs.append(self.field.getObject("s_module_" + str(idx)))
-        self.set_pose(Pose2d(0, 0, Rotation2d.fromDegrees(0)))
+        self.set_pose(Pose2d(4, 3.5, Rotation2d.fromDegrees(180)))
 
     def drive_field(self, vx: float, vy: float, omega: float) -> None:
         """Field oriented drive commands"""
@@ -295,6 +290,10 @@ class Chassis:
         self.update_odometry()
         self.update_pose_history()
         self.last_time = time.monotonic()
+
+    @magicbot.feedback
+    def get_imu_speed(self) -> float:
+        return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
 
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
@@ -367,6 +366,13 @@ class Chassis:
     def get_pose(self) -> Pose2d:
         """Get the current location of the robot relative to ???"""
         return self.estimator.getEstimatedPosition()
+
+    def get_gyro_pose(self) -> Pose2d:
+        return Pose2d(
+            self.imu.getDisplacementX(),
+            self.imu.getDisplacementY(),
+            self.imu.getRotation2d(),
+        )
 
     def get_rotation(self) -> Rotation2d:
         """Get the current heading of the robot."""

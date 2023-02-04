@@ -8,9 +8,10 @@ from controllers.leds import LedController
 from components.chassis import Chassis
 from components.vision import Vision
 from components.leds import StatusLights
-from wpimath.geometry import Pose2d, Rotation2d
-import math
+from components.arm import Arm
 from utilities.scalers import rescale_js
+from components.intake import Intake
+from components.gripper import Gripper
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -21,6 +22,9 @@ class MyRobot(magicbot.MagicRobot):
     # Components
     chassis: Chassis
     vision: Vision
+    arm: Arm
+    intake: Intake
+    gripper: Gripper
     status_lights: StatusLights
 
     def createObjects(self) -> None:
@@ -34,28 +38,56 @@ class MyRobot(magicbot.MagicRobot):
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
-        # if self.isReal():
-        #     try:
-        #         from cscore import CameraServer  # type: ignore
-        #     except ImportError:
-        #         self.logger.exception("Could not import CameraServer")
-        #     else:
-        #         CameraServer.startAutomaticCapture()
+    def teleopInit(self) -> None:
+        self.vision.add_to_estimator = True
 
     def teleopPeriodic(self) -> None:
-        drop_off = self.gamepad.getAButton()
-        pick_up = self.gamepad.getXButton()
+        autodrive = self.gamepad.getAButton()
         spin_rate = 6
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * Chassis.max_wheel_speed
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
 
+        if self.gamepad.getLeftBumper():
+            self.intake.retract()
+
+        if self.gamepad.getRightBumper():
+            self.intake.deploy()
+
+        if self.gripper.game_piece_in_reach():
+            self.gripper.close()
+
+        if self.gamepad.getXButton():
+            self.gripper.open()
+
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
-        if drop_off:
-            self.movement.do_autodrive(Pose2d(3, 0, 0), Rotation2d(0))
-        elif pick_up:
-            self.movement.do_autodrive(Pose2d(0, -1, math.pi), Rotation2d(math.pi))
+        if autodrive:
+            self.movement.do_autodrive()
+
+    def testInit(self) -> None:
+        self.arm.on_enable()
+        self.vision.add_to_estimator = False
+
+    def testPeriodic(self) -> None:
+        right_trigger = self.gamepad.getRightTriggerAxis()
+        left_trigger = self.gamepad.getLeftTriggerAxis()
+        self.arm.rotation_motor.set((left_trigger - right_trigger) * 0.5)
+        # self.arm._rotation_motor_right.set((right_trigger - right_trigger) * 0.5)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
+        # self.arm.extension_motor.set(left_trigger * 0.1)
+        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
+
+        # self.arm.execute()
+
+        self.vision.execute()
+
+    def disabledInit(self) -> None:
+        self.vision.add_to_estimator = False
+
+    def disabledPeriodic(self):
+        self.vision.execute()
 
 
 if __name__ == "__main__":
