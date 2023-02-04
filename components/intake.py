@@ -19,6 +19,9 @@ class Intake:
             ids.PcmChannels.Intake.intake_piston_reverse,
         )
 
+    def is_game_piece_present(self) -> bool:
+        return not self.break_beam.get()
+
     def deploy(self) -> None:
         self.deployed = True
 
@@ -32,6 +35,5 @@ class Intake:
         else:
             self.piston.set(DoubleSolenoid.Value.kReverse)
             self.motor.set(0.0)
-
-    def is_game_piece_present(self) -> bool:
-        return not self.break_beam.get()
+        if self.is_game_piece_present():
+            self.deployed = False
