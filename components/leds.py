@@ -41,9 +41,9 @@ class RobotState(Enum):
 
 
 class Piece(Enum):
-    CONE = auto()
-    CUBE = auto()
-    NONE = auto()
+    CONE = LedColors.YELLOW
+    CUBE = LedColors.VIOLET
+    NONE = LedColors.OFF
 
 
 class PickupFromSide(Enum):
@@ -84,6 +84,7 @@ class StatusLights:
         self.side = PickupFromSide.RIGHT
 
         self._morse_message = ""
+        self.pattern_start_time = time.monotonic()
 
     def setup(self) -> None:
         self.choose_morse_message()
