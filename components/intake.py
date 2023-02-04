@@ -5,12 +5,11 @@ import ids
 
 
 class Intake:
-    ids = ids
     intake_speed = tunable(0.5)
 
     def __init__(self) -> None:
         self.deployed = False
-        self.break_beam = DigitalInput(self.ids.DioChannels.Intake.break_beam_sensor)
+        self.break_beam = DigitalInput(ids.DioChannels.Intake.break_beam_sensor)
         self.motor = CANSparkMax(
             ids.CanIds.Intake.intake_motor, CANSparkMax.MotorType.kBrushless
         )
