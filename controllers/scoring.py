@@ -1,12 +1,8 @@
-from magicbot import (
-    state,
-    StateMachine,
-    feedback
-)
+from magicbot import state, StateMachine, feedback
 
 import math
 
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Pose2d
 
 from components.gripper import Gripper
 from components.intake import Intake
@@ -15,12 +11,15 @@ from controllers.movement import Movement
 
 from enum import Enum, auto
 
+
 class Piece(Enum):
     CUBE = auto()
     CONE = auto()
     NONE = auto()
 
+
 # TODO: use set points
+
 
 class ScoreController(StateMachine):
     gripper: Gripper
@@ -31,7 +30,7 @@ class ScoreController(StateMachine):
     MOVE_FORWARD = 1
     # the distance that a cone will be at when we pick it up (meters)
     CONE_DISTANCE = 0.3
-    
+
     def __init__(self) -> None:
         self.has_piece = False
         self.holding_piece = Piece.NONE
@@ -48,9 +47,16 @@ class ScoreController(StateMachine):
         # turn the intake on
         self.intake.deploy()
         # move forward a bit to suck the piece in until the cube is not in reach (and therefore in our bot)
-        if not(self.game_piece_in_reach()):
+        if not (self.game_piece_in_reach()):
             current_goal = self.movement.goal
-            self.movement.set_goal(Pose2d(current_goal.X(), current_goal.Y() + self.MOVE_FORWARD, current_goal.rotation()), current_goal.rotation())
+            self.movement.set_goal(
+                Pose2d(
+                    current_goal.X(),
+                    current_goal.Y() + self.MOVE_FORWARD,
+                    current_goal.rotation(),
+                ),
+                current_goal.rotation(),
+            )
         self.intake.retract()
 
         self.holding_piece = Piece.CUBE
@@ -76,12 +82,14 @@ class ScoreController(StateMachine):
 
             self.holding_piece = Piece.CONE
         else:
-            raise Exception(f"The position ({self.CONE_DISTANCE}, .95) cannot be reached")
-        
+            raise Exception(
+                f"The position ({self.CONE_DISTANCE}, .95) cannot be reached"
+            )
+
     @state
     def score_cone(self):
         ...
-        
+
     def get_time_to_goal(self) -> float:
         ...
 
@@ -93,10 +101,11 @@ class ScoreController(StateMachine):
     def recovery(self):
         ...
 
-
     @state
     def gripper_open(self) -> None:
-        self.has_piece = False # if the gripper is open, there is 100% no piece in our control
+        self.has_piece = (
+            False  # if the gripper is open, there is 100% no piece in our control
+        )
         self.gripper.open()
 
     @state
@@ -112,5 +121,3 @@ class ScoreController(StateMachine):
     @feedback
     def held_piece(self) -> Piece:
         return self.holding_piece
-
-    
