@@ -1,6 +1,6 @@
 from components.leds import (
     StatusLights,
-    LedColours,
+    LedColors,
     DisplayType,
 )
 
@@ -18,5 +18,5 @@ class LedController:
         self.enabled = False
 
     def execute(self) -> None:
-        self.status_lights.set_colour(LedColours.RED)
+        self.status_lights.set_color(LedColors.RED)
         self.status_lights.set_display_pattern(DisplayType.PULSE)
