@@ -252,7 +252,7 @@ class StatusLights:
                     ),
                     wpilib.AddressableLED.LEDData(0, 0, 0),
                 ]
-                * math.floor(position / 2)
+                * (position // 2)
             )
             led_data.extend(pattern)
         else:
