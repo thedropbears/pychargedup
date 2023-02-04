@@ -2,7 +2,6 @@ import math
 import wpilib
 import time
 from enum import Enum, auto
-from typing import List, Tuple
 from utilities.scalers import scale_value
 import random
 
@@ -123,16 +122,6 @@ class StatusLights:
         self.set_piece(piece)
         self.set_state(state)
         self.set_intake_side(side)
-
-    def set_disabled(self):
-        if self.cur_pattern not in [
-            DisplayType.MORSE,
-            DisplayType.PACMAN,
-            DisplayType.RAINBOW,
-        ]:
-            self.cur_pattern = DisplayType.MORSE
-            self.choose_morse_message("GGEZ")
-            self.pattern_start_time = time.monotonic()
 
     def calc_half(self):
         led_data: list[wpilib.AddressableLED.LEDData] = []
@@ -284,7 +273,7 @@ class StatusLights:
             + 3 * self._morse_message.count(" ")
         )
 
-    def _morse_calculation(self) -> tuple[int, int, int]:
+    def calc_morse(self) -> tuple[int, int, int]:
         # Work out how far through the message we are
         DOT_LENGTH = 0.15  # seconds
         total_time = self._morse_length * DOT_LENGTH
@@ -314,6 +303,7 @@ class StatusLights:
             "MORSE CODE IS FOR NERDS",
             "HONEYBADGER DONT CARE",
             "GLHF",
+            "I HATE MORSE CODE",
         ]
         message = random.choice(MESSAGES) if _message is None else _message.upper()
         # Convert to dots and dashes
@@ -374,6 +364,8 @@ class StatusLights:
             color = self.calc_pulse()
         elif self.pattern == DisplayType.RAINBOW:
             color = self.calc_rainbow()
+        elif self.pattern == DisplayType.MORSE:
+            color = self.calc_morse()
         elif self.pattern == DisplayType.HALF_HALF:
             self.calc_half()
             return # sets LEDs
@@ -383,6 +375,6 @@ class StatusLights:
         elif self.pattern == DisplayType.ALTERNATING:
             self.calc_alternating()
             return  # ''
-
+    
         self.single_led_data.setHSV(color[0], color[1], color[2])
         self.leds.setData(self.leds_data)

@@ -3,11 +3,10 @@
 import wpilib
 import magicbot
 
+from components.leds import StatusLights
 from controllers.movement import Movement
-from controllers.leds import LedController
 from components.chassis import Chassis
 from components.vision import Vision
-from components.leds import StatusLights
 from components.arm import Arm
 from utilities.scalers import rescale_js
 from components.intake import Intake
@@ -17,7 +16,6 @@ from components.gripper import Gripper
 class MyRobot(magicbot.MagicRobot):
     # Controllers
     movement: Movement
-    led_controller: LedController
 
     # Components
     chassis: Chassis
@@ -32,8 +30,6 @@ class MyRobot(magicbot.MagicRobot):
 
         self.gamepad = wpilib.XboxController(0)
         self.joystick = wpilib.Joystick(1)
-
-        self.leds = wpilib.AddressableLED(0)
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
