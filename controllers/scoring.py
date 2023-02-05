@@ -35,7 +35,7 @@ class ScoreController(StateMachine):
     CONE_DISTANCE = 0.3
 
     has_piece: bool
-    
+
     def __init__(self) -> None:
         self.has_piece = False
         self.holding_piece = Piece.NONE
@@ -81,7 +81,7 @@ class ScoreController(StateMachine):
             self.holding_piece = Piece.CONE
         else:
             raise Exception(f"The position ({self.CONE_DISTANCE}, .95) cannot be reached")
-        
+
     @state
     def score_cone(self):
                 '''goto_correct_state()
@@ -115,7 +115,7 @@ class ScoreController(StateMachine):
 
     @feedback
     def get_time_to_goal(self) -> float: #returns the updated time for the robot to get to the goal according to the trajectory
-        return self.movement.time_to_goal 
+        return self.movement.time_to_goal
 
     @feedback
     def has_piece_grabbed(self) -> bool:
@@ -133,5 +133,3 @@ class ScoreController(StateMachine):
     @feedback
     def held_piece(self) -> Piece:
         return self.holding_piece
-
-    
