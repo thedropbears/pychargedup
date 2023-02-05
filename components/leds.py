@@ -375,9 +375,8 @@ class StatusLights:
         self._morse_message += "  "
 
     def execute(self):
-        color = (
-            self.color
-        )  # use the current color as a fallback if (for whatever reason) there is no pattern set.
+        # use the current color as a fallback if (for whatever reason) there is no pattern set.
+        color = self.color
         if self.pattern == DisplayType.SOLID:
             color = self.calc_solid()
         elif self.pattern == DisplayType.FLASH:
