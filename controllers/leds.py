@@ -1,4 +1,4 @@
-from components.leds import *, LedColors, DisplayType
+from components.leds import StatusLights, LedColors, DisplayType
 from components.gripper import Gripper
 from components.intake import Intake
 from magicbot import feedback
