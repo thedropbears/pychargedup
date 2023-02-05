@@ -15,6 +15,8 @@ class CanIds:
     steer_4 = 8
     swerve_encoder_4 = 12
 
+
+class SparkMaxIds:
     arm_rotation_main = 13
     arm_rotation_follower = 14
     arm_extension = 15

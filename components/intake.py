@@ -11,7 +11,7 @@ class Intake:
         self.deployed = False
         self.break_beam = DigitalInput(ids.DioChannels.intake_break_beam_sensor)
         self.motor = CANSparkMax(
-            ids.CanIds.intake_motor, CANSparkMax.MotorType.kBrushless
+            ids.SparkMaxIds.intake_motor, CANSparkMax.MotorType.kBrushless
         )
         self.piston = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,
