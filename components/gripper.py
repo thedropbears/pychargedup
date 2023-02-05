@@ -23,9 +23,9 @@ class Gripper:
         self.game_piece_switch = DigitalInput(ids.DioChannels.gripper_game_piece_switch)
 
     def open(self) -> None:
-
+        if self.opened is False:
+            self.open_time = time.monotonic()
         self.opened = True
-        self.open_time = time.monotonic()
 
     def close(self) -> None:
         if self.opened:
@@ -37,10 +37,10 @@ class Gripper:
         return (
             (time.monotonic() - self.close_time) >= Gripper.CLOSE_TIME_THERESHOLD
         ) and (not self.opened)
-    
+
     @feedback
     def get_full_open(self) -> bool:
-        return(time.monotonic()-self.open_time >= Gripper.OPEN_TIME_THERESHOLD)
+        return time.monotonic() - self.open_time >= Gripper.OPEN_TIME_THERESHOLD
 
     def execute(self) -> None:
         if self.opened:
