@@ -40,7 +40,7 @@ class Movement(StateMachine):
         self.drive_local = False
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
-        self.waypoints: Optional[list[Pose2d]] = None
+        self.waypoints: Optional[list[Translation2d]] = None
         self.is_pickup = False
         self.time_remaining = 3
         self.set_goal(
@@ -111,34 +111,22 @@ class Movement(StateMachine):
             (pose.y, spline_start_momentum_y),
         )
 
-        spline_waypoints = []
-        if self.waypoints:
-            for i in range(len(self.waypoints)):
-                x_from_last = self.waypoints[i].X() - self.waypoints[i - 1].X()
-                y_from_last = self.waypoints[i].Y() - self.waypoints[i - 1].Y()
-                # get the distance from the last point (in a straight line)
-                distance_from_last = math.sqrt((x_from_last)**2 + (y_from_last)**2)
-                # get the angle to {i} from the point before
-                angle = math.atan(x_from_last/y_from_last)
-                approach_direction: Rotation2d = Rotation2d(angle)
-                end_control_vec = min(10, distance_from_last * 2.8)
-                spline = Spline3.ControlVector(
-                    (self.waypoints[i].X(), approach_direction.cos() * end_control_vec),
-                    (self.waypoints[i].Y(), approach_direction.sin() * end_control_vec) 
-                )
-                spline_waypoints.append(spline)
-
         self.config.setStartVelocity(chassis_speed)
 
-        trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, spline_waypoints, goal_spline, self.config
-        )
+        if self.waypoints:
+            trajectory = TrajectoryGenerator.generateTrajectory(
+                start_point_spline, self.waypoints, goal_spline, self.config
+            )
+        else:
+            trajectory = TrajectoryGenerator.generateTrajectory(
+                start_point_spline, [], goal_spline, self.config
+            )
 
         self.robot_object.setTrajectory(trajectory)
         return trajectory
 
     def set_goal(
-        self, goal: Pose2d, approach_direction: Rotation2d, waypoints: Optional[list[Pose2d]] = None, slow_dist=0.5
+        self, goal: Pose2d, approach_direction: Rotation2d, waypoints: Optional[list[Translation2d]] = None, slow_dist=0.5
     ) -> None:
         if goal == self.goal: return 
         self.goal = goal
