@@ -1,71 +1,91 @@
-# class CubeAutoBase:
-#     """Auto which starts with a preloaded cone, scores it then drives to pickup and score cubes"""
+from magicbot.state_machine import AutonomousStateMachine, state
+from dataclasses import dataclass
 
-#     scoring: ScoringController
-#     chassis: Chassis
+from components.chassis import Chassis
+from components.intake import Intake
+from components.arm import Arm, Setpoints, Setpoint
+from components.gripper import Gripper
 
-#     def __init__(self, cubes: list[tuple[int, Rotation2d]], nodes: list[Node]) -> None:
-#         # list of cube idx and angle to hit pickup at as if was on blue alliance
-#         # 0 is closest to wall, 3 is closest to substations
-#         self.cubes = cubes
-#         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-#         self.nodes = nodes
-#         self.finished = False
+from controllers.movement import Movement
 
-#     def on_enable(self) -> None:
-#         (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
-#         start_pose = field_flip_pose2d(start_pose) if is_red() else start_pose
-#         self.chassis.set_pose(start_pose)
-
-#         self.scoring.wants_piece = GamePiece.CUBE
-#         self.scoring.is_holding = GamePiece.CONE
-#         self.scoring.cube_stack = []
-#         all_pieces = get_staged_pieces(wpilib.DriverStation.getAlliance())
-#         for idx, rotation in self.cubes[::-1]:
-#             position = all_pieces[idx]
-#             # flip angle, position is already correctly flipped
-#             angle = field_flip_rotation2d(rotation) if is_red() else rotation
-#             # approach angle is the same as chassis heading
-#             pose = Pose2d(position, angle)
-#             self.scoring.cube_stack.append((pose, angle))
-
-#         self.scoring.score_stack = self.nodes[::-1]
-
-#     def on_iteration(self, tm: float) -> None:
-#         if not self.finished:
-#             self.scoring.autodrive = True
-#             self.scoring.engage()
-#         if len(self.scoring.cube_stack) == 0 and len(self.scoring.score_stack) == 0:
-#             self.finished = True
-
-#     def on_disable(self) -> None:
-#         self.scoring.wants_piece = GamePiece.CONE
+from wpilib import Timer
+from wpimath.geometry import Pose2d, Rotation2d
 
 
-# class WallSide3(CubeAutoBase):
-#     MODE_NAME = "Wall side 3"
+@dataclass
+class PickupPath:
+    goal: Pose2d
+    approach_angle: Rotation2d
+    intermediate_waypoints: list[Pose2d]
 
-#     def __init__(self):
-#         super().__init__(
-#             cubes=[(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))],
-#             nodes=[
-#                 Node(row=Rows.HIGH, col=0),
-#                 Node(row=Rows.HIGH, col=1),
-#                 Node(row=Rows.MID, col=1),
-#             ],
-#         )
+@dataclass
+class ScorePath:
+    goal: Pose2d
+    approach_angle: Rotation2d
+    intermediate_waypoints: list[Pose2d]
+    arm_setpoint: Setpoint
 
+class AutoBase(AutonomousStateMachine):
+    gripper: Gripper
+    arm: Arm
+    chassis: Chassis
+    intake: Intake
+    movement: Movement
 
-# class SubstationSide3(CubeAutoBase):
-#     MODE_NAME = "Substation side 3"
-#     DEFAULT = True
+    def __init__(self) -> None:
+        self.piece_positions = []
+        self.pickup_paths = []
+        self.score_paths = []
+        self.stage = 0
+        self.timeout_set = False
+        self.timeout_start = 0
 
-#     def __init__(self):
-#         super().__init__(
-#             cubes=[(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))],
-#             nodes=[
-#                 Node(row=Rows.HIGH, col=8),
-#                 Node(row=Rows.HIGH, col=7),
-#                 Node(row=Rows.MID, col=7),
-#             ],
-#         )
+    @state(first=True)
+    def score(self, state_tm: float, initial_call: bool) -> None:
+        if initial_call:
+            self.timeout_set = False
+            path = self.score_paths[self.stage]
+            self.movement.set_goal(
+                path.goal,
+                path.approach_direction,
+                intermediate_waypoints=path.intermediate_waypoints,
+            )
+        self.movement.do_autodrive()
+        if self.movement.time_remaining < 0.5:
+            if not self.timeout_set:
+                self.timeout_start = Timer.getFPGATimestamp()
+                self.timeout_set = True
+            self.arm.set_setpoint(self.score_paths[self.stage].arm_setpoint)
+        if (
+            self.movement.is_at_goal()
+            and self.arm.at_goal_angle()
+            and self.arm.at_goal_extension()
+        ):
+            self.gripper.open()
+        if self.gripper.opened or Timer.getFPGATimestamp - self.timeout_start > 2.0:
+            self.gripper.close()
+            self.arm.set_setpoint(Setpoints.HANDOFF)
+            self.next_state("pickup_cube")
+
+    @state
+    def pickup_cube(self, state_tm: float, initial_call: bool) -> None:
+        if initial_call:
+            self.timeout_set = False
+            path = self.pickup_paths[self.stage]
+            self.movement.set_goal(
+                path.goal,
+                path.approach_direction,
+                intermediate_waypoints=path.intermediate_waypoints,
+            )
+        self.movement.do_autodrive()
+        if self.movement.time_remaining < 0.5:
+            if not self.timeout_set:
+                self.timeout_start = Timer.getFPGATimestamp()
+                self.timeout_set = True
+            self.intake.deploy()
+        if (
+            self.movement.is_at_goal() and self.intake.is_game_piece_present()
+        ) or Timer.getFPGATimestamp - self.timeout_start > 1.0:
+            self.intake.retract()
+            self.stage += 1
+            self.next_state("score")
