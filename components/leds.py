@@ -49,6 +49,7 @@ class Piece(Enum):
 class PickupFromSide(Enum):
     LEFT = LedColors.GREEN
     RIGHT = LedColors.RED
+    NONE = LedColors.OFF
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
@@ -142,7 +143,7 @@ class StatusLights:
     def cube_onboard(self) -> None:
         self.set(Piece.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
 
-    def calc_half(self):
+    def calc_half(self) -> None:
         led_data: list[wpilib.AddressableLED.LEDData] = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
