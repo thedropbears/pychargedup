@@ -124,13 +124,31 @@ class StatusLights:
         self.set_state(state)
         self.set_intake_side(side)
 
+    def want_cone_left(self) -> None:
+        self.set(Piece.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
+
+    def want_cube_left(self) -> None:
+        self.set(Piece.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
+
+    def want_cone_right(self) -> None:
+        self.set(Piece.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def want_cube_right(self) -> None:
+        self.set(Piece.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def cone_onboard(self) -> None:
+        self.set(Piece.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+
+    def cube_onboard(self) -> None:
+        self.set(Piece.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+
     def calc_half(self):
         led_data: list[wpilib.AddressableLED.LEDData] = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
-                led_data.append(wpilib.AddressableLED.LEDData(*self.color))
+                led_data.append(wpilib.AddressableLED.LEDData().setHSV(*self.color))
             else:
-                led_data.append(wpilib.AddressableLED.LEDData(*self.side.value))
+                led_data.append(wpilib.AddressableLED.LEDData().setHSV(*self.side.value))
         self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
