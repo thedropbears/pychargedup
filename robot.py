@@ -21,6 +21,7 @@ from components.gripper import Gripper
 from components.leds import DisplayType, StatusLights
 from utilities.scalers import rescale_js
 
+from wpimath.geometry import Rotation2d, Pose2d
 
 class MyRobot(magicbot.MagicRobot):
     # Controllers
@@ -239,6 +240,9 @@ class MyRobot(magicbot.MagicRobot):
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.arm_component.update_display()
+
+    def autonomousInit(self) -> None:
+        self.chassis.set_pose(Pose2d(1.88795, 0.50721, Rotation2d(0.0)))
 
 
 if __name__ == "__main__":
