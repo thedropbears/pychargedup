@@ -23,6 +23,7 @@ from utilities.scalers import rescale_js
 
 from wpimath.geometry import Rotation2d, Pose2d
 
+
 class MyRobot(magicbot.MagicRobot):
     # Controllers
     movement: Movement

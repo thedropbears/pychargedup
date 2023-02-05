@@ -91,7 +91,13 @@ class AutoBase(AutonomousStateMachine):
                 self.timeout_set = True
                 self.timeout_start = Timer.getFPGATimestamp()
             self.intake.deploy()
-        if self.movement.is_at_goal() and self.intake.is_game_piece_present() or (self.timeout_set and Timer.getFPGATimestamp() - self.timeout_start > 2.0):
+        if (
+            self.movement.is_at_goal()
+            and self.intake.is_game_piece_present()
+            or (
+                self.timeout_set and Timer.getFPGATimestamp() - self.timeout_start > 2.0
+            )
+        ):
             self.intake.retract()
             self.gripper.close()
             if self.gripper.get_full_closed():
