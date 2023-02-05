@@ -1,19 +1,22 @@
-class CanIds:
+class TalonIds:
     drive_1 = 1
     steer_1 = 5
-    swerve_encoder_1 = 9
 
     drive_2 = 2
     steer_2 = 6
-    swerve_encoder_2 = 10
 
     drive_3 = 3
     steer_3 = 7
-    swerve_encoder_3 = 11
 
     drive_4 = 4
     steer_4 = 8
-    swerve_encoder_4 = 12
+
+
+class CancoderIds:
+    swerve_1 = 9
+    swerve_2 = 10
+    swerve_3 = 11
+    swerve_4 = 12
 
 
 class SparkMaxIds:
