@@ -9,14 +9,14 @@ class Intake:
 
     def __init__(self) -> None:
         self.deployed = False
-        self.break_beam = DigitalInput(ids.DioChannels.Intake.break_beam_sensor)
+        self.break_beam = DigitalInput(ids.DioChannels.intake_break_beam_sensor)
         self.motor = CANSparkMax(
-            ids.CanIds.Intake.intake_motor, CANSparkMax.MotorType.kBrushless
+            ids.SparkMaxIds.intake_motor, CANSparkMax.MotorType.kBrushless
         )
         self.piston = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,
-            ids.PcmChannels.Intake.intake_piston_forward,
-            ids.PcmChannels.Intake.intake_piston_reverse,
+            ids.PcmChannels.intake_piston_forward,
+            ids.PcmChannels.intake_piston_reverse,
         )
 
     def is_game_piece_present(self) -> bool:

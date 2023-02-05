@@ -1,7 +1,7 @@
 from magicbot import feedback, tunable
 from rev import CANSparkMax
 import wpilib
-from ids import CanIds, PcmChannels, DioChannels
+from ids import SparkMaxIds, PcmChannels, DioChannels
 import math
 from wpilib import (
     Solenoid,
@@ -86,13 +86,13 @@ class Arm:
     def __init__(self) -> None:
         # Create rotation things
         self.rotation_motor = CANSparkMax(
-            CanIds.Arm.rotation_main, CANSparkMax.MotorType.kBrushless
+            SparkMaxIds.arm_rotation_main, CANSparkMax.MotorType.kBrushless
         )
         self.rotation_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.rotation_motor.setInverted(False)
         # setup second motor to follow first
         self._rotation_motor_follower = CANSparkMax(
-            CanIds.Arm.rotation_follower, CANSparkMax.MotorType.kBrushless
+            SparkMaxIds.arm_rotation_follower, CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_follower.follow(self.rotation_motor, invert=True)
         self._rotation_motor_follower.setIdleMode(CANSparkMax.IdleMode.kCoast)
@@ -103,7 +103,7 @@ class Arm:
             1 / self.ROTATE_GEAR_RATIO / 60
         )
 
-        self.absolute_encoder = DutyCycleEncoder(DioChannels.Arm.absolute_encoder)
+        self.absolute_encoder = DutyCycleEncoder(DioChannels.arm_absolute_encoder)
         self.absolute_encoder.setDistancePerRotation(math.tau)
         self.absolute_encoder.setPositionOffset(0)
 
@@ -121,7 +121,7 @@ class Arm:
 
         # Create extension things
         self.extension_motor = CANSparkMax(
-            CanIds.Arm.extension, CANSparkMax.MotorType.kBrushless
+            SparkMaxIds.arm_extension, CANSparkMax.MotorType.kBrushless
         )
         self.extension_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self.extension_motor.setInverted(False)
