@@ -1,78 +1,58 @@
-import inspect
+import enum
 
 
-class CanIds:
-    class Chassis:
-        drive_1 = 1
-        steer_1 = 5
-        encoder_1 = 9
+@enum.unique
+class TalonIds(enum.IntEnum):
+    drive_1 = 1
+    steer_1 = 5
 
-        drive_2 = 2
-        steer_2 = 6
-        encoder_2 = 10
+    drive_2 = 2
+    steer_2 = 6
 
-        drive_3 = 3
-        steer_3 = 7
-        encoder_3 = 11
+    drive_3 = 3
+    steer_3 = 7
 
-        drive_4 = 4
-        steer_4 = 8
-        encoder_4 = 12
-
-    class Arm:
-        rotation_main = 13
-        rotation_follower = 14
-        extension = 15
-
-    class Intake:
-        intake_motor = 16
+    drive_4 = 4
+    steer_4 = 8
 
 
-class PcmChannels:
+@enum.unique
+class CancoderIds(enum.IntEnum):
+    swerve_1 = 9
+    swerve_2 = 10
+    swerve_3 = 11
+    swerve_4 = 12
+
+
+@enum.unique
+class SparkMaxIds(enum.IntEnum):
+    arm_rotation_main = 13
+    arm_rotation_follower = 14
+    arm_extension = 15
+
+    intake_motor = 16
+
+
+@enum.unique
+class PcmChannels(enum.IntEnum):
     arm_brake = 4
 
-    class Intake:
-        intake_piston_forward = 6
-        intake_piston_reverse = 7
+    intake_piston_forward = 6
+    intake_piston_reverse = 7
 
-    class Gripper:
-        gripper_solenoid_forward = 0
-        gripper_solenoid_reverse = 1
+    gripper_solenoid_forward = 0
+    gripper_solenoid_reverse = 1
 
 
-class PwmChannels:
-    leds = 0
+@enum.unique
+class PwmChannels(enum.IntEnum):
+    ...
 
 
-class DioChannels:
-    class Gripper:
-        gripper_game_piece_switch = 0
+@enum.unique
+class DioChannels(enum.IntEnum):
+    gripper_game_piece_switch = 0
 
-    class Intake:
-        break_beam_sensor = 2
+    intake_break_beam_sensor = 2
 
-    class Arm:
-        absolute_encoder = 1
-
-
-# recursively get all attributes
-def get_ids(cls) -> list[int]:
-    # ignore dunders
-    attributes = [x for x in dir(cls) if not x.startswith("__")]
-    ids = []
-    for att in attributes:
-        if inspect.isclass(getattr(cls, att)):
-            ids.extend(get_ids(getattr(cls, att)))
-        else:
-            ids.append(getattr(cls, att))
-
-    return ids
-
-
-# enforce no duplicate ids
-def check_ids(*classes) -> None:
-    for cls in classes:
-        ids = get_ids(cls)
-        dups = {str(x) for x in ids if ids.count(x) > 1}
-        if dups:
-            raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
+    arm_absolute_encoder = 1
