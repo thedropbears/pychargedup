@@ -1,4 +1,8 @@
-class TalonIds:
+import enum
+
+
+@enum.unique
+class TalonIds(enum.IntEnum):
     drive_1 = 1
     steer_1 = 5
 
@@ -12,14 +16,16 @@ class TalonIds:
     steer_4 = 8
 
 
-class CancoderIds:
+@enum.unique
+class CancoderIds(enum.IntEnum):
     swerve_1 = 9
     swerve_2 = 10
     swerve_3 = 11
     swerve_4 = 12
 
 
-class SparkMaxIds:
+@enum.unique
+class SparkMaxIds(enum.IntEnum):
     arm_rotation_main = 13
     arm_rotation_follower = 14
     arm_extension = 15
@@ -27,7 +33,8 @@ class SparkMaxIds:
     intake_motor = 16
 
 
-class PcmChannels:
+@enum.unique
+class PcmChannels(enum.IntEnum):
     arm_brake = 4
 
     intake_piston_forward = 6
@@ -37,33 +44,15 @@ class PcmChannels:
     gripper_solenoid_reverse = 1
 
 
-class PwmChannels:
+@enum.unique
+class PwmChannels(enum.IntEnum):
     ...
 
 
-class DioChannels:
+@enum.unique
+class DioChannels(enum.IntEnum):
     gripper_game_piece_switch = 0
 
     intake_break_beam_sensor = 2
 
     arm_absolute_encoder = 1
-
-
-# recursively get all attributes
-def get_ids(cls) -> list[int]:
-    ids = []
-    for name, value in vars(cls).items():
-        if name.startswith("_"):
-            continue
-        ids.append(value)
-
-    return ids
-
-
-# enforce no duplicate ids
-def check_ids(*classes) -> None:
-    for cls in classes:
-        ids = get_ids(cls)
-        dups = {str(x) for x in ids if ids.count(x) > 1}
-        if dups:
-            raise ValueError("Duplicate Ids detected: " + ", ".join(dups))
