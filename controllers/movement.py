@@ -126,7 +126,11 @@ class Movement(StateMachine):
         return trajectory
 
     def set_goal(
-        self, goal: Pose2d, approach_direction: Rotation2d, waypoints: Optional[list[Translation2d]] = None, slow_dist=0.5
+        self,
+        goal: Pose2d,
+        approach_direction: Rotation2d,
+        waypoints: Optional[list[Translation2d]] = None,
+        slow_dist=0.5,
     ) -> None:
         if goal == self.goal:
             return
