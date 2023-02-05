@@ -128,18 +128,15 @@ class Movement(StateMachine):
     def set_goal(
         self, goal: Pose2d, approach_direction: Rotation2d, waypoints: Optional[list[Translation2d]] = None, slow_dist=0.5
     ) -> None:
-        if goal == self.goal: return 
+        if goal == self.goal:
+            return
         self.goal = goal
         self.goal_approach_dir = approach_direction
 
         self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
-        topRight = Translation2d(
-            self.goal.X() + slow_dist, self.goal.Y() + slow_dist
-        )
-        bottomLeft = Translation2d(
-            self.goal.X() - slow_dist, self.goal.Y() - slow_dist
-        )
+        topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
+        bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
         self.config.addConstraint(
             RectangularRegionConstraint(
                 bottomLeft, topRight, MaxVelocityConstraint(0.5)
