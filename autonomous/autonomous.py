@@ -18,12 +18,14 @@ class PickupPath:
     approach_angle: Rotation2d
     intermediate_waypoints: list[Pose2d]
 
+
 @dataclass
 class ScorePath:
     goal: Pose2d
     approach_angle: Rotation2d
     intermediate_waypoints: list[Pose2d]
     arm_setpoint: Setpoint
+
 
 class AutoBase(AutonomousStateMachine):
     gripper: Gripper
