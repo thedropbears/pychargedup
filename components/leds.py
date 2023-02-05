@@ -148,7 +148,9 @@ class StatusLights:
             if i < round(self.led_length / 2):
                 led_data.append(wpilib.AddressableLED.LEDData().setHSV(*self.color))
             else:
-                led_data.append(wpilib.AddressableLED.LEDData().setHSV(*self.side.value))
+                led_data.append(
+                    wpilib.AddressableLED.LEDData().setHSV(*self.side.value)
+                )
         self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> tuple[int, int, int]:
