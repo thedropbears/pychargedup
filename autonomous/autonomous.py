@@ -1,3 +1,4 @@
+from typing import Optional
 from magicbot.state_machine import AutonomousStateMachine, state
 from dataclasses import dataclass
 
@@ -9,21 +10,25 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 
 from wpilib import Timer
-from wpimath.geometry import Pose2d, Rotation2d
+from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+
+from utilities.functions import grid_col_to_field_y
+
+from math import radians
 
 
 @dataclass
 class PickupPath:
     goal: Pose2d
-    approach_angle: Rotation2d
-    intermediate_waypoints: list[Pose2d]
+    approach_direction: Rotation2d
+    intermediate_waypoints: Optional[list[Translation2d]]
 
 
 @dataclass
 class ScorePath:
     goal: Pose2d
-    approach_angle: Rotation2d
-    intermediate_waypoints: list[Pose2d]
+    approach_direction: Rotation2d
+    intermediate_waypoints: Optional[list[Translation2d]]
     arm_setpoint: Setpoint
 
 
@@ -47,26 +52,26 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             self.timeout_set = False
             path = self.score_paths[self.stage]
+            self.movement.next_state("autodrive")
             self.movement.set_goal(
                 path.goal,
                 path.approach_direction,
-                intermediate_waypoints=path.intermediate_waypoints,
+                waypoints=path.intermediate_waypoints,
             )
         self.movement.do_autodrive()
         if self.movement.time_remaining < 0.5:
-            if not self.timeout_set:
-                self.timeout_start = Timer.getFPGATimestamp()
-                self.timeout_set = True
-            self.arm.set_setpoint(self.score_paths[self.stage].arm_setpoint)
+            # self.arm.set_setpoint(self.score_paths[self.stage].arm_setpoint)
+            pass
         if (
             self.movement.is_at_goal()
-            and self.arm.at_goal_angle()
-            and self.arm.at_goal_extension()
+            # and self.arm.at_goal_angle()
+            # and self.arm.at_goal_extension()
         ):
             self.gripper.open()
-        if self.gripper.opened or Timer.getFPGATimestamp - self.timeout_start > 2.0:
-            self.gripper.close()
-            self.arm.set_setpoint(Setpoints.HANDOFF)
+        if self.gripper.opened:
+            # self.arm.set_setpoint(Setpoints.HANDOFF)
+            if self.stage >= len(self.pickup_paths):
+                self.done()
             self.next_state("pickup_cube")
 
     @state
@@ -74,20 +79,60 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             self.timeout_set = False
             path = self.pickup_paths[self.stage]
+            self.movement.next_state("autodrive")
             self.movement.set_goal(
                 path.goal,
                 path.approach_direction,
-                intermediate_waypoints=path.intermediate_waypoints,
+                waypoints=path.intermediate_waypoints,
             )
         self.movement.do_autodrive()
         if self.movement.time_remaining < 0.5:
-            if not self.timeout_set:
-                self.timeout_start = Timer.getFPGATimestamp()
+            if state_tm > 0.1 and not self.timeout_set:
                 self.timeout_set = True
+                self.timeout_start = Timer.getFPGATimestamp()
             self.intake.deploy()
-        if (
-            self.movement.is_at_goal() and self.intake.is_game_piece_present()
-        ) or Timer.getFPGATimestamp - self.timeout_start > 1.0:
+        if self.movement.is_at_goal() and self.intake.is_game_piece_present() or (self.timeout_set and Timer.getFPGATimestamp() - self.timeout_start > 2.0):
             self.intake.retract()
-            self.stage += 1
-            self.next_state("score")
+            self.gripper.close()
+            if self.gripper.get_full_closed():
+                self.stage += 1
+                self.next_state("score")
+
+
+class AutoTest(AutoBase):
+    MODE_NAME = "Auto Test"
+    DEFAULT = True
+
+    def setup(self) -> None:
+        self.score_paths = [
+            ScorePath(
+                Pose2d(1.88795, grid_col_to_field_y(0), Rotation2d(0.0)),
+                Rotation2d.fromDegrees(180.0),
+                None,
+                Setpoints.SCORE_CONE_HIGH,
+            ),
+            ScorePath(
+                Pose2d(1.88795, grid_col_to_field_y(1), Rotation2d(0.0)),
+                Rotation2d.fromDegrees(180.0),
+                None,
+                Setpoints.SCORE_CUBE_HIGH,
+            ),
+            ScorePath(
+                Pose2d(1.88795, grid_col_to_field_y(4), Rotation2d(0.0)),
+                Rotation2d.fromDegrees(180.0),
+                None,
+                Setpoints.SCORE_CUBE_HIGH,
+            ),
+        ]
+        self.pickup_paths = [
+            PickupPath(
+                Pose2d(6.65885, 0.88812, Rotation2d(radians(4.56))),
+                Rotation2d.fromDegrees(4.56),
+                None,
+            ),
+            PickupPath(
+                Pose2d(6.719, 1.92247, Rotation2d(radians(32.04))),
+                Rotation2d.fromDegrees(32.04),
+                None,
+            ),
+        ]

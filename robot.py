@@ -11,6 +11,7 @@ from components.arm import Arm
 from components.gripper import Gripper
 from utilities.scalers import rescale_js
 
+from wpimath.geometry import Rotation2d, Pose2d
 
 class MyRobot(magicbot.MagicRobot):
     # Controllers
@@ -82,6 +83,9 @@ class MyRobot(magicbot.MagicRobot):
 
     def disabledPeriodic(self):
         self.vision.execute()
+
+    def autonomousInit(self) -> None:
+        self.chassis.set_pose(Pose2d(1.88795, 0.50721, Rotation2d(0.0)))
 
 
 if __name__ == "__main__":
