@@ -19,7 +19,7 @@ class LedColors(Enum):
     CYAN = (90, 255, MAX_BRIGHTNESS)
     GREEN = (60, 255, MAX_BRIGHTNESS)
     WHITE = (0, 0, MAX_BRIGHTNESS)
-    VIOLET = (300, 45, MAX_BRIGHTNESS)
+    VIOLET = (180, 45, MAX_BRIGHTNESS)
     OFF = (0, 0, 0)
 
 
