@@ -49,7 +49,7 @@ class DioChannels:
         gripper_game_piece_switch = 0
 
     class Intake:
-        break_beam_sensor = 1
+        break_beam_sensor = 2
 
     class Arm:
         absolute_encoder = 1
