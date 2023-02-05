@@ -147,10 +147,10 @@ class StatusLights:
         led_data: list[wpilib.AddressableLED.LEDData] = []
         for i in range(self.led_length):
             if i < round(self.led_length / 2):
-                led_data.append(wpilib.AddressableLED.LEDData(0,0,0))
+                led_data.append(wpilib.AddressableLED.LEDData(0, 0, 0))
                 led_data[-1].setHSV(*self.color)
             else:
-                led_data.append(wpilib.AddressableLED.LEDData(0,0,0))
+                led_data.append(wpilib.AddressableLED.LEDData(0, 0, 0))
                 led_data[-1].setHSV(*LedColors(self.side.value).value)
         self.leds.setData(led_data[: self.led_length])
 
