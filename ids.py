@@ -50,7 +50,7 @@ class DioChannels:
 
     class Intake:
         break_beam_sensor = 1
-        
+
     class Arm:
         absolute_encoder = 1
 
