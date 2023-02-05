@@ -60,5 +60,6 @@ def clamp_2d(val: tuple[float, float], radius: float) -> tuple[float, float]:
     new_mag = min(mag, radius)
     return new_mag * val[0] / mag, new_mag * val[1] / mag
 
+
 def grid_col_to_field_y(col: int) -> float:
     return 0.50721 + col * 0.55801
