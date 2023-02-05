@@ -46,7 +46,7 @@ class PcmChannels(enum.IntEnum):
 
 @enum.unique
 class PwmChannels(enum.IntEnum):
-    ...
+    leds = 0
 
 
 @enum.unique
