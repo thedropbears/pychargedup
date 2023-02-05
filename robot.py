@@ -12,6 +12,8 @@ from utilities.scalers import rescale_js
 from components.intake import Intake
 from components.gripper import Gripper
 
+from ids import PwmChannels
+
 
 class MyRobot(magicbot.MagicRobot):
     # Controllers
@@ -33,6 +35,8 @@ class MyRobot(magicbot.MagicRobot):
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
+
+        self.leds = wpilib.AddressableLED(PwmChannels.leds)
 
     def teleopInit(self) -> None:
         self.vision.add_to_estimator = True

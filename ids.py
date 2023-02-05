@@ -41,7 +41,7 @@ class PcmChannels:
 
 
 class PwmChannels:
-    ...
+    leds = 0
 
 
 class DioChannels:
