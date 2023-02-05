@@ -5,12 +5,12 @@ import magicbot
 
 from components.leds import StatusLights
 from controllers.movement import Movement
+from components.intake import Intake
 from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm
-from utilities.scalers import rescale_js
-from components.intake import Intake
 from components.gripper import Gripper
+from utilities.scalers import rescale_js
 
 from ids import PwmChannels
 
@@ -49,11 +49,11 @@ class MyRobot(magicbot.MagicRobot):
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
 
-        if self.gamepad.getLeftBumper():
-            self.intake.retract()
-
-        if self.gamepad.getRightBumper():
+        if self.gamepad.getLeftBumperPressed():
             self.intake.deploy()
+
+        if self.gamepad.getRightBumperPressed():
+            self.intake.retract()
 
         if self.gripper.game_piece_in_reach():
             self.gripper.close()

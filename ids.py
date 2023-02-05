@@ -20,8 +20,8 @@ class CanIds:
         encoder_4 = 12
 
     class Arm:
-        rotation_left = 13
-        rotation_right = 14
+        rotation_main = 13
+        rotation_follower = 14
         extension = 15
 
     class Intake:
@@ -47,6 +47,12 @@ class PwmChannels:
 class DioChannels:
     class Gripper:
         gripper_game_piece_switch = 0
+
+    class Intake:
+        break_beam_sensor = 2
+
+    class Arm:
+        absolute_encoder = 1
 
 
 # recursively get all attributes
