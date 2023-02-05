@@ -6,7 +6,8 @@ import ids
 
 
 class Gripper:
-    CLOSE_TIME_THERESHOLD : float = 0.5
+    CLOSE_TIME_THERESHOLD: float = 0.5
+
     def __init__(self) -> None:
         self.opened = False
         self.close_time = time.monotonic()
@@ -31,7 +32,9 @@ class Gripper:
 
     @feedback
     def get_full_closed(self) -> bool:
-        return ((time.monotonic() - self.close_time) >= Gripper.CLOSE_TIME_THERESHOLD) and (not self.opened)
+        return (
+            (time.monotonic() - self.close_time) >= Gripper.CLOSE_TIME_THERESHOLD
+        ) and (not self.opened)
 
     def execute(self) -> None:
         if self.opened:
