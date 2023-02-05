@@ -20,7 +20,7 @@ from wpimath.controller import SimpleMotorFeedforwardMeters
 
 from utilities.functions import constrain_angle, rate_limit_module
 from utilities.ctre import FALCON_CPR, FALCON_FREE_RPS
-from ids import CanIds
+from ids import CancoderIds, TalonIds
 
 
 class SwerveModule:
@@ -197,33 +197,33 @@ class Chassis:
             SwerveModule(
                 self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_1,
-                CanIds.Chassis.steer_1,
-                CanIds.Chassis.encoder_1,
+                TalonIds.drive_1,
+                TalonIds.steer_1,
+                CancoderIds.swerve_1,
             ),
             # Back Left
             SwerveModule(
                 -self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_2,
-                CanIds.Chassis.steer_2,
-                CanIds.Chassis.encoder_2,
+                TalonIds.drive_2,
+                TalonIds.steer_2,
+                CancoderIds.swerve_2,
             ),
             # Back Right
             SwerveModule(
                 -self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_3,
-                CanIds.Chassis.steer_3,
-                CanIds.Chassis.encoder_3,
+                TalonIds.drive_3,
+                TalonIds.steer_3,
+                CancoderIds.swerve_3,
             ),
             # Front Right
             SwerveModule(
                 self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_4,
-                CanIds.Chassis.steer_4,
-                CanIds.Chassis.encoder_4,
+                TalonIds.drive_4,
+                TalonIds.steer_4,
+                CancoderIds.swerve_4,
             ),
         ]
 
