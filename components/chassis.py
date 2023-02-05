@@ -197,33 +197,33 @@ class Chassis:
             SwerveModule(
                 self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_1,
-                CanIds.Chassis.steer_1,
-                CanIds.Chassis.encoder_1,
+                CanIds.drive_1,
+                CanIds.steer_1,
+                CanIds.swerve_encoder_1,
             ),
             # Back Left
             SwerveModule(
                 -self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_2,
-                CanIds.Chassis.steer_2,
-                CanIds.Chassis.encoder_2,
+                CanIds.drive_2,
+                CanIds.steer_2,
+                CanIds.swerve_encoder_2,
             ),
             # Back Right
             SwerveModule(
                 -self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_3,
-                CanIds.Chassis.steer_3,
-                CanIds.Chassis.encoder_3,
+                CanIds.drive_3,
+                CanIds.steer_3,
+                CanIds.swerve_encoder_3,
             ),
             # Front Right
             SwerveModule(
                 self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
-                CanIds.Chassis.drive_4,
-                CanIds.Chassis.steer_4,
-                CanIds.Chassis.encoder_4,
+                CanIds.drive_4,
+                CanIds.steer_4,
+                CanIds.swerve_encoder_4,
             ),
         ]
 

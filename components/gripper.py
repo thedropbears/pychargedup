@@ -9,13 +9,11 @@ class Gripper:
 
         self.solenoid = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,
-            ids.PcmChannels.Gripper.gripper_solenoid_forward,
-            ids.PcmChannels.Gripper.gripper_solenoid_reverse,
+            ids.PcmChannels.gripper_solenoid_forward,
+            ids.PcmChannels.gripper_solenoid_reverse,
         )
 
-        self.game_piece_switch = DigitalInput(
-            ids.DioChannels.Gripper.gripper_game_piece_switch
-        )
+        self.game_piece_switch = DigitalInput(ids.DioChannels.gripper_game_piece_switch)
 
     def open(self) -> None:
         self.opened = True

@@ -112,12 +112,12 @@ class PhysicsEngine:
             wpilib.PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
         )
 
-        self.arm_motor = SimDeviceSim("SPARK MAX ", CanIds.Arm.rotation_main)
+        self.arm_motor = SimDeviceSim("SPARK MAX ", CanIds.arm_rotation_main)
         self.arm_motor_pos = self.arm_motor.getDouble("Position")
         self.arm_motor_vel = self.arm_motor.getDouble("Velocity")
         self.arm_motor_output = self.arm_motor.getDouble("Applied Output")
 
-        self.arm_extension = SimDeviceSim("SPARK MAX ", CanIds.Arm.extension)
+        self.arm_extension = SimDeviceSim("SPARK MAX ", CanIds.arm_extension)
         self.arm_extension_pos = self.arm_extension.getDouble("Position")
         self.arm_extension_vel = self.arm_extension.getDouble("Velocity")
         self.arm_extension_output = self.arm_extension.getDouble("Applied Output")

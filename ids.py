@@ -1,43 +1,35 @@
-import inspect
-
-
 class CanIds:
-    class Chassis:
-        drive_1 = 1
-        steer_1 = 5
-        encoder_1 = 9
+    drive_1 = 1
+    steer_1 = 5
+    swerve_encoder_1 = 9
 
-        drive_2 = 2
-        steer_2 = 6
-        encoder_2 = 10
+    drive_2 = 2
+    steer_2 = 6
+    swerve_encoder_2 = 10
 
-        drive_3 = 3
-        steer_3 = 7
-        encoder_3 = 11
+    drive_3 = 3
+    steer_3 = 7
+    swerve_encoder_3 = 11
 
-        drive_4 = 4
-        steer_4 = 8
-        encoder_4 = 12
+    drive_4 = 4
+    steer_4 = 8
+    swerve_encoder_4 = 12
 
-    class Arm:
-        rotation_main = 13
-        rotation_follower = 14
-        extension = 15
+    arm_rotation_main = 13
+    arm_rotation_follower = 14
+    arm_extension = 15
 
-    class Intake:
-        intake_motor = 16
+    intake_motor = 16
 
 
 class PcmChannels:
     arm_brake = 4
 
-    class Intake:
-        intake_piston_forward = 6
-        intake_piston_reverse = 7
+    intake_piston_forward = 6
+    intake_piston_reverse = 7
 
-    class Gripper:
-        gripper_solenoid_forward = 0
-        gripper_solenoid_reverse = 1
+    gripper_solenoid_forward = 0
+    gripper_solenoid_reverse = 1
 
 
 class PwmChannels:
@@ -45,26 +37,20 @@ class PwmChannels:
 
 
 class DioChannels:
-    class Gripper:
-        gripper_game_piece_switch = 0
+    gripper_game_piece_switch = 0
 
-    class Intake:
-        break_beam_sensor = 2
+    intake_break_beam_sensor = 2
 
-    class Arm:
-        absolute_encoder = 1
+    arm_absolute_encoder = 1
 
 
 # recursively get all attributes
 def get_ids(cls) -> list[int]:
-    # ignore dunders
-    attributes = [x for x in dir(cls) if not x.startswith("__")]
     ids = []
-    for att in attributes:
-        if inspect.isclass(getattr(cls, att)):
-            ids.extend(get_ids(getattr(cls, att)))
-        else:
-            ids.append(getattr(cls, att))
+    for name, value in vars(cls).items():
+        if name.startswith("_"):
+            continue
+        ids.append(value)
 
     return ids
 
