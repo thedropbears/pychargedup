@@ -40,7 +40,9 @@ class Gripper:
 
     @feedback
     def get_full_open(self) -> bool:
-        return time.monotonic() - self.open_time >= Gripper.OPEN_TIME_THERESHOLD
+        return (
+            (time.monotonic() - self.open_time) >= Gripper.OPEN_TIME_THERESHOLD
+        ) and self.opened
 
     def execute(self) -> None:
         if self.opened:
