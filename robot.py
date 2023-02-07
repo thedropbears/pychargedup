@@ -7,7 +7,7 @@ from controllers.movement import Movement
 from components.intake import Intake
 from components.chassis import Chassis
 from components.vision import Vision
-from components.arm import Arm
+from components.arm import Arm, Setpoints
 from components.gripper import Gripper
 from utilities.scalers import rescale_js
 
@@ -36,28 +36,44 @@ class MyRobot(magicbot.MagicRobot):
         self.vision.add_to_estimator = True
 
     def teleopPeriodic(self) -> None:
-        autodrive = self.gamepad.getAButton()
-        spin_rate = 6
+        spin_rate = 4
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * Chassis.max_wheel_speed
         drive_y = -rescale_js(self.gamepad.getLeftX(), 0.1) * Chassis.max_wheel_speed
         drive_z = -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * spin_rate
         local_driving = self.gamepad.getBButton()
+        self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
-        if self.gamepad.getLeftBumperPressed():
-            self.intake.deploy()
+        right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
+        left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
+        if left_trigger or right_trigger:
+            self.movement.do_autodrive()
+            # set pickup preferance to left/right trigger
 
         if self.gamepad.getRightBumperPressed():
+            self.intake.deploy()
+        if self.gamepad.getLeftBumperPressed():
             self.intake.retract()
 
         if self.gripper.game_piece_in_reach():
             self.gripper.close()
-
+        if self.gamepad.getYButton():
+            self.gripper.close()
         if self.gamepad.getXButton():
             self.gripper.open()
 
-        self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
-        if autodrive:
-            self.movement.do_autodrive()
+        dpad_angle = self.gamepad.getPOV()
+        # up
+        if dpad_angle == 0:
+            self.arm.set_setpoint(Setpoints.SCORE_CONE_HIGH)
+        # right
+        elif dpad_angle == 90:
+            self.arm.set_setpoint(Setpoints.SCORE_CONE_MID)
+        # down
+        elif dpad_angle == 180:
+            self.arm.set_setpoint(Setpoints.HANDOFF)
+        # left
+        elif dpad_angle == 270:
+            self.arm.set_setpoint(Setpoints.PICKUP_CONE)
 
     def testInit(self) -> None:
         self.arm.on_enable()
