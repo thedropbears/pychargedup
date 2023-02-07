@@ -64,16 +64,16 @@ class MyRobot(magicbot.MagicRobot):
         dpad_angle = self.gamepad.getPOV()
         # up
         if dpad_angle == 0:
-            self.arm.set_setpoint(Setpoints.SCORE_CONE_HIGH)
+            self.arm.goto_setpoint(Setpoints.SCORE_CONE_HIGH)
         # right
         elif dpad_angle == 90:
-            self.arm.set_setpoint(Setpoints.SCORE_CONE_MID)
+            self.arm.goto_setpoint(Setpoints.SCORE_CONE_MID)
         # down
         elif dpad_angle == 180:
-            self.arm.set_setpoint(Setpoints.HANDOFF)
+            self.arm.goto_setpoint(Setpoints.HANDOFF)
         # left
         elif dpad_angle == 270:
-            self.arm.set_setpoint(Setpoints.PICKUP_CONE)
+            self.arm.goto_setpoint(Setpoints.PICKUP_CONE)
 
     def testInit(self) -> None:
         self.arm.on_enable()

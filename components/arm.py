@@ -180,7 +180,7 @@ class Arm:
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
-        self.set_setpoint(Setpoints.SCORE_CONE_HIGH)
+        self.goto_setpoint(Setpoints.SCORE_CONE_HIGH)
 
     def execute(self) -> None:
         extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
@@ -194,7 +194,7 @@ class Arm:
 
         setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
         if setpoint != self.last_selection:
-            self.set_setpoint(setpoint)
+            self.goto_setpoint(setpoint)
         self.last_selection = setpoint
 
         extension_goal = self.get_max_extension()
@@ -281,7 +281,7 @@ class Arm:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
 
-    def set_setpoint(self, value: Setpoint) -> None:
+    def goto_setpoint(self, value: Setpoint) -> None:
         self.set_length(value.extension)
         self.set_angle(value.angle)
 
