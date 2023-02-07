@@ -53,7 +53,8 @@ class Setpoint:
 
 class Setpoints:
     PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
-    HANDOFF = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.1)
+    HANDOFF = Setpoint(MAX_ANGLE - math.radians(5), MIN_EXTENSION + 0.1)
+    STOW = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.2)
     SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
     SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
     SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.42)
@@ -298,6 +299,11 @@ class Arm:
     def is_angle_still(self, allowable_speed=0.01) -> bool:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
         return abs(self.get_arm_speed()) < allowable_speed
+
+    def at_goal(self) -> bool:
+        return (
+            self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
+        )
 
     def brake(self) -> None:
         self.brake_solenoid.set(False)

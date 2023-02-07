@@ -1,135 +1,162 @@
-from magicbot import (
-    state,
-    default_state,
-    StateMachine,
-    tunable,
-    feedback
-)
-
-import math
-
+from magicbot import state, StateMachine, tunable, feedback
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+import wpilib
 
 from components.gripper import Gripper
 from components.intake import Intake
-from components.arm import Arm
+from components.arm import Arm, Setpoints, Setpoint
 from controllers.movement import Movement
+from utilities import field
 
-from enum import Enum, auto
 
-class Piece(Enum):
-    CUBE = auto()
-    CONE = auto()
-    NONE = auto()
-
-# TODO: use set points
-
-class ScoreController(StateMachine):
+class ScoringController(StateMachine):
     gripper: Gripper
     intake: Intake
     arm: Arm
     movement: Movement
 
-    MOVE_FORWARD = 1
-    # the distance that a cone will be at when we pick it up (meters)
-    CONE_DISTANCE = 0.3
-
-    has_piece: bool
+    grab_pre_time = tunable(0.5)
 
     def __init__(self) -> None:
-        self.has_piece = False
-        self.holding_piece = Piece.NONE
+        self.holding_piece = field.GamePiece.CONE
+        self.autodrive = False
+        self.wants_piece = field.GamePiece.CUBE
+        self.wants_to_intake = False
+        # use double substation shelf on right side from drivers pov
+        self.cone_pickup_side_right = False
 
-    def setup(self) -> None:
-        ...
-
-    @state
-    def pickup_cube_ground(self):
-        """
-        A function to pickup a cube from the ground
-        Requires the robot to already be aligned to the cube
-        """
-        # turn the intake on
-        self.intake.deploy()
-        # move forward a bit to suck the piece in until the cube is not in reach (and therefore in our bot)
-        if not(self.game_piece_in_reach()):
-            current_goal = self.movement.goal
-            self.movement.set_goal(Pose2d(current_goal.X(), current_goal.Y() + self.MOVE_FORWARD, current_goal.rotation()), current_goal.rotation())
-        self.intake.retract()
-
-        self.holding_piece = Piece.CUBE
-
-    @state
-    def pickup_cone(self):
-        target_pos = self.arm.get_arm_from_target(self.CONE_DISTANCE, 0.95)
-        # this means we can reach the position of ({CONE_DISTANCE}m, .95m)
-        if target_pos[2]:
-            # move the arm to target_pos
-            self.arm.set_angle(target_pos[0])
-            self.arm.set_length(target_pos[1])
-            if self.arm.at_goal_angle() and self.arm.at_goal_extension():
-                self.has_piece = True
-                self.gripper.close()
-
-                if self.get_time_to_goal() < 3:
-                    self.arm.set_angle(math.radians(90))
-                    self.arm.set_length(self.arm.MIN_EXTENSION)
-                else:
-                    self.arm.set_angle(math.radians(180))
-                    self.arm.set_length(self.arm.MIN_EXTENSION)
-
-            self.holding_piece = Piece.CONE
+    def get_correct_state(self) -> str:
+        if self.autodrive:
+            cur_piece = self.get_current_piece()
+            if cur_piece is field.GamePiece.CONE or cur_piece is field.GamePiece.CUBE:
+                return "score"
+            elif self.wants_piece is field.GamePiece.CONE:
+                return "auto_pickup_cone"
+            elif self.wants_piece is field.GamePiece.CUBE:
+                return "auto_pickup_cube"
         else:
-            raise Exception(f"The position ({self.CONE_DISTANCE}, .95) cannot be reached")
+            if self.wants_to_intake:
+                return "intaking"
+        return "idle"
+
+    def goto_correct_state(self):
+        self.next_state_now(self.get_correct_state())
+
+    @state(first=True)
+    def idle(self, state_tm: float):
+        self.goto_correct_state()
+        # self.arm.stop()
+        if state_tm > 0.5:
+            self.arm.goto_setpoint(Setpoints.STOW)
 
     @state
-    def score_cone(self):
-                '''goto_correct_state()
-            get place to score cone and get movement goal to it
-            if gripper has piece and time to goal < 3:
-                arm goto score cone @ mid or high
-            if time to goal > 4:
-                arm goto stow'''
-        ...
+    def intaking(self):
+        self.goto_correct_state()
+
+        self.arm.goto_setpoint(Setpoints.HANDOFF)
+        self.intake.deploy()
+        if self.gripper.game_piece_in_reach():
+            self.gripper.close()
+            self.holding_piece = field.GamePiece.CUBE
 
     @state
-    def score_cube(self):
-        '''    goto_correct_state()
-            get place to score cube and set movement goal to it
-            if gripper has piece and time to goal < 3:
-                arm goto score cube @ mid or high
-            if gripper dosent have piece or time to goal > 4:
-                arm goto handoff
-            if cube in reach of claw:
-                close claw'''
-        ...
+    def auto_pickup_cube(self, initial_call):
+        """Drives to the single substation to intake a cube"""
+        self.goto_correct_state()
 
-    @state(must_finish=True)
-    def recovery(self):
-        ...
+        self.movement.set_goal(*self.get_cube_pickup())
+        if self.movement.time_to_goal < 2:
+            self.arm.goto_setpoint(Setpoints.HANDOFF)
+            self.gripper.open()
+            self.intake.deploy()
+            if self.gripper.game_piece_in_reach():
+                self.gripper.close()
+                self.holding_piece = field.GamePiece.CUBE
+        self.movement.do_autodrive()
 
+    @state
+    def auto_pickup_cone(self):
+        self.goto_correct_state()
 
-    def gripper_open(self) -> None:
-        self.has_piece = False # if the gripper is open, there is 100% no piece in our control
-        self.gripper.open()
+        self.movement.set_goal(*self.get_cone_pickup())
+        self.intake.retract()
+        if self.movement.time_to_goal < 2:
+            self.arm.goto_setpoint(Setpoints.PICKUP_CONE)
+            self.gripper.open()
+        if self.movement.time_to_goal < self.grab_pre_time:
+            self.gripper.close()
+            self.holding_piece = field.GamePiece.CONE
+        self.movement.do_autodrive()
+
+    @state
+    def score(self, initial_call):
+        self.goto_correct_state()
+
+        if initial_call:
+            move_goal, self.arm_setpoint = self.get_score_location()
+            self.movement.set_goal(*move_goal)
+
+        self.intake.retract()
+        if self.movement.time_to_goal < 4:
+            self.arm.goto_setpoint(self.arm_setpoint)
+        if self.movement.time_to_goal < 0.1:
+            self.gripper.open()
+        self.movement.do_autodrive()
+
+    def is_red(self) -> bool:
+        return wpilib.DriverStation.getAlliance() is wpilib.DriverStation.Alliance.kRed
+
+    def get_team(self) -> wpilib.DriverStation.Alliance:
+        return wpilib.DriverStation.getAlliance()
+
+    def get_current_piece(self) -> field.GamePiece:
+        """What piece the gripper is currently holding"""
+        if self.gripper.get_full_closed():
+            return self.holding_piece
+        return field.GamePiece.NONE
 
     @feedback
-    def get_time_to_goal(self) -> float: #returns the updated time for the robot to get to the goal according to the trajectory
-        return self.movement.time_to_goal
+    def get_current_piece_str(self) -> str:
+        return self.get_current_piece().name
 
     @feedback
-    def has_piece_grabbed(self) -> bool:
-        return self.has_piece and self.gripper.get_full_closed()
+    def get_wants_piece_str(self) -> str:
+        return self.wants_piece.name
 
-    def gripper_close(self) -> None:
-        self.gripper.close()
-        if self.game_piece_in_reach() and self.gripper.get_full_closed():
-            self.has_piece = True
+    def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
+        """Gets where to auto pickup cubes from"""
+        # can be changed for autonomous period?
+        goal_trans = field.get_single_substation(wpilib.DriverStation.Alliance.kBlue)
+        goal_rotation = (
+            field.field_flip_rotation2d(Rotation2d(0))
+            if self.is_red()
+            else Rotation2d(0)
+        )
+        return Pose2d(goal_trans, goal_rotation), goal_rotation
 
-    @feedback
-    def game_piece_in_reach(self) -> bool:
-        return self.gripper.game_piece_in_reach()
+    def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
+        is_wall_side = self.cone_pickup_side_right == self.is_red()
+        goal_trans = field.get_double_substation(self.get_team(), is_wall_side)
+        goal_rotation = (
+            field.field_flip_rotation2d(Rotation2d(0))
+            if self.is_red()
+            else Rotation2d(0)
+        )
+        return (
+            Pose2d(
+                goal_trans.toTranslation2d(),
+                goal_rotation + Rotation2d.fromDegrees(180),
+            ),
+            goal_rotation,
+        )
 
-    @feedback
-    def held_piece(self) -> Piece:
-        return self.holding_piece
+    def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
+        # TODO: pick actual scoring node
+        goal_trans = field.field_flip_translation2d(
+            Translation2d(field.GRIDS_EDGE_X + 0.5, 2)
+        )
+        goal_rot = field.field_flip_rotation2d(Rotation2d.fromDegrees(180))
+        return (
+            Pose2d(goal_trans, goal_rot + Rotation2d.fromDegrees(180)),
+            goal_rot,
+        ), Setpoints.SCORE_CONE_HIGH

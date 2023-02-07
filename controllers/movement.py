@@ -38,12 +38,11 @@ class Movement(StateMachine):
         self.drive_local = False
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
+        self.goal_approach_dir = Rotation2d()
+        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
         self.time_to_goal = 3
-        self.set_goal(
-            Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
-        )
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -128,7 +127,11 @@ class Movement(StateMachine):
         waypoints: tuple[Translation2d, ...] = (),
         slow_dist=0.5,
     ) -> None:
-        if goal == self.goal:
+        if (
+            goal == self.goal
+            and approach_direction == self.goal_approach_dir
+            and waypoints == self.waypoints
+        ):
             return
         self.goal = goal
         self.goal_approach_dir = approach_direction
