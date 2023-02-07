@@ -66,13 +66,13 @@ class MyRobot(magicbot.MagicRobot):
         if dpad_angle == 0:
             self.arm.set_setpoint(Setpoints.SCORE_CONE_HIGH)
         # right
-        if dpad_angle == 90:
+        elif dpad_angle == 90:
             self.arm.set_setpoint(Setpoints.SCORE_CONE_MID)
         # down
-        if dpad_angle == 180:
+        elif dpad_angle == 180:
             self.arm.set_setpoint(Setpoints.HANDOFF)
         # left
-        if dpad_angle == 270:
+        elif dpad_angle == 270:
             self.arm.set_setpoint(Setpoints.PICKUP_CONE)
 
     def testInit(self) -> None:
