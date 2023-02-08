@@ -147,7 +147,10 @@ class Movement(StateMachine):
         )
         self.waypoints = waypoints
         if self.current_state == "autodrive":
+            # to reset the state_tm and regen trajectory
             self.trajectory = self.generate_trajectory()
+            self.time_to_goal = self.trajectory.totalTime()
+            self.next_state("autodrive")
 
     def execute_trajectory(self, trajectory: Trajectory, state_tm: float) -> None:
         target_state = trajectory.sample(
