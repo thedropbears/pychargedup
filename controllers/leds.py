@@ -11,13 +11,26 @@ class LedController:
     def __init__(self) -> None:
         ...
 
+    # is this needed?
+    def gripped_piece_is_cone(self) -> bool:
+        ...
+    
+    def should_place_left(self) -> bool:
+        ...
+
+    def wants_cone(self) -> bool:
+        ...
+
+    def wants_cube(self) -> bool:
+        ...
+
     def execute(self) -> None:
-        CONE = self.gripper.get_full_closed() and CHECK_THAT_PIECE_ISNT_A_CUBE
+        CONE = self.gripper.get_full_closed() and self.gripped_piece_is_cone()
         CUBE = self.intake.is_game_piece_present()
-        LEFT = LEFT_CHECK
-        RIGHT = RIGHT_CHECK
-        WANTS_CONE = WANTS_CONE_CHECK
-        WANTS_CUBE = WANTS_CUBE_CHECK
+        LEFT = self.should_place_left()
+        RIGHT = not self.should_place_left()
+        WANTS_CONE = self.wants_cone()
+        WANTS_CUBE = self.wants_cube()
         if WANTS_CONE:
             if LEFT:
                 self.status_lights.want_cone_left()

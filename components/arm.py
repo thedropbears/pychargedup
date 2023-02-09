@@ -107,6 +107,7 @@ class Arm:
         self.absolute_encoder.setDistancePerRotation(math.tau)
         self.absolute_encoder.setPositionOffset(0)
 
+
         # TODO: get pid and feedforward values for arm and extension from sysid
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
