@@ -13,16 +13,16 @@ class LedController:
 
     # is this needed?
     def gripped_piece_is_cone(self) -> bool:
-        ...
+        return False
     
     def should_place_left(self) -> bool:
-        ...
+        return False
 
     def wants_cone(self) -> bool:
-        ...
+        return False
 
     def wants_cube(self) -> bool:
-        ...
+        return False
 
     def execute(self) -> None:
         CONE = self.gripper.get_full_closed() and self.gripped_piece_is_cone()
