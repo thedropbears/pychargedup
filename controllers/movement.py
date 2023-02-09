@@ -38,14 +38,15 @@ class Movement(StateMachine):
         self.drive_local = False
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
+        self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
         self.time_remaining = 3
-        self.set_goal(
-            Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
-        )
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
+        self.set_goal(
+            Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
+        )
 
     def generate_trajectory(self) -> Trajectory:
         """Generates a trajectory to self.goal and displays it"""
@@ -111,32 +112,36 @@ class Movement(StateMachine):
         self.config.setStartVelocity(chassis_speed)
 
         trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, [], goal_spline, self.config
+            start_point_spline, list(self.waypoints), goal_spline, self.config
         )
 
         self.robot_object.setTrajectory(trajectory)
         return trajectory
 
     def set_goal(
-        self, goal: Pose2d, approach_direction: Rotation2d, slow_dist=0.5
+        self,
+        goal: Pose2d,
+        approach_direction: Rotation2d,
+        waypoints: tuple[Translation2d, ...] = (),
+        slow_dist=0.5,
     ) -> None:
-        if goal != self.goal:
-            self.goal = goal
-            self.goal_approach_dir = approach_direction
+        if goal == self.goal:
+            return
+        self.goal = goal
+        self.goal_approach_dir = approach_direction
 
-            self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
-            self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
-            topRight = Translation2d(
-                self.goal.X() + slow_dist, self.goal.Y() + slow_dist
+        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
+        self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
+        topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
+        bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
+        self.config.addConstraint(
+            RectangularRegionConstraint(
+                bottomLeft, topRight, MaxVelocityConstraint(0.5)
             )
-            bottomLeft = Translation2d(
-                self.goal.X() - slow_dist, self.goal.Y() - slow_dist
-            )
-            self.config.addConstraint(
-                RectangularRegionConstraint(
-                    bottomLeft, topRight, MaxVelocityConstraint(0.5)
-                )
-            )
+        )
+        self.waypoints = waypoints
+        if self.current_state == "autodrive":
+            self.trajectory = self.generate_trajectory()
 
     def execute_trajectory(self, trajectory: Trajectory, state_tm: float) -> None:
         target_state = trajectory.sample(
