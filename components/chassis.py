@@ -3,7 +3,7 @@ import math
 import time
 from typing import Optional
 
-import ctre
+import ctre.sensors
 import magicbot
 import navx
 import wpilib
@@ -63,7 +63,7 @@ class SwerveModule:
         self.steer = ctre.WPI_TalonFX(steer_id)
         self.drive = ctre.WPI_TalonFX(drive_id)
         self.drive_id = drive_id
-        self.encoder = ctre.CANCoder(encoder_id)
+        self.encoder = ctre.sensors.CANCoder(encoder_id)
 
         # Reduce CAN status frame rates before configuring
         self.steer.setStatusFramePeriod(
