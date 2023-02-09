@@ -14,7 +14,7 @@ class LedController:
     # is this needed?
     def gripped_piece_is_cone(self) -> bool:
         return False
-    
+
     def should_place_left(self) -> bool:
         return False
 
