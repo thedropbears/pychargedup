@@ -18,10 +18,10 @@ class TalonIds(enum.IntEnum):
 
 @enum.unique
 class CancoderIds(enum.IntEnum):
-    swerve_1 = 9
-    swerve_2 = 10
-    swerve_3 = 11
-    swerve_4 = 12
+    swerve_1 = 1
+    swerve_2 = 2
+    swerve_3 = 3
+    swerve_4 = 4
 
 
 @enum.unique
