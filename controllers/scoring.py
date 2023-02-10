@@ -57,21 +57,29 @@ class ScoringController(StateMachine):
         if self.autodrive:
             self.goto_autodrive_state()
         if not self.wants_to_intake:
-            self.next_state("intaking")
+            self.next_state("idle")
 
         self.arm.goto_setpoint(Setpoints.HANDOFF)
         self.intake.deploy()
-        if self.gripper.game_piece_in_reach():
+        if self.intake.is_game_piece_present():
+            self.intake.retract()
+            self.next_state("grab_from_well")
+
+    @state
+    def grab_from_well(self):
+        """Grabs a cube from the well, assumes there is a cube in the well"""
+        self.arm.goto_setpoint(Setpoints.HANDOFF)
+        self.gripper.open()
+        if self.arm.at_goal():
             self.gripper.close()
             if self.gripper.get_full_closed():
                 self.is_holding = field.GamePiece.CUBE
                 self.next_state("idle")
-                self.intake.retract()
                 self.arm.goto_setpoint(Setpoints.STOW)
 
     @state
     def auto_pickup_cube(self):
-        """Drives to the single substation to intake a cube"""
+        """Drives to intake a cube from the ground"""
         if not self.autodrive:
             self.next_state("idle")
 
@@ -80,13 +88,11 @@ class ScoringController(StateMachine):
             self.arm.goto_setpoint(Setpoints.HANDOFF)
             self.gripper.open()
             self.intake.deploy()
-            if self.gripper.game_piece_in_reach():
-                self.gripper.close()
-                self.is_holding = field.GamePiece.CUBE
-            if self.gripper.get_full_closed():
-                self.next_state("idle")
-                self.arm.goto_setpoint(Setpoints.STOW)
-                self.intake.retract()
+            if (
+                self.intake.is_game_piece_present()
+                or self.gripper.game_piece_in_reach()
+            ):
+                self.next_state("grab_from_well")
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.goto_setpoint(Setpoints.STOW)
         self.movement.do_autodrive()
