@@ -9,6 +9,7 @@ from wpilib import (
     DutyCycleEncoder,
     SendableChooser,
     SmartDashboard,
+    DigitalInput,
 )
 from wpimath.controller import (
     ProfiledPIDController,
@@ -177,6 +178,10 @@ class Arm:
             4,
             wpilib.Color8Bit(68, 117, 26),
         )
+
+        # Hall effector
+        self.hall_effector = DigitalInput(DioChannels.hall_effector)
+
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
@@ -272,6 +277,11 @@ class Arm:
     def get_extension_speed(self) -> float:
         """Gets the extension speed in m/s"""
         return self.extension_encoder.getVelocity()
+
+    @feedback
+    def get_hall_effect(self) -> bool:
+        """"""
+        return self.hall_effector.get()
 
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""

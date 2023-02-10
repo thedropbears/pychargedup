@@ -56,3 +56,5 @@ class DioChannels(enum.IntEnum):
     intake_break_beam_sensor = 2
 
     arm_absolute_encoder = 1
+
+    hall_effector = 5
