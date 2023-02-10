@@ -6,7 +6,14 @@ from components.gripper import Gripper
 from components.intake import Intake
 from components.arm import Arm, Setpoints, Setpoint
 from controllers.movement import Movement
-from utilities import field
+from utilities.game import (
+    GamePiece,
+    get_double_substation,
+    get_single_substation,
+    field_flip_rotation2d,
+    field_flip_translation2d,
+    GRIDS_EDGE_X,
+)
 
 
 class ScoringController(StateMachine):
@@ -25,20 +32,20 @@ class ScoringController(StateMachine):
     PICKUP_CUBE_PREPARE_TIME = tunable(3)
 
     def __init__(self) -> None:
-        self.is_holding = field.GamePiece.NONE
+        self.is_holding = GamePiece.NONE
         self.autodrive = False
-        self.wants_piece = field.GamePiece.CONE
+        self.wants_piece = GamePiece.CONE
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
 
     def get_correct_state(self) -> str:
         cur_piece = self.get_current_piece()
-        if cur_piece is field.GamePiece.CONE or cur_piece is field.GamePiece.CUBE:
+        if cur_piece is GamePiece.CONE or cur_piece is GamePiece.CUBE:
             return "score"
-        elif self.wants_piece is field.GamePiece.CONE:
+        elif self.wants_piece is GamePiece.CONE:
             return "auto_pickup_cone"
-        elif self.wants_piece is field.GamePiece.CUBE:
+        elif self.wants_piece is GamePiece.CUBE:
             return "auto_pickup_cube"
         return "idle"
 
@@ -73,7 +80,7 @@ class ScoringController(StateMachine):
         if self.arm.at_goal():
             self.gripper.close()
             if self.gripper.get_full_closed():
-                self.is_holding = field.GamePiece.CUBE
+                self.is_holding = GamePiece.CUBE
                 self.next_state("idle")
                 self.arm.goto_setpoint(Setpoints.STOW)
 
@@ -107,7 +114,7 @@ class ScoringController(StateMachine):
         if self.movement.time_to_goal < self.GRAB_PRE_TIME:  # or gripper sees cone
             self.gripper.close()
             if self.gripper.get_full_closed():
-                self.is_holding = field.GamePiece.CONE
+                self.is_holding = GamePiece.CONE
                 self.next_state("idle")
                 self.arm.goto_setpoint(Setpoints.STOW)
         elif self.movement.time_to_goal < self.PICKUP_CONE_PREPARE_TIME:
@@ -130,7 +137,7 @@ class ScoringController(StateMachine):
         self.intake.retract()
         if self.movement.time_to_goal < 0.1:
             self.gripper.open()
-            self.is_holding = field.GamePiece.NONE
+            self.is_holding = GamePiece.NONE
             if self.gripper.get_full_open():
                 self.next_state("idle")
                 self.arm.goto_setpoint(Setpoints.STOW)
@@ -148,11 +155,11 @@ class ScoringController(StateMachine):
     def get_team(self) -> wpilib.DriverStation.Alliance:
         return wpilib.DriverStation.getAlliance()
 
-    def get_current_piece(self) -> field.GamePiece:
+    def get_current_piece(self) -> GamePiece:
         """What piece the gripper is currently holding in the gripper"""
         if self.gripper.get_full_closed() or self.gripper.is_opening():
             return self.is_holding
-        return field.GamePiece.NONE
+        return GamePiece.NONE
 
     @feedback
     def get_current_piece_str(self) -> str:
@@ -165,21 +172,17 @@ class ScoringController(StateMachine):
     def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         """Gets where to auto pickup cubes from"""
         # can be changed for autonomous period?
-        goal_trans = field.get_single_substation(wpilib.DriverStation.Alliance.kBlue)
+        goal_trans = get_single_substation(wpilib.DriverStation.Alliance.kBlue)
         goal_rotation = (
-            field.field_flip_rotation2d(Rotation2d(0))
-            if self.is_red()
-            else Rotation2d(0)
+            field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
         )
         return Pose2d(goal_trans, goal_rotation), goal_rotation
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         is_wall_side = self.cone_pickup_side_right == self.is_red()
-        goal_trans = field.get_double_substation(self.get_team(), is_wall_side)
+        goal_trans = get_double_substation(self.get_team(), is_wall_side)
         goal_rotation = (
-            field.field_flip_rotation2d(Rotation2d(0))
-            if self.is_red()
-            else Rotation2d(0)
+            field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
         )
         return (
             Pose2d(
@@ -191,10 +194,8 @@ class ScoringController(StateMachine):
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         # TODO: pick actual scoring node
-        goal_trans = field.field_flip_translation2d(
-            Translation2d(field.GRIDS_EDGE_X + 0.5, 2)
-        )
-        goal_rot = field.field_flip_rotation2d(Rotation2d.fromDegrees(180))
+        goal_trans = field_flip_translation2d(Translation2d(GRIDS_EDGE_X + 0.5, 2))
+        goal_rot = field_flip_rotation2d(Rotation2d.fromDegrees(180))
         return (
             Pose2d(goal_trans, goal_rot + Rotation2d.fromDegrees(180)),
             goal_rot,
