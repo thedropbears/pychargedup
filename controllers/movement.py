@@ -152,25 +152,6 @@ class Movement(StateMachine):
             self.time_to_goal = self.trajectory.totalTime()
             self.next_state("autodrive")
 
-    def execute_trajectory(self, trajectory: Trajectory, state_tm: float) -> None:
-        target_state = trajectory.sample(
-            state_tm
-        )  # Grabbing the target position at the current point in time from the trajectory.
-
-        # Calculating the speeds required to get to the target position.
-        chassis_speed = self.drive_controller.calculate(
-            self.chassis.get_pose(),
-            target_state,
-            self.goal.rotation(),
-        )
-        self.chassis.drive_local(
-            chassis_speed.vx,
-            chassis_speed.vy,
-            chassis_speed.omega,
-        )
-
-        self.time_to_goal = trajectory.totalTime() - state_tm
-
     def is_at_goal(self) -> bool:
         return (
             self.goal.translation() - self.chassis.get_pose().translation()
@@ -193,19 +174,23 @@ class Movement(StateMachine):
         if initial_call:
             self.trajectory = self.generate_trajectory()
 
-        self.execute_trajectory(self.trajectory, state_tm)
+        target_state = self.trajectory.sample(
+            state_tm
+        )  # Grabbing the target position at the current point in time from the trajectory.
 
-        if self.is_at_goal():
-            # self.done()
-            ...
-        elif self.time_to_goal < 0.2:
-            # TODO Tell other components to begin action
-            # print("Began scoring")
-            ...
-        elif self.time_to_goal < 1:
-            # TODO Tell other components to prepare for action
-            # print("Preparing for scoring")
-            ...
+        # Calculating the speeds required to get to the target position.
+        chassis_speed = self.drive_controller.calculate(
+            self.chassis.get_pose(),
+            target_state,
+            self.goal.rotation(),
+        )
+        self.chassis.drive_local(
+            chassis_speed.vx,
+            chassis_speed.vy,
+            chassis_speed.omega,
+        )
+
+        self.time_to_goal = self.trajectory.totalTime() - state_tm
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """
