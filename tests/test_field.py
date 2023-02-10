@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis.strategies import floats
 
-from utilities.field import (
+from utilities.game import (
     field_flip_pose2d,
     field_flip_rotation2d,
     field_flip_translation2d,
