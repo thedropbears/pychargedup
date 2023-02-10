@@ -30,20 +30,27 @@ class Gripper:
 
     @feedback
     def get_full_closed(self) -> bool:
+        # has been in same state for some time, current state is closed and wasn't only just closed
         return (
             (time.monotonic() - self.change_time) >= Gripper.CLOSE_TIME_THERESHOLD
-        ) and (not self.opened)
+        ) and self.last_opened is self.opened is False
 
     @feedback
     def get_full_open(self) -> bool:
         return (
             (time.monotonic() - self.change_time) >= Gripper.OPEN_TIME_THERESHOLD
-        ) and self.opened
+        ) and self.opened is self.last_opened is True
+
+    def is_closing(self) -> bool:
+        return (not self.opened) and not self.get_full_closed()
+
+    def is_opening(self) -> bool:
+        return self.opened and not self.get_full_open()
 
     def execute(self) -> None:
         if self.opened != self.last_opened:
             self.change_time = time.monotonic()
-            self.last_opened = self.opened
+        self.last_opened = self.opened
 
         if self.opened:
             self.solenoid.set(DoubleSolenoid.Value.kReverse)
