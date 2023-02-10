@@ -11,7 +11,6 @@ from utilities.game import (
     get_double_substation,
     get_single_substation,
     field_flip_rotation2d,
-    field_flip_translation2d,
     GRIDS_EDGE_X,
 )
 
@@ -24,12 +23,13 @@ class ScoringController(StateMachine):
 
     # how long before reaching pickup shelf to start closing claw
     GRAB_PRE_TIME = tunable(0.5)
-    # how long before reaching pickup shelf to move arm to correct position
-    PICKUP_CONE_PREPARE_TIME = tunable(3)
-    # how long before are stows if in an autodrive state
+    # amont of time before arriving at goal to stow arm before which
     AUTO_STOW_CUTOFF = tunable(5)
-    # how long before intaking a cube to start running intake
+    # how long before arriving at the correct position for each action
+    # to move the arm to correct position or start intaking
     PICKUP_CUBE_PREPARE_TIME = tunable(3)
+    SCORE_PREPARE_TIME = tunable(3)
+    PICKUP_CONE_PREPARE_TIME = tunable(3)
 
     def __init__(self) -> None:
         self.is_holding = GamePiece.NONE
@@ -39,7 +39,7 @@ class ScoringController(StateMachine):
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
 
-    def get_correct_state(self) -> str:
+    def get_correct_autodrive_state(self) -> str:
         cur_piece = self.get_current_piece()
         if cur_piece is GamePiece.CONE or cur_piece is GamePiece.CUBE:
             return "score"
@@ -50,7 +50,7 @@ class ScoringController(StateMachine):
         return "idle"
 
     def goto_autodrive_state(self):
-        self.next_state(self.get_correct_state())
+        self.next_state(self.get_correct_autodrive_state())
 
     @state(first=True)
     def idle(self):
@@ -141,9 +141,9 @@ class ScoringController(StateMachine):
             if self.gripper.get_full_open():
                 self.next_state("idle")
                 self.arm.goto_setpoint(Setpoints.STOW)
-        elif self.movement.time_to_goal < 4:
+        elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.goto_setpoint(self.arm_setpoint)
-        elif self.movement.time_to_goal > 5:
+        elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.goto_setpoint(Setpoints.STOW)
 
         self.movement.do_autodrive()
@@ -194,9 +194,10 @@ class ScoringController(StateMachine):
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         # TODO: pick actual scoring node
-        goal_trans = field_flip_translation2d(Translation2d(GRIDS_EDGE_X + 0.5, 2))
-        goal_rot = field_flip_rotation2d(Rotation2d.fromDegrees(180))
+        goal_trans = Translation2d(GRIDS_EDGE_X + 0.5, 2)
+        goal_rot = Rotation2d.fromDegrees(180)
+        goal_approach = Rotation2d.fromDegrees(0)
         return (
-            Pose2d(goal_trans, goal_rot + Rotation2d.fromDegrees(180)),
-            goal_rot,
+            Pose2d(goal_trans, goal_rot, goal_rot),
+            goal_approach,
         ), Setpoints.SCORE_CONE_HIGH
