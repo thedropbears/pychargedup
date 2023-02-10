@@ -181,7 +181,8 @@ class Arm:
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
-        self.goto_setpoint(Setpoints.SCORE_CONE_HIGH)
+        self.set_angle(self.get_angle())
+        self.set_length(self.get_extension())
 
     def execute(self) -> None:
         extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
