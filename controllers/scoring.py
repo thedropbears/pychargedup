@@ -15,7 +15,14 @@ class ScoringController(StateMachine):
     arm: Arm
     movement: Movement
 
-    grab_pre_time = tunable(0.5)
+    # how long before reaching pickup shelf to start closing claw
+    GRAB_PRE_TIME = tunable(0.5)
+    # how long before reaching pickup shelf to move arm to correct position
+    PICKUP_CONE_PREPARE_TIME = tunable(3)
+    # how long before are stows if in an autodrive state
+    AUTO_STOW_CUTOFF = tunable(5)
+    # how long before intaking a cube to start running intake
+    PICKUP_CUBE_PREPARE_TIME = tunable(3)
 
     def __init__(self) -> None:
         self.is_holding = field.GamePiece.NONE
@@ -49,6 +56,8 @@ class ScoringController(StateMachine):
     def intaking(self):
         if self.autodrive:
             self.goto_autodrive_state()
+        if not self.wants_to_intake:
+            self.next_state("intaking")
 
         self.arm.goto_setpoint(Setpoints.HANDOFF)
         self.intake.deploy()
@@ -57,6 +66,7 @@ class ScoringController(StateMachine):
             if self.gripper.get_full_closed():
                 self.is_holding = field.GamePiece.CUBE
                 self.next_state("idle")
+                self.intake.retract()
                 self.arm.goto_setpoint(Setpoints.STOW)
 
     @state
@@ -66,7 +76,7 @@ class ScoringController(StateMachine):
             self.next_state("idle")
 
         self.movement.set_goal(*self.get_cube_pickup())
-        if self.movement.time_to_goal < 2:
+        if self.movement.time_to_goal < self.PICKUP_CUBE_PREPARE_TIME:
             self.arm.goto_setpoint(Setpoints.HANDOFF)
             self.gripper.open()
             self.intake.deploy()
@@ -76,7 +86,8 @@ class ScoringController(StateMachine):
             if self.gripper.get_full_closed():
                 self.next_state("idle")
                 self.arm.goto_setpoint(Setpoints.STOW)
-        elif self.movement.time_to_goal > 5:
+                self.intake.retract()
+        elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.goto_setpoint(Setpoints.STOW)
         self.movement.do_autodrive()
 
@@ -87,16 +98,16 @@ class ScoringController(StateMachine):
 
         self.movement.set_goal(*self.get_cone_pickup())
         self.intake.retract()
-        if self.movement.time_to_goal < self.grab_pre_time:  # or gripper sees cone
+        if self.movement.time_to_goal < self.GRAB_PRE_TIME:  # or gripper sees cone
             self.gripper.close()
             if self.gripper.get_full_closed():
                 self.is_holding = field.GamePiece.CONE
                 self.next_state("idle")
                 self.arm.goto_setpoint(Setpoints.STOW)
-        elif self.movement.time_to_goal < 3:
+        elif self.movement.time_to_goal < self.PICKUP_CONE_PREPARE_TIME:
             self.arm.goto_setpoint(Setpoints.PICKUP_CONE)
             self.gripper.open()
-        elif self.movement.time_to_goal > 5:
+        elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.goto_setpoint(Setpoints.STOW)
 
         self.movement.do_autodrive()
@@ -132,7 +143,7 @@ class ScoringController(StateMachine):
         return wpilib.DriverStation.getAlliance()
 
     def get_current_piece(self) -> field.GamePiece:
-        """What piece the gripper is currently holding"""
+        """What piece the gripper is currently holding in the gripper"""
         if self.gripper.get_full_closed() or self.gripper.is_opening():
             return self.is_holding
         return field.GamePiece.NONE
