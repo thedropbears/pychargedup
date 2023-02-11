@@ -11,8 +11,9 @@ class Gripper:
 
     def __init__(self) -> None:
         self.opened = False
-        self.open_time = time.monotonic()
-        self.close_time = time.monotonic()
+        self.last_opened = self.opened
+        self.change_time = time.monotonic()
+        self.wants_to_close = False
 
         self.solenoid = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,
@@ -23,28 +24,38 @@ class Gripper:
         self.game_piece_switch = DigitalInput(ids.DioChannels.gripper_game_piece_switch)
 
     def open(self) -> None:
-        if self.opened is False:
-            self.open_time = time.monotonic()
         self.opened = True
 
     def close(self) -> None:
-        if self.opened:
-            self.close_time = time.monotonic()
         self.opened = False
 
     @feedback
     def get_full_closed(self) -> bool:
+        # has been in same state for some time, current state is closed and wasn't only just closed
         return (
-            (time.monotonic() - self.close_time) >= Gripper.CLOSE_TIME_THERESHOLD
-        ) and (not self.opened)
+            (time.monotonic() - self.change_time) >= Gripper.CLOSE_TIME_THERESHOLD
+        ) and self.last_opened is self.opened is False
 
     @feedback
     def get_full_open(self) -> bool:
         return (
-            (time.monotonic() - self.open_time) >= Gripper.OPEN_TIME_THERESHOLD
-        ) and self.opened
+            (time.monotonic() - self.change_time) >= Gripper.OPEN_TIME_THERESHOLD
+        ) and self.opened is self.last_opened is True
+
+    def is_closing(self) -> bool:
+        return (not self.opened) and not self.get_full_closed()
+
+    def is_opening(self) -> bool:
+        return self.opened and not self.get_full_open()
 
     def execute(self) -> None:
+        if self.wants_to_close and self.game_piece_in_reach():
+            self.opened = False
+
+        if self.opened != self.last_opened:
+            self.change_time = time.monotonic()
+        self.last_opened = self.opened
+
         if self.opened:
             self.solenoid.set(DoubleSolenoid.Value.kReverse)
         else:
