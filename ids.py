@@ -30,7 +30,7 @@ class SparkMaxIds(enum.IntEnum):
     arm_rotation_follower = 14
     arm_extension = 15
 
-    intake_motor = 16
+    intake_motor = 3
 
 
 @enum.unique

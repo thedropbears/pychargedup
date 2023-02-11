@@ -74,12 +74,14 @@ class ScoringController(StateMachine):
             self.goto_autodrive_state()
         if not self.wants_to_intake:
             self.next_state("idle")
+            self.intake.retract
+            return
 
         self.arm.goto_setpoint(Setpoints.HANDOFF)
         self.intake.deploy()
-        if self.intake.is_game_piece_present():
-            self.intake.retract()
-            self.next_state("grab_from_well")
+        # if self.intake.is_game_piece_present():
+        #     self.intake.retract()
+        #     self.next_state("grab_from_well")
 
     @state
     def grab_from_well(self):
