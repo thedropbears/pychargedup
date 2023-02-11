@@ -13,6 +13,7 @@ class Gripper:
         self.opened = False
         self.last_opened = self.opened
         self.change_time = time.monotonic()
+        self.wants_to_close = False
 
         self.solenoid = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,
@@ -48,6 +49,9 @@ class Gripper:
         return self.opened and not self.get_full_open()
 
     def execute(self) -> None:
+        if self.wants_to_close and self.game_piece_in_reach():
+            self.opened = False
+
         if self.opened != self.last_opened:
             self.change_time = time.monotonic()
         self.last_opened = self.opened
