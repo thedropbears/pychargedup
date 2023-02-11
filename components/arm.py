@@ -50,6 +50,11 @@ class Setpoint:
         """Sets a cartesian goal reletive to the arms axle"""
         return cls(math.atan2(-z, x), math.hypot(x, z))
 
+    def toCartesian(self) -> tuple[float, float]:
+        return self.extension * math.cos(self.angle), self.extension * math.sin(
+            self.angle
+        )
+
 
 class Setpoints:
     PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
