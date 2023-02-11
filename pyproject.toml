@@ -1,3 +1,14 @@
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+	"pragma: no cover",
+	"raise NotImplementedError",
+	"if __name__ == .__main__.:",
+	"if typing.TYPE_CHECKING:",
+]
+
 [tool.pytest.ini_options]
 pythonpath = '.'
 
