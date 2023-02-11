@@ -54,12 +54,12 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getLeftBumperPressed():
             self.intake.retract()
 
-        if self.gripper.game_piece_in_reach():
-            self.gripper.close()
         if self.gamepad.getYButton():
-            self.gripper.close()
+            self.gripper.wants_to_close = not self.gripper.wants_to_close
         if self.gamepad.getXButton():
             self.gripper.open()
+        if self.gamepad.getBButton():
+            self.gripper.close()
 
         dpad_angle = self.gamepad.getPOV()
         # up
