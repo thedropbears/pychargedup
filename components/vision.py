@@ -3,7 +3,7 @@ from components.chassis import Chassis
 import wpilib
 import wpiutil.log
 import robotpy_apriltag
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Quaternion
+from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
 from typing import Optional
 from magicbot import tunable
 
@@ -31,30 +31,16 @@ class Vision:
     add_to_estimator = tunable(True)
 
     def __init__(self) -> None:
-        left_rot = Rotation3d(
-            Quaternion(
-                w=0.05185915012526366,
-                x=0.9440085629608038,
-                y=0.2712337484457223,
-                z=0.18052898744812756,
-            )
-        )
-        right_rot = Rotation3d(
-            Quaternion(
-                w=0.05185915012526366,
-                x=-0.9440085629608038,
-                y=0.2712337484457223,
-                z=-0.18052898744812756,
-            )
-        )
+        left_rot = Rotation3d(0, math.radians(10), math.radians(25))
+        right_rot = Rotation3d(0, math.radians(10), math.radians(-25))
         self.cameras = [  # (Camera object, camera-to-robot transform)
             (
                 PhotonCamera(n),
                 Transform3d(Translation3d(x, y, z), rot).inverse(),
             )
             for (n, x, y, z, rot) in [
-                ("C922_Left", 0.36986, 0.05223, 0.22041, left_rot),
-                ("C920_Right", 0.36986, -0.05223, 0.22041, right_rot),
+                ("cam_port", 0.35001, 0.06583, 0.44971, left_rot),
+                ("cam_starbord", 0.35001, -0.06583, 0.44971, right_rot),
             ]
         ]
         self.last_timestamps = [0] * len(self.cameras)
