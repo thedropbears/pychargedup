@@ -1,5 +1,5 @@
 from magicbot import state, StateMachine, tunable, feedback
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Pose2d, Rotation2d, Translation2d, Translation3d
 import wpilib
 
 from components.gripper import Gripper
@@ -182,9 +182,17 @@ class ScoringController(StateMachine):
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         is_wall_side = self.cone_pickup_side_right == self.is_red()
         goal_trans = get_double_substation(self.get_team(), is_wall_side)
+
         goal_rotation = (
             field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
         )
+        offset_x, _ = Setpoints.PICKUP_CONE.toCartesian()
+
+        # offset goal_trans to be where robot centre will be
+        if self.is_red():
+            goal_trans = goal_trans + Translation3d(-offset_x, 0, 0)
+        else:
+            goal_trans = goal_trans + Translation3d(offset_x, 0, 0)
         return (
             Pose2d(
                 goal_trans.toTranslation2d(),
