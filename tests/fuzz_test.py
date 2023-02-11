@@ -29,7 +29,7 @@ class AllTheThings:
 
     def fuzz(self) -> None:
         for dio in self.dios:
-            if dio.getIsInput():
+            if dio.getIsInput():  # pragma: no branch
                 dio.setValue(rand_bool())
 
 
