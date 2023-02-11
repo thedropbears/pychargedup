@@ -31,16 +31,16 @@ class Vision:
     add_to_estimator = tunable(True)
 
     def __init__(self) -> None:
-        left_rot = Rotation3d(0, math.radians(10), math.radians(25))
-        right_rot = Rotation3d(0, math.radians(10), math.radians(-25))
+        left_rot = Rotation3d(0, math.radians(10), math.radians(25 + 180))
+        right_rot = Rotation3d(0, math.radians(10), math.radians(-25 + 180))
         self.cameras = [  # (Camera object, camera-to-robot transform)
             (
                 PhotonCamera(n),
                 Transform3d(Translation3d(x, y, z), rot).inverse(),
             )
             for (n, x, y, z, rot) in [
-                ("cam_port", 0.35001, 0.06583, 0.44971, left_rot),
-                ("cam_starbord", 0.35001, -0.06583, 0.44971, right_rot),
+                ("cam_port", -0.35001, 0.06583, 0.44971, left_rot),
+                ("cam_starboard", -0.35001, -0.06583, 0.44971, right_rot),
             ]
         ]
         self.last_timestamps = [0] * len(self.cameras)
