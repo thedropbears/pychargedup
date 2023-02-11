@@ -90,8 +90,8 @@ class PhysicsEngine:
             -arm.MAX_ANGLE - math.radians(10),
             -arm.MIN_ANGLE,
             arm_mass,
-            True,
-            [math.radians(0.01)],
+            simulateGravity=True,
+            measurementStdDevs=[math.radians(0.01)],
         )
         extension_motors_sim = DCMotor.NEO550(1)
         self.extension_sim = ElevatorSim(
@@ -101,8 +101,8 @@ class PhysicsEngine:
             robot.arm.SPOOL_DIAMETER / 2,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
-            False,
-            [0.001],
+            simulateGravity=False,
+            measurementStdDevs=[0.001],
         )
         self.extension_sim.setState(np.array([[arm.MIN_EXTENSION], [0]]))
 
