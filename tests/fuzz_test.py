@@ -14,6 +14,11 @@ def rand_bool() -> bool:
     return random.getrandbits(1) != 0
 
 
+def rand_axis() -> float:
+    """Get a random number between -1 and 1."""
+    return random.random() * 2 - 1
+
+
 def rand_pov() -> int:
     """Pick a random POV hat value."""
     return random.choice((-1, 0, 45, 90, 135, 180, 225, 270, 315))
@@ -50,7 +55,7 @@ class DSInputs:
 def fuzz_joystick(joystick: wpilib.simulation.JoystickSim) -> None:
     """Fuzz a Logitech Extreme 3D Pro flight stick."""
     for axis in range(5):
-        joystick.setRawAxis(axis, random.random())
+        joystick.setRawAxis(axis, rand_axis())
     for button in range(12):
         joystick.setRawButton(button, rand_bool())
     joystick.setPOV(rand_pov())
@@ -59,7 +64,7 @@ def fuzz_joystick(joystick: wpilib.simulation.JoystickSim) -> None:
 def fuzz_xbox_gamepad(gamepad: wpilib.simulation.XboxControllerSim) -> None:
     """Fuzz an XInput gamepad."""
     for axis in range(6):
-        gamepad.setRawAxis(axis, random.random())
+        gamepad.setRawAxis(axis, rand_axis())
     for button in range(10):
         gamepad.setRawButton(button, rand_bool())
     gamepad.setPOV(rand_pov())
