@@ -20,6 +20,8 @@ def rand_pov() -> int:
 
 
 class AllTheThings:
+    """Fuzzer for robot hardware inputs."""
+
     def __init__(self) -> None:
         self.dios = [
             dio
@@ -34,6 +36,8 @@ class AllTheThings:
 
 
 class DSInputs:
+    """Fuzzer for HIDs attached to the driver station."""
+
     def __init__(self) -> None:
         self.gamepad = wpilib.simulation.XboxControllerSim(0)
         self.joystick = wpilib.simulation.JoystickSim(1)
