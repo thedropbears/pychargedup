@@ -23,6 +23,7 @@ class ScoringController(StateMachine):
 
     # how long before reaching pickup shelf to start closing claw
     GRAB_PRE_TIME = tunable(0.5)
+    SCORE_PRE_TIME = tunable(0.1)
     # amont of time before arriving at goal to stow arm before which
     AUTO_STOW_CUTOFF = tunable(5)
     # how long before arriving at the correct position for each action
@@ -135,7 +136,7 @@ class ScoringController(StateMachine):
             self.movement.set_goal(*move_goal)
 
         self.intake.retract()
-        if self.movement.time_to_goal < 0.1:
+        if self.movement.time_to_goal < self.SCORE_PRE_TIME:
             self.gripper.open()
             self.is_holding = GamePiece.NONE
             if self.gripper.get_full_open():
