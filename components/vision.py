@@ -3,9 +3,9 @@ from components.chassis import Chassis
 import wpilib
 import wpiutil.log
 import robotpy_apriltag
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
+from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Quaternion
 from typing import Optional
-from magicbot import tunable
+from magicbot import tunable, feedback
 
 from photonvision import (
     PhotonCamera,
@@ -21,7 +21,7 @@ class Vision:
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 0.25
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 3.0
     ANGULAR_STD_DEV_CONSTANT = 1.0
 
     field: wpilib.Field2d
@@ -31,20 +31,38 @@ class Vision:
     add_to_estimator = tunable(True)
 
     def __init__(self) -> None:
-        left_rot = Rotation3d(0, math.radians(10), math.radians(25 + 180))
-        right_rot = Rotation3d(0, math.radians(10), math.radians(-25 + 180))
+        left_rot = Rotation3d(
+            Quaternion(
+                -0.2156163454055786,
+                0.0850898027420044,
+                0.018863987177610397,
+                0.9725808501243591,
+            )
+        )
+        right_rot = Rotation3d(
+            Quaternion(
+                0.21561579406261444,
+                0.08508981764316559,
+                -0.018863940611481667,
+                0.9725809693336487,
+            )
+        )
         self.cameras = [  # (Camera object, camera-to-robot transform)
             (
                 PhotonCamera(n),
                 Transform3d(Translation3d(x, y, z), rot).inverse(),
             )
             for (n, x, y, z, rot) in [
-                ("cam_port", -0.35001, 0.06583, 0.44971, left_rot),
-                ("cam_starboard", -0.35001, -0.06583, 0.44971, right_rot),
+                ("cam_port", -0.35001, 0.06583, 0.25, left_rot),
+                ("cam_starboard", -0.35001, -0.06583, 0.247, right_rot),
             ]
         ]
         self.last_timestamps = [0] * len(self.cameras)
         self.should_log = False
+        # amount of tags that have produced unreasonable estimates in a row
+        self.rejected_in_row = 0.0
+        self.last_z_1 = 0.0
+        self.last_z_2 = 0.0
 
     def setup(self) -> None:
         self.field_pos_obj_left = self.field.getObject("vision_pose_left_cam")
@@ -70,10 +88,15 @@ class Vision:
                 continue
 
             for target in results.getTargets():
-                poses = estimate_poses_from_apriltag(trans, target)
+                _poses = estimate_poses_from_apriltag(trans, target)
                 # tag dosent exist
-                if poses is None:
+                if _poses is None:
                     continue
+                *poses, z1 = _poses
+                if cam_idx:
+                    self.last_z_1 = z1
+                else:
+                    self.last_z_2 = z1
                 pose = choose_pose(
                     poses[0],
                     poses[1],
@@ -84,6 +107,16 @@ class Vision:
                 # filter out likely bad targets
                 if target.getPoseAmbiguity() > 0.25 or target.getYaw() > 20:
                     continue
+
+                change = (
+                    self.chassis.get_pose().translation().distance(pose.translation())
+                )
+                if change > 1.0:
+                    self.rejected_in_row += 1
+                    if self.rejected_in_row < 50:
+                        continue
+                else:
+                    self.rejected_in_row /= 2
 
                 if self.add_to_estimator:
                     self.chassis.estimator.addVisionMeasurement(
@@ -138,10 +171,22 @@ class Vision:
                 else:
                     self.field_pos_obj_right.setPose(pose)
 
+    @feedback
+    def get_last_z_1(self):
+        return self.last_z_1
+
+    @feedback
+    def get_last_z_2(self):
+        return self.last_z_2
+
+    @feedback
+    def get_rejected_in_row(self):
+        return self.rejected_in_row
+
 
 def estimate_poses_from_apriltag(
     cam_to_robot: Transform3d, target: PhotonTrackedTarget
-) -> Optional[tuple[Pose2d, Pose2d]]:
+) -> Optional[tuple[Pose2d, Pose2d, float]]:
     tag_id = target.getFiducialId()
     tag_pose = Vision.FIELD_LAYOUT.getTagPose(tag_id)
     if tag_pose is None:
@@ -157,7 +202,12 @@ def estimate_poses_from_apriltag(
         .transformBy(cam_to_robot)
         .toPose2d()
     )
-    return best_pose, alternate_pose
+    z = (
+        tag_pose.transformBy(target.getBestCameraToTarget().inverse())
+        .transformBy(cam_to_robot)
+        .z
+    )
+    return best_pose, alternate_pose, z
 
 
 def get_target_skew(target: PhotonTrackedTarget):

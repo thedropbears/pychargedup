@@ -50,10 +50,16 @@ class Setpoint:
         """Sets a cartesian goal reletive to the arms axle"""
         return cls(math.atan2(-z, x), math.hypot(x, z))
 
+    def toCartesian(self) -> tuple[float, float]:
+        return self.extension * math.cos(self.angle), self.extension * math.sin(
+            self.angle
+        )
+
 
 class Setpoints:
     PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
-    HANDOFF = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.1)
+    HANDOFF = Setpoint(MAX_ANGLE - math.radians(5), MIN_EXTENSION + 0.1)
+    STOW = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.2)
     SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
     SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
     SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.42)
@@ -94,7 +100,7 @@ class Arm:
         self._rotation_motor_follower = CANSparkMax(
             SparkMaxIds.arm_rotation_follower, CANSparkMax.MotorType.kBrushless
         )
-        self._rotation_motor_follower.follow(self.rotation_motor, invert=True)
+        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_follower.setInverted(False)
         self.relative_encoder = self.rotation_motor.getEncoder()
@@ -180,7 +186,8 @@ class Arm:
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
-        self.set_setpoint(Setpoints.SCORE_CONE_HIGH)
+        self.set_angle(self.get_angle())
+        self.set_length(self.get_extension())
 
     def execute(self) -> None:
         extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
@@ -194,7 +201,7 @@ class Arm:
 
         setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
         if setpoint != self.last_selection:
-            self.set_setpoint(setpoint)
+            self.go_to_setpoint(setpoint)
         self.last_selection = setpoint
 
         extension_goal = self.get_max_extension()
@@ -281,7 +288,7 @@ class Arm:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
 
-    def set_setpoint(self, value: Setpoint) -> None:
+    def go_to_setpoint(self, value: Setpoint) -> None:
         self.set_length(value.extension)
         self.set_angle(value.angle)
 
@@ -298,6 +305,11 @@ class Arm:
     def is_angle_still(self, allowable_speed=0.01) -> bool:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
         return abs(self.get_arm_speed()) < allowable_speed
+
+    def at_goal(self) -> bool:
+        return (
+            self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
+        )
 
     def brake(self) -> None:
         self.brake_solenoid.set(False)
