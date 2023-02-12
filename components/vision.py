@@ -60,7 +60,7 @@ class Vision:
         self.last_timestamps = [0] * len(self.cameras)
         self.should_log = False
         # amount of tags that have produced unreasonable estimates in a row
-        self.limited_in_row = 0.0
+        self.rejected_in_row = 0.0
         self.last_z_1 = 0
         self.last_z_2 = 0
 
@@ -112,11 +112,11 @@ class Vision:
                     self.chassis.get_pose().translation().distance(pose.translation())
                 )
                 if change > 1.0:
-                    if self.limited_in_row < 50:
+                    self.rejected_in_row += 1
+                    if self.rejected_in_row < 50:
                         continue
-                    self.limited_in_row += 1
                 else:
-                    self.limited_in_row /= 2
+                    self.rejected_in_row /= 2
 
                 if self.add_to_estimator:
                     self.chassis.estimator.addVisionMeasurement(
@@ -178,6 +178,10 @@ class Vision:
     @feedback
     def get_last_z_2(self):
         return self.last_z_2
+
+    @feedback
+    def get_rejected_in_row(self):
+        return self.rejected_in_row
 
 
 def estimate_poses_from_apriltag(
