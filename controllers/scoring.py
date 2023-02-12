@@ -207,6 +207,6 @@ class ScoringController(StateMachine):
         goal_rot = Rotation2d.fromDegrees(180)
         goal_approach = Rotation2d.fromDegrees(0)
         return (
-            Pose2d(goal_trans, goal_rot, goal_rot),
+            Pose2d(goal_trans, goal_rot),
             goal_approach,
         ), Setpoints.SCORE_CONE_HIGH
