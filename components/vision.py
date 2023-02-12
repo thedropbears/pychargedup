@@ -21,7 +21,7 @@ class Vision:
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 2.5
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 3.0
     ANGULAR_STD_DEV_CONSTANT = 1.0
 
     field: wpilib.Field2d
@@ -111,7 +111,7 @@ class Vision:
                 change = (
                     self.chassis.get_pose().translation().distance(pose.translation())
                 )
-                if change > 2.0:
+                if change > 1.0:
                     if self.limited_in_row < 50:
                         continue
                     self.limited_in_row += 1
