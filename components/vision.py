@@ -3,7 +3,7 @@ from components.chassis import Chassis
 import wpilib
 import wpiutil.log
 import robotpy_apriltag
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
+from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Quaternion
 from typing import Optional
 from magicbot import tunable
 
@@ -21,7 +21,7 @@ class Vision:
     )
 
     # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 0.25
+    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 2.5
     ANGULAR_STD_DEV_CONSTANT = 1.0
 
     field: wpilib.Field2d
@@ -31,8 +31,22 @@ class Vision:
     add_to_estimator = tunable(True)
 
     def __init__(self) -> None:
-        left_rot = Rotation3d(0, math.radians(10), math.radians(25 + 180))
-        right_rot = Rotation3d(0, math.radians(10), math.radians(-25 + 180))
+        left_rot = Rotation3d(
+            Quaternion(
+                -0.2156163454055786,
+                0.0850898027420044,
+                0.018863987177610397,
+                0.9725808501243591,
+            )
+        )
+        right_rot = Rotation3d(
+            Quaternion(
+                0.21561579406261444,
+                0.08508981764316559,
+                -0.018863940611481667,
+                0.9725809693336487,
+            )
+        )
         self.cameras = [  # (Camera object, camera-to-robot transform)
             (
                 PhotonCamera(n),
@@ -45,6 +59,8 @@ class Vision:
         ]
         self.last_timestamps = [0] * len(self.cameras)
         self.should_log = False
+        # amount of tags that have produced unreasonable estimates in a row
+        self.limited_in_row = 0
 
     def setup(self) -> None:
         self.field_pos_obj_left = self.field.getObject("vision_pose_left_cam")
@@ -84,6 +100,16 @@ class Vision:
                 # filter out likely bad targets
                 if target.getPoseAmbiguity() > 0.25 or target.getYaw() > 20:
                     continue
+
+                change = (
+                    self.chassis.get_pose().translation().distance(pose.translation())
+                )
+                if change > 2.0:
+                    if self.limited_in_row < 50:
+                        continue
+                    self.limited_in_row += 1
+                else:
+                    self.limited_in_row /= 2
 
                 if self.add_to_estimator:
                     self.chassis.estimator.addVisionMeasurement(
