@@ -63,8 +63,12 @@ def fuzz_joystick(joystick: wpilib.simulation.JoystickSim) -> None:
 
 def fuzz_xbox_gamepad(gamepad: wpilib.simulation.XboxControllerSim) -> None:
     """Fuzz an XInput gamepad."""
-    for axis in range(6):
-        gamepad.setRawAxis(axis, rand_axis())
+    gamepad.setLeftX(rand_axis())
+    gamepad.setLeftY(rand_axis())
+    gamepad.setRightX(rand_axis())
+    gamepad.setRightY(rand_axis())
+    gamepad.setLeftTriggerAxis(random.random())
+    gamepad.setRightTriggerAxis(random.random())
     for button in range(10):
         gamepad.setRawButton(button, rand_bool())
     gamepad.setPOV(rand_pov())
