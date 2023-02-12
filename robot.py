@@ -96,8 +96,8 @@ class MyRobot(magicbot.MagicRobot):
     def testPeriodic(self) -> None:
         right_trigger = self.gamepad.getRightTriggerAxis()
         left_trigger = self.gamepad.getLeftTriggerAxis()
-        self.arm.rotation_motor.set((left_trigger - right_trigger) * 0.5)
-        # self.arm._rotation_motor_right.set((right_trigger - right_trigger) * 0.5)
+        self.arm.rotation_motor.set(right_trigger * 0.5)
+        self.arm._rotation_motor_follower.set(left_trigger * 0.5)
         # self.arm.extension_motor.set(left_trigger * 0.1)
         # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
         # self.arm.extension_motor.set(left_trigger * 0.1)

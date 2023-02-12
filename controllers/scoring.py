@@ -67,6 +67,7 @@ class ScoringController(StateMachine):
             self.goto_autodrive_state()
         if self.wants_to_intake:
             self.next_state("intaking")
+        self.intake.retract()
 
     @state
     def intaking(self):

@@ -100,7 +100,7 @@ class Arm:
         self._rotation_motor_follower = CANSparkMax(
             SparkMaxIds.arm_rotation_follower, CANSparkMax.MotorType.kBrushless
         )
-        self._rotation_motor_follower.follow(self.rotation_motor, invert=True)
+        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_follower.setInverted(False)
         self.relative_encoder = self.rotation_motor.getEncoder()
