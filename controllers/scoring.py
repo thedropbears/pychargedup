@@ -33,6 +33,7 @@ class ScoringController(StateMachine):
     PICKUP_CUBE_PREPARE_TIME = tunable(3)
     SCORE_PREPARE_TIME = tunable(3)
     PICKUP_CONE_PREPARE_TIME = tunable(3)
+    PICKUP_CUBE_TIMEOUT = tunable(0.2)
 
     DESIRED_ROW = tunable(0)
     DESIRED_COLUMN = tunable(0)
@@ -95,7 +96,7 @@ class ScoringController(StateMachine):
             self.wants_to_intake = False
             self.next_state("idle")
             if len(self.cube_queue):
-                self.cube_queue.pop()
+                self.cube_queue.pop(0)
 
     @state
     def auto_pickup_cube(self):
@@ -111,6 +112,7 @@ class ScoringController(StateMachine):
             if (
                 self.intake.is_game_piece_present()
                 or self.gripper.game_piece_in_reach()
+                or self.movement.time_to_goal < -self.PICKUP_CUBE_TIMEOUT
             ):
                 self.next_state("grab_from_well")
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:

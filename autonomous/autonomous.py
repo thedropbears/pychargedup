@@ -15,7 +15,7 @@ class CubeAutoBase:
     """Auto which starts with a preloaded cone, scores it then drives to pickup and score cubes"""
 
     scoring: ScoringController
-    Chassis: Chassis
+    chassis: Chassis
 
     def __init__(self):
         self.start_pose = Pose2d(4, 3, 0)
@@ -24,13 +24,14 @@ class CubeAutoBase:
         self.cubes: list[tuple[int, Rotation2d]] = []
         # TODO: impliment or rule out balancing during auto
         self.balance_at_end = False
+        self.finished = False
 
     def on_enable(self):
         if self.scoring.is_red():
             start_pose = field_flip_pose2d(self.start_pose)
         else:
             start_pose = self.start_pose
-        self.Chassis.set_pose(start_pose)
+        self.chassis.set_pose(start_pose)
 
         self.scoring.wants_piece = GamePiece.CUBE
         self.scoring.is_holding = GamePiece.CONE
@@ -44,15 +45,21 @@ class CubeAutoBase:
             pose = Pose2d(position, angle)
             self.scoring.cube_queue.append((pose, angle))
 
-    def on_iteration(self):
-        self.scoring.autodrive = True
-        self.scoring.engage()
+    def on_iteration(self, tm: float):
+        if not self.finished:
+            self.scoring.autodrive = True
+            self.scoring.engage()
+        if (
+            len(self.scoring.cube_queue) == 0
+            and self.scoring.is_holding is GamePiece.NONE
+        ):
+            self.finished = True
 
 
 class WallSide3(CubeAutoBase):
     MODE_NAME = "Wall side 3"
     DEFAULT = True
 
-    def __init__(self):
+    def setup(self):
         self.start_pose = Pose2d(1.88, BLUE_NODES[0][0].y, 0)
         self.cubes = [(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))]

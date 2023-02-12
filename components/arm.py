@@ -90,6 +90,7 @@ class Arm:
     goal_extension = tunable(MIN_EXTENSION)
     # automatically retract the extension when rotating overhead
     do_auto_retract = tunable(True)
+    arm_enabled = tunable(False)
 
     control_loop_wait_time: float
 
@@ -352,7 +353,7 @@ class Arm:
     def at_goal(self) -> bool:
         return (
             self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
-        )
+        ) or not self.arm_enabled
 
     def brake(self) -> None:
         self.brake_solenoid.set(False)
