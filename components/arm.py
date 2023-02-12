@@ -201,7 +201,7 @@ class Arm:
 
         setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
         if setpoint != self.last_selection:
-            self.goto_setpoint(setpoint)
+            self.go_to_setpoint(setpoint)
         self.last_selection = setpoint
 
         extension_goal = self.get_max_extension()
@@ -288,7 +288,7 @@ class Arm:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
 
-    def goto_setpoint(self, value: Setpoint) -> None:
+    def go_to_setpoint(self, value: Setpoint) -> None:
         self.set_length(value.extension)
         self.set_angle(value.angle)
 
