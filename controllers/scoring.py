@@ -46,6 +46,7 @@ class ScoringController(StateMachine):
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
         self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
+        self.score_queue = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -104,7 +105,7 @@ class ScoringController(StateMachine):
         if not self.autodrive:
             self.next_state("idle")
 
-        self.movement.set_goal(*self.get_cube_pickup())
+        self.movement.set_goal(*self.get_cube_pickup(), slow_dist=0)
         if self.movement.time_to_goal < self.PICKUP_CUBE_PREPARE_TIME:
             self.arm.go_to_setpoint(Setpoints.HANDOFF)
             self.gripper.open()
@@ -199,7 +200,7 @@ class ScoringController(StateMachine):
         return Pose2d(goal_trans, goal_rotation), goal_rotation
 
     def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        return self.cube_queue[0]
+        return self.cube_queue[0][:2]
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         # use the shelf closest to the wall, furthest from the nodes
@@ -227,8 +228,8 @@ class ScoringController(StateMachine):
         )
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        if True:  # is auto
-            return self.score_location_from_node(0, 1)
+        if len(self.score_queue):  # is auto
+            return self.score_location_from_node(0, self.score_queue[0])
         else:
             return self.score_location_from_node(self.DESIRED_ROW, self.DESIRED_COLUMN)
 
@@ -236,7 +237,7 @@ class ScoringController(StateMachine):
         self, row, col
     ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         # TODO: pick actual scoring node
-        node_trans3d = BLUE_NODES[int(self.DESIRED_ROW)][int(self.DESIRED_COLUMN)]
+        node_trans3d = BLUE_NODES[int(row)][int(col)]
         node_trans = node_trans3d.toTranslation2d()
 
         setpoint = Setpoints.SCORE_CONE_HIGH
