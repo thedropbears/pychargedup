@@ -44,6 +44,7 @@ class ScoringController(StateMachine):
         self.is_holding = GamePiece.NONE
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
+        self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -88,13 +89,13 @@ class ScoringController(StateMachine):
     @state
     def grab_from_well(self):
         """Grabs a cube from the well, assumes there is a cube in the well"""
-        self.arm.go_to_setpoint(Setpoints.HANDOFF)
         self.gripper.close()
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
-            self.next_state("idle")
             self.wants_to_intake = False
-            # self.arm.go_to_setpoint(Setpoints.STOW)
+            self.next_state("idle")
+            if len(self.cube_queue):
+                self.cube_queue.pop()
 
     @state
     def auto_pickup_cube(self):
@@ -183,12 +184,20 @@ class ScoringController(StateMachine):
 
     def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         """Gets where to auto pickup cubes from"""
-        # can be changed for autonomous period?
+        if len(self.cube_queue) == 0:
+            return self.get_single_substation_cube_pickup()
+        else:
+            return self.get_auto_cube_pickup()
+
+    def get_single_substation_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         goal_trans = get_single_substation(wpilib.DriverStation.Alliance.kBlue)
         goal_rotation = (
             field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
         )
         return Pose2d(goal_trans, goal_rotation), goal_rotation
+
+    def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
+        return self.cube_queue[0]
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         # use the shelf closest to the wall, furthest from the nodes
@@ -216,6 +225,14 @@ class ScoringController(StateMachine):
         )
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
+        if True:  # is auto
+            return self.score_location_from_node(0, 1)
+        else:
+            return self.score_location_from_node(self.DESIRED_ROW, self.DESIRED_COLUMN)
+
+    def score_location_from_node(
+        self, row, col
+    ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         # TODO: pick actual scoring node
         node_trans3d = BLUE_NODES[int(self.DESIRED_ROW)][int(self.DESIRED_COLUMN)]
         node_trans = node_trans3d.toTranslation2d()
