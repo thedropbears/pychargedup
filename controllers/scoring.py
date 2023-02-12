@@ -1,5 +1,5 @@
 from magicbot import state, StateMachine, tunable, feedback
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d, Translation3d
+from wpimath.geometry import Pose2d, Rotation2d, Translation3d
 import wpilib
 
 from components.gripper import Gripper
@@ -11,7 +11,9 @@ from utilities.game import (
     get_double_substation,
     get_single_substation,
     field_flip_rotation2d,
-    GRIDS_EDGE_X,
+    RED_NODES,
+    BLUE_NODES,
+    Rows,
 )
 
 
@@ -31,6 +33,8 @@ class ScoringController(StateMachine):
     PICKUP_CUBE_PREPARE_TIME = tunable(3)
     SCORE_PREPARE_TIME = tunable(3)
     PICKUP_CONE_PREPARE_TIME = tunable(3)
+    DESIRED_ROW = tunable(0)
+    DESIRED_COLUMN = tunable(0)
 
     def __init__(self) -> None:
         self.is_holding = GamePiece.NONE
@@ -39,6 +43,7 @@ class ScoringController(StateMachine):
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
+        self.target_nodes = RED_NODES if self.is_red() else BLUE_NODES
 
     def get_correct_autodrive_state(self) -> str:
         cur_piece = self.get_current_piece()
@@ -203,10 +208,27 @@ class ScoringController(StateMachine):
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         # TODO: pick actual scoring node
-        goal_trans = Translation2d(GRIDS_EDGE_X + 0.5, 2)
+        goal_trans = self.target_nodes[int(self.DESIRED_ROW)][int(self.DESIRED_COLUMN)]
+
+        if self.get_current_piece() == GamePiece.CONE:
+            if self.DESIRED_ROW == Rows.HIGH:
+                offset_x, _ = Setpoints.SCORE_CONE_HIGH.toCartesian()
+            elif self.DESIRED_ROW == Rows.MID:
+                offset_x, _ = Setpoints.SCORE_CONE_MID.toCartesian()
+        elif self.get_current_piece() == GamePiece.CUBE:
+            if self.DESIRED_ROW == Rows.HIGH:
+                offset_x, _ = Setpoints.SCORE_CUBE_HIGH.toCartesian()
+            elif self.DESIRED_ROW == Rows.MID:
+                offset_x, _ = Setpoints.SCORE_CUBE_MID.toCartesian()
+
+        if self.is_red():
+            goal_trans = goal_trans + Translation3d(+offset_x, 0, 0)
+        else:
+            goal_trans = goal_trans + Translation3d(-offset_x, 0, 0)
+
         goal_rot = Rotation2d.fromDegrees(180)
         goal_approach = Rotation2d.fromDegrees(0)
         return (
-            Pose2d(goal_trans, goal_rot),
+            Pose2d(goal_trans.toTranslation2d(), goal_rot),
             goal_approach,
         ), Setpoints.SCORE_CONE_HIGH
