@@ -61,8 +61,8 @@ class Vision:
         self.should_log = False
         # amount of tags that have produced unreasonable estimates in a row
         self.rejected_in_row = 0.0
-        self.last_z_1 = 0
-        self.last_z_2 = 0
+        self.last_z_1 = 0.0
+        self.last_z_2 = 0.0
 
     def setup(self) -> None:
         self.field_pos_obj_left = self.field.getObject("vision_pose_left_cam")
