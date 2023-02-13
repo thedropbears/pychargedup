@@ -1,7 +1,9 @@
 import math
 from utilities.game import FIELD_LENGTH
 from dataclasses import dataclass
-from wpimath.geometry import Translation2d
+from wpimath.geometry import Translation2d, Pose2d, Rotation2d
+from wpimath.trajectory import Trajectory
+from typing import Optional
 import astar
 
 Point = tuple[float, float]
@@ -24,7 +26,17 @@ class Rect:
     x_max: float
     y_max: float
 
+    def point_intersect(self, p: Point) -> bool:
+        return (
+            p[0] >= self.x_min
+            and p[0] < self.x_max
+            and p[1] >= self.y_min
+            and p[1] < self.y_max
+        )
+
     def line_intersect(self, A: Point, B: Point) -> bool:
+        if self.point_intersect(A) or self.point_intersect(B):
+            return True
         return (
             intersect(A, B, (self.x_min, self.y_min), (self.x_max, self.y_min))
             or intersect(A, B, (self.x_max, self.y_min), (self.x_max, self.y_max))
@@ -32,12 +44,12 @@ class Rect:
             or intersect(A, B, (self.x_min, self.y_max), (self.x_min, self.y_min))
         )
 
-    def flip(self):
+    def flip(self) -> "Rect":
         return Rect(
             FIELD_LENGTH - self.x_min, self.y_min, FIELD_LENGTH - self.x_max, self.y_max
         )
 
-    def expand(self, amount):
+    def expand(self, amount) -> None:
         self.x_min -= amount
         self.y_min -= amount
         self.x_max += amount
@@ -55,27 +67,27 @@ DIVIDER.expand(ROBOT_WIDTH / 2)
 OBSTACLES = [CHARGE_STATION, CHARGE_STATION.flip(), DIVIDER, DIVIDER.flip()]
 
 
-def is_visible(p1: Point, p2: Point):
+def is_visible(p1: Point, p2: Point) -> bool:
     return all(not ob.line_intersect(p1, p2) for ob in OBSTACLES)
 
 
-waypoints_blue = [
+waypoints_blue: list[Point] = [
     (2.600, 0.754),
     (5.000, 0.754),
     (2.600, 4.732),
     (5.000, 4.732),
     (3.700, 6.118),
 ]
-waypoints_red = []
+waypoints_red: list[Point] = []
 for w in waypoints_blue:
-    waypoints_red.append((FIELD_LENGTH - w[0], [1]))
+    waypoints_red.append((FIELD_LENGTH - w[0], w[1]))
 
-waypoints: list[Point] = [*waypoints_blue, *waypoints_red]
+waypoints = [*waypoints_blue, *waypoints_red]
 
 
-def _find_path(start: Point, goal: Point) -> list[Point]:
+def _find_path(start: Point, goal: Point) -> Optional[list[Point]]:
     new_waypoints = waypoints + [start, goal]
-    return astar.find_path(
+    iter_path = astar.find_path(
         start,
         goal,
         neighbors_fnct=lambda p: [x for x in new_waypoints if is_visible(x, p)],
@@ -83,8 +95,22 @@ def _find_path(start: Point, goal: Point) -> list[Point]:
         heuristic_cost_estimate_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
         distance_between_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
     )
+    if iter_path is None:
+        return None
+    return list(iter_path)
 
 
 def find_path(start: Translation2d, end: Translation2d) -> list[Translation2d]:
     path = _find_path((start.x, start.y), (end.x, end.y))
+    if path is None:
+        return [start, end]
     return [Translation2d(p[0], p[1]) for p in path]
+
+
+# need a trajectory to display a path on a field2d widget
+def to_trajectory(path: list[Translation2d]) -> Trajectory:
+    if len(path) == 0:
+        # creating a trajectory with an empty list segfaults
+        return Trajectory([Trajectory.State(0, 0, 0, Pose2d(), 0)])
+    states = [Trajectory.State(0, 0, 0, Pose2d(t, Rotation2d()), 0) for t in path]
+    return Trajectory(states)
