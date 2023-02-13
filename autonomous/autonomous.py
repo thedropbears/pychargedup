@@ -17,18 +17,16 @@ class CubeAutoBase:
     scoring: ScoringController
     chassis: Chassis
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.start_pose = Pose2d(4, 3, 0)
         # list of cube idx and angle to hit pickup at as if was on blue alliance
         # 0 is closest to wall, 3 is closest to substations
         self.cubes: list[tuple[int, Rotation2d]] = []
         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
         self.nodes: list[int] = []
-        # TODO: impliment or rule out balancing during auto
-        self.balance_at_end = False
         self.finished = False
 
-    def on_enable(self):
+    def on_enable(self) -> None:
         if self.scoring.is_red():
             start_pose = field_flip_pose2d(self.start_pose)
         else:
@@ -51,17 +49,14 @@ class CubeAutoBase:
 
         self.scoring.score_queue = self.nodes
 
-    def on_iteration(self, tm: float):
+    def on_iteration(self, tm: float) -> None:
         if not self.finished:
             self.scoring.autodrive = True
             self.scoring.engage()
-        if (
-            len(self.scoring.cube_queue) == 0
-            and self.scoring.is_holding is GamePiece.NONE
-        ):
+        if len(self.scoring.cube_queue) == 0 and len(self.scoring.score_queue) == 0:
             self.finished = True
 
-    def on_disable(self):
+    def on_disable(self) -> None:
         self.scoring.wants_piece = GamePiece.CONE
 
 

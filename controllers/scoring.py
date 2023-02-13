@@ -46,7 +46,7 @@ class ScoringController(StateMachine):
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
         self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
-        self.score_queue = []
+        self.score_queue: list[int] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
