@@ -2,9 +2,8 @@ import math
 from utilities.game import FIELD_LENGTH
 from dataclasses import dataclass
 from wpimath.geometry import Translation2d, Pose2d, Rotation2d
-from wpimath.trajectory import Trajectory
 from typing import Optional
-import astar
+import astar  # type: ignore
 
 Point = tuple[float, float]
 
@@ -73,9 +72,9 @@ def is_visible(p1: Point, p2: Point) -> bool:
 
 waypoints_blue: list[Point] = [
     (2.600, 0.754),
-    (5.000, 0.754),
+    (6.000, 0.754),
     (2.600, 4.732),
-    (5.000, 4.732),
+    (6.000, 4.732),
     (3.700, 6.118),
 ]
 waypoints_red: list[Point] = []
@@ -107,10 +106,5 @@ def find_path(start: Translation2d, end: Translation2d) -> list[Translation2d]:
     return [Translation2d(p[0], p[1]) for p in path]
 
 
-# need a trajectory to display a path on a field2d widget
-def to_trajectory(path: list[Translation2d]) -> Trajectory:
-    if len(path) == 0:
-        # creating a trajectory with an empty list segfaults
-        return Trajectory([Trajectory.State(0, 0, 0, Pose2d(), 0)])
-    states = [Trajectory.State(0, 0, 0, Pose2d(t, Rotation2d()), 0) for t in path]
-    return Trajectory(states)
+def to_poses(path: list[Translation2d]) -> list[Pose2d]:
+    return [Pose2d(t, Rotation2d()) for t in path]

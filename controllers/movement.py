@@ -1,5 +1,6 @@
 from magicbot import StateMachine, state, default_state, tunable
 from components.chassis import Chassis
+from utilities.pathfinding import find_path, to_poses
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
     TrajectoryConfig,
@@ -49,6 +50,7 @@ class Movement(StateMachine):
         self.set_goal(
             Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
         )
+        self.path_object = self.field.getObject("path")
 
     def generate_trajectory(self) -> Trajectory:
         """Generates a trajectory to self.goal and displays it"""
@@ -113,11 +115,14 @@ class Movement(StateMachine):
 
         self.config.setStartVelocity(chassis_speed)
 
+        waypoints = find_path(pose.translation(), self.goal.translation())
+
         trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, list(self.waypoints), goal_spline, self.config
+            start_point_spline, waypoints, goal_spline, self.config
         )
 
         self.robot_object.setTrajectory(trajectory)
+        self.path_object.setPoses(to_poses(waypoints))
         return trajectory
 
     def set_goal(
