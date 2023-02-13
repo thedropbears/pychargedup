@@ -180,7 +180,10 @@ class Arm:
         )
 
         # Hall effector
-        self.hall_effector = DigitalInput(DioChannels.hall_effector)
+        self.hall_effector1 = DigitalInput(SparkMaxIds.hall_effector1)
+        self.hall_effector2 = DigitalInput(SparkMaxIds.hall_effector2)
+        self.hall_effect_far = True
+        self.hall_effect_close = False
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
