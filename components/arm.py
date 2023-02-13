@@ -227,6 +227,14 @@ class Arm:
         rotation_ff = self.calculate_rotation_feedforwards()
         self.rotation_motor.setVoltage(pid_output + rotation_ff)
 
+        # Hall effector
+        if self.hall_effector1.get() is True and self.hall_effector2.get() is False:
+            self.hall_effect_close = True
+            self.hall_effect_far = False
+        elif self.hall_effector2.get() is True and self.hall_effector1.get() is False:
+            self.hall_effect_far = True
+            self.hall_effect_close = False
+
     def get_max_extension(self) -> float:
         """Gets the max extension to not exceed the height limit for the current angle and goal"""
         is_angle_forwards = math.copysign(1, self.get_angle() + (math.pi / 2))
@@ -284,7 +292,15 @@ class Arm:
     @feedback
     def get_hall_effect(self) -> bool:
         """"""
-        return self.hall_effector.get()
+        return self.hall_effector1.get() and self.hall_effector2.get()
+
+    @feedback
+    def is_hall_effect_close(self) -> bool:
+        return self.hall_effect_close
+
+    @feedback
+    def is_hall_effect_far(self) -> bool:
+        return self.hall_effect_far
 
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""
