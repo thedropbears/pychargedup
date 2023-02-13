@@ -1,6 +1,8 @@
 from magicbot import StateMachine, state, default_state, tunable
 from components.chassis import Chassis
+from utilities.functions import clamp
 from utilities.pathfinding import find_path, to_poses
+from utilities.pathfinding import waypoints as pathfinding_waypoints
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
     TrajectoryConfig,
@@ -29,10 +31,14 @@ class Movement(StateMachine):
 
     # When on True, a trajectory is generated every code run to be displayed
     # When on False, a trajectory is only generated when needed to save resources.
-    debug_trajectory = tunable(False)
+    debug_trajectory = tunable(True)
 
     POSITION_TOLERANCE = 0.025
     ANGLE_TOLERANCE = math.radians(2)
+    # constraints for path following
+    MAX_VEL = 3.0
+    MAX_ACCEL = 2
+    MAX_CENTR_ACCEL = 2.5
 
     def __init__(self) -> None:
         self.inputs = (0.0, 0.0, 0.0)
@@ -51,26 +57,30 @@ class Movement(StateMachine):
             Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
         )
         self.path_object = self.field.getObject("path")
+        self.waypoints_object = self.field.getObject("waypoints")
+        waypoints_as_poses = [Pose2d(p[0], p[1], 0) for p in pathfinding_waypoints]
+        self.waypoints_object.setPoses(waypoints_as_poses)
 
     def generate_trajectory(self) -> Trajectory:
         """Generates a trajectory to self.goal and displays it"""
-        x_controller = PIDController(2.5, 0, 0)
-        y_controller = PIDController(2.5, 0, 0)
-        heading_controller = ProfiledPIDControllerRadians(
-            5.5, 0, 0, TrapezoidProfileRadians.Constraints(2, 2)
-        )
-        heading_controller.enableContinuousInput(math.pi, -math.pi)
-
-        self.drive_controller = HolonomicDriveController(
-            x_controller, y_controller, heading_controller
-        )
+        pose = self.chassis.get_pose()
+        waypoints = find_path(pose.translation(), self.goal.translation())
+        # remove first and last nodes in path
+        waypoints.pop()
+        waypoints.pop(0)
+        self.path_object.setPoses(to_poses(waypoints))
 
         chassis_velocity = self.chassis.get_velocity()
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
-        pose = self.chassis.get_pose()
 
-        translation = self.goal.translation() - pose.translation()
-        translation_distance = translation.norm()
+        if len(waypoints):
+            translation = waypoints[0] - pose.translation()
+            translation_distance = translation.norm()
+            end_control_scale = min(10, translation_distance * 0.5)
+        else:
+            translation = self.goal.translation() - pose.translation()
+            translation_distance = translation.norm()
+            end_control_scale = min(10, translation_distance * 2)
 
         # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
         # return an empty trajectory that starts at the end point so the robot won't move.
@@ -97,15 +107,9 @@ class Movement(StateMachine):
             spline_start_momentum_x = chassis_velocity.vx * kvx
             spline_start_momentum_y = chassis_velocity.vy * kvy
 
-        # If the robot is close to the goal but still not enough, making the robot reverse to
-        # approach the control vector is unnecessary; this constant scales the derivative of
-        # the goal derivative according to the translation distance.
-        # The closer the robot gets to the goal, the small the derivative is.
-        end_control_vec = min(10, translation_distance * 2.8)
-
         goal_spline = Spline3.ControlVector(
-            (self.goal.X(), self.goal_approach_dir.cos() * end_control_vec),
-            (self.goal.Y(), self.goal_approach_dir.sin() * end_control_vec),
+            (self.goal.X(), self.goal_approach_dir.cos() * end_control_scale),
+            (self.goal.Y(), self.goal_approach_dir.sin() * end_control_scale),
         )
 
         start_point_spline = Spline3.ControlVector(
@@ -114,15 +118,27 @@ class Movement(StateMachine):
         )
 
         self.config.setStartVelocity(chassis_speed)
-
-        waypoints = find_path(pose.translation(), self.goal.translation())
-
         trajectory = TrajectoryGenerator.generateTrajectory(
             start_point_spline, waypoints, goal_spline, self.config
         )
+        rotation_needed = (pose.rotation() - self.goal.rotation()).radians()
+        if rotation_needed == 0:
+            rotate_rate = 2
+        else:
+            rotate_rate = clamp(
+                2 * abs(rotation_needed) / trajectory.totalTime(), 0.1, 10
+            )
+        x_controller = PIDController(2.5, 0, 0)
+        y_controller = PIDController(2.5, 0, 0)
+        heading_controller = ProfiledPIDControllerRadians(
+            5.5, 0, 0, TrapezoidProfileRadians.Constraints(rotate_rate, 3)
+        )
+        heading_controller.enableContinuousInput(math.pi, -math.pi)
+        self.drive_controller = HolonomicDriveController(
+            x_controller, y_controller, heading_controller
+        )
 
         self.robot_object.setTrajectory(trajectory)
-        self.path_object.setPoses(to_poses(waypoints))
         return trajectory
 
     def set_goal(
@@ -141,8 +157,12 @@ class Movement(StateMachine):
         self.goal = goal
         self.goal_approach_dir = approach_direction
 
-        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
-        self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
+        self.config = TrajectoryConfig(
+            maxVelocity=self.MAX_VEL, maxAcceleration=self.MAX_ACCEL
+        )
+        self.config.addConstraint(
+            CentripetalAccelerationConstraint(self.MAX_CENTR_ACCEL)
+        )
         topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
         bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
         self.config.addConstraint(
@@ -167,6 +187,7 @@ class Movement(StateMachine):
     # will execute if no other states are executing
     @default_state
     def manualdrive(self) -> None:
+        self.chassis.do_fudge = True
         if self.debug_trajectory:
             self.generate_trajectory()
         if self.drive_local:
@@ -176,6 +197,7 @@ class Movement(StateMachine):
 
     @state(first=True)
     def autodrive(self, state_tm: float, initial_call: bool) -> None:
+        self.chassis.do_fudge = False
         if initial_call:
             self.trajectory = self.generate_trajectory()
 

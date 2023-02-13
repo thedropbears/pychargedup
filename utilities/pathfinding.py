@@ -34,8 +34,8 @@ class Rect:
         )
 
     def line_intersect(self, A: Point, B: Point) -> bool:
-        if self.point_intersect(A) or self.point_intersect(B):
-            return True
+        # if self.point_intersect(A) or self.point_intersect(B):
+        #     return True
         return (
             intersect(A, B, (self.x_min, self.y_min), (self.x_max, self.y_min))
             or intersect(A, B, (self.x_max, self.y_min), (self.x_max, self.y_max))
@@ -45,7 +45,7 @@ class Rect:
 
     def flip(self) -> "Rect":
         return Rect(
-            FIELD_LENGTH - self.x_min, self.y_min, FIELD_LENGTH - self.x_max, self.y_max
+            FIELD_LENGTH - self.x_max, self.y_min, FIELD_LENGTH - self.x_min, self.y_max
         )
 
     def expand(self, amount) -> None:
@@ -59,9 +59,9 @@ ROBOT_LEN = 1.0105
 ROBOT_WIDTH = 0.8705
 
 CHARGE_STATION = Rect(2.925, 1.527, 4.859, 3.947)
-CHARGE_STATION.expand(ROBOT_LEN / 2)
+CHARGE_STATION.expand(0.4)
 DIVIDER = Rect(0, 5.45, 3.36, 5.5)
-DIVIDER.expand(ROBOT_WIDTH / 2)
+DIVIDER.expand(0.4)
 
 OBSTACLES = [CHARGE_STATION, CHARGE_STATION.flip(), DIVIDER, DIVIDER.flip()]
 
@@ -72,10 +72,10 @@ def is_visible(p1: Point, p2: Point) -> bool:
 
 waypoints_blue: list[Point] = [
     (2.600, 0.754),
-    (6.000, 0.754),
+    (5.600, 0.754),
     (2.600, 4.732),
-    (6.000, 4.732),
-    (3.700, 6.118),
+    (5.600, 4.732),
+    (4.000, 6.118),
 ]
 waypoints_red: list[Point] = []
 for w in waypoints_blue:
@@ -102,6 +102,7 @@ def _find_path(start: Point, goal: Point) -> Optional[list[Point]]:
 def find_path(start: Translation2d, end: Translation2d) -> list[Translation2d]:
     path = _find_path((start.x, start.y), (end.x, end.y))
     if path is None:
+        print("no path")
         return [start, end]
     return [Translation2d(p[0], p[1]) for p in path]
 
