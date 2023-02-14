@@ -1,26 +1,17 @@
 from magicbot import StateMachine, state, default_state, tunable
 from components.chassis import Chassis
-from utilities.functions import clamp
-from utilities.pathfinding import find_path, to_poses
-from utilities.pathfinding import waypoints as pathfinding_waypoints
+from utilities.pathfinding import find_path, all_waypoints, get_all_corners
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
-from wpimath.trajectory import (
-    TrajectoryConfig,
-    Trajectory,
-    TrajectoryGenerator,
-    TrapezoidProfileRadians,
-)
-from wpimath.trajectory.constraint import (
-    CentripetalAccelerationConstraint,
-    RectangularRegionConstraint,
-    MaxVelocityConstraint,
+from pathplannerlib import (
+    PathPlanner,
+    PathPoint,
+    PathPlannerTrajectory,
+    PathConstraints,
+    controllers,
 )
 from wpimath.controller import (
-    HolonomicDriveController,
     PIDController,
-    ProfiledPIDControllerRadians,
 )
-from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
 
@@ -36,9 +27,15 @@ class Movement(StateMachine):
     POSITION_TOLERANCE = 0.025
     ANGLE_TOLERANCE = math.radians(2)
     # constraints for path following
-    MAX_VEL = 3.0
+    MAX_VEL = 2.5
     MAX_ACCEL = 2
     MAX_CENTR_ACCEL = 2.5
+
+    # spacing of additional waypoints added to mimic the wpilib region constraint
+    SLOW_DIST_SPACING = 0.1
+    SLOW_VEL = 0.5
+
+    SHOW_PATHFINDING_DEBUG = True
 
     def __init__(self) -> None:
         self.inputs = (0.0, 0.0, 0.0)
@@ -46,10 +43,10 @@ class Movement(StateMachine):
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
         self.goal_approach_dir = Rotation2d()
-        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
         self.time_to_goal = 3
+        self.slow_dist = 0
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -57,124 +54,94 @@ class Movement(StateMachine):
             Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
         )
         self.path_object = self.field.getObject("path")
-        self.waypoints_object = self.field.getObject("waypoints")
-        waypoints_as_poses = [Pose2d(p[0], p[1], 0) for p in pathfinding_waypoints]
-        self.waypoints_object.setPoses(waypoints_as_poses)
+        if self.SHOW_PATHFINDING_DEBUG:
+            self.waypoints_object = self.field.getObject("waypoints")
+            self.waypoints_object.setPoses(all_waypoints)
+            self.obsticles_object = self.field.getObject("obsticles")
+            self.obsticles_object.setPoses(get_all_corners())
+            self.cur_goal_object = self.field.getObject("cur_trajectory_goal")
 
-    def generate_trajectory(self) -> Trajectory:
+    def generate_trajectory(self) -> PathPlannerTrajectory:
         """Generates a trajectory to self.goal and displays it"""
         pose = self.chassis.get_pose()
-        waypoints = find_path(pose.translation(), self.goal.translation())
+        distance = pose.translation().distance(self.goal.translation())
+        waypoints = find_path(pose, self.goal)
         # remove first and last nodes in path
-        waypoints.pop()
         waypoints.pop(0)
-        self.path_object.setPoses(to_poses(waypoints))
+        if self.SHOW_PATHFINDING_DEBUG:
+            self.path_object.setPoses(waypoints)
 
         chassis_velocity = self.chassis.get_velocity()
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
+        points: list[PathPoint] = []
 
-        if len(waypoints):
-            translation = waypoints[0] - pose.translation()
-            translation_distance = translation.norm()
-            end_control_scale = min(10, translation_distance * 0.5)
-        else:
-            translation = self.goal.translation() - pose.translation()
-            translation_distance = translation.norm()
-            end_control_scale = min(10, translation_distance * 2)
-
-        # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
-        # return an empty trajectory that starts at the end point so the robot won't move.
-        if translation_distance <= 0.01:
-            return Trajectory([Trajectory.State(0, 0, 0, pose)])
-
-        if chassis_speed < 0.2:
-            # If the robot is stationary, instead of accounting for the momentum of the robot,
-            # this section of code will point the control vector at the goal to avoid the robot
-            # taking unnecessary turns before moving towards the goal.
-            kD = 0.3
-
-            spline_start_momentum_x = translation.x * kD
-            spline_start_momentum_y = translation.y * kD
-
-        else:
-            # It is more efficient to make trajectories account for the robot's current momentum so
-            # the robot doesn't make a sudden stop to reverse.
-            # In most cases, this will generate a smooth curve that works better than simply reversing
-            # the robot.
-            kvx = 3
-            kvy = 3
-
-            spline_start_momentum_x = chassis_velocity.vx * kvx
-            spline_start_momentum_y = chassis_velocity.vy * kvy
-
-        goal_spline = Spline3.ControlVector(
-            (self.goal.X(), self.goal_approach_dir.cos() * end_control_scale),
-            (self.goal.Y(), self.goal_approach_dir.sin() * end_control_scale),
-        )
-
-        start_point_spline = Spline3.ControlVector(
-            (pose.x, spline_start_momentum_x),
-            (pose.y, spline_start_momentum_y),
-        )
-
-        self.config.setStartVelocity(chassis_speed)
-        trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, waypoints, goal_spline, self.config
-        )
-        rotation_needed = (pose.rotation() - self.goal.rotation()).radians()
-        if rotation_needed == 0:
-            rotate_rate = 2
-        else:
-            rotate_rate = clamp(
-                2 * abs(rotation_needed) / trajectory.totalTime(), 0.1, 10
+        # Add starting pathpoint
+        if chassis_speed < 0.1:
+            # if we're not moving control vector points towards next waypoint
+            dir_to_next = (waypoints[0].translation() - pose.translation()).angle()
+            points.append(
+                PathPoint(
+                    pose.translation(), dir_to_next, pose.rotation(), chassis_speed
+                )
             )
-        x_controller = PIDController(2.5, 0, 0)
-        y_controller = PIDController(2.5, 0, 0)
-        heading_controller = ProfiledPIDControllerRadians(
-            5.5, 0, 0, TrapezoidProfileRadians.Constraints(rotate_rate, 3)
+        else:
+            # otherwise control vector goes with current momentum
+            points.append(PathPoint.fromCurrentHolonomicState(pose, chassis_velocity))
+            points[0].withNextControlLength(chassis_speed * 0.5)
+
+        # Add waypoints from pathfinding
+        for cur, next in zip(waypoints, waypoints[1:]):
+            dir_to_next = (next.translation() - cur.translation()).angle()
+            points.append(PathPoint(cur.translation(), dir_to_next, cur.rotation()))
+
+        # Add waypoints near goal with low speed so the approach is slow
+        approach_dist = min(self.slow_dist, distance)
+        slow_dist_transform = Translation2d(self.SLOW_DIST_SPACING, 0).rotateBy(
+            self.goal_approach_dir
         )
-        heading_controller.enableContinuousInput(math.pi, -math.pi)
-        self.drive_controller = HolonomicDriveController(
+        for i in range(1 + math.ceil(approach_dist / self.SLOW_DIST_SPACING), 0, -1):
+            pos = self.goal.translation() - slow_dist_transform * i
+            points.append(
+                PathPoint(
+                    pos, self.goal_approach_dir, self.goal.rotation(), self.SLOW_VEL
+                )
+            )
+        # Add goal waypoint
+        points.append(
+            PathPoint(
+                self.goal.translation(), self.goal_approach_dir, self.goal.rotation()
+            )
+        )
+
+        constraints = PathConstraints(self.MAX_VEL, self.MAX_ACCEL)
+        trajectory = PathPlanner.generatePath(constraints, points)
+
+        x_controller = PIDController(3.5, 0, 0)
+        y_controller = PIDController(3.5, 0, 0)
+        heading_controller = PIDController(6.0, 0, 0)
+        self.drive_controller = controllers.PPHolonomicDriveController(
             x_controller, y_controller, heading_controller
         )
 
-        self.robot_object.setTrajectory(trajectory)
+        self.robot_object.setTrajectory(trajectory.asWPILibTrajectory())
         return trajectory
 
     def set_goal(
         self,
         goal: Pose2d,
         approach_direction: Rotation2d,
-        waypoints: tuple[Translation2d, ...] = (),
         slow_dist=0.5,
     ) -> None:
-        if (
-            goal == self.goal
-            and approach_direction == self.goal_approach_dir
-            and waypoints == self.waypoints
-        ):
+        if goal == self.goal and approach_direction == self.goal_approach_dir:
             return
         self.goal = goal
         self.goal_approach_dir = approach_direction
+        self.slow_dist = slow_dist
 
-        self.config = TrajectoryConfig(
-            maxVelocity=self.MAX_VEL, maxAcceleration=self.MAX_ACCEL
-        )
-        self.config.addConstraint(
-            CentripetalAccelerationConstraint(self.MAX_CENTR_ACCEL)
-        )
-        topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
-        bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
-        self.config.addConstraint(
-            RectangularRegionConstraint(
-                bottomLeft, topRight, MaxVelocityConstraint(0.5)
-            )
-        )
-        self.waypoints = waypoints
         if self.current_state == "autodrive":
             # to reset the state_tm and regen trajectory
             self.trajectory = self.generate_trajectory()
-            self.time_to_goal = self.trajectory.totalTime()
+            self.time_to_goal = self.trajectory.getTotalTime()
             self.next_state("autodrive")
 
     def is_at_goal(self) -> bool:
@@ -201,15 +168,14 @@ class Movement(StateMachine):
         if initial_call:
             self.trajectory = self.generate_trajectory()
 
-        target_state = self.trajectory.sample(
-            state_tm
-        )  # Grabbing the target position at the current point in time from the trajectory.
+        target_state = self.trajectory.sample(state_tm)
+        if self.SHOW_PATHFINDING_DEBUG:
+            self.cur_goal_object.setPose(target_state.pose)
 
         # Calculating the speeds required to get to the target position.
         chassis_speed = self.drive_controller.calculate(
             self.chassis.get_pose(),
             target_state,
-            self.goal.rotation(),
         )
         self.chassis.drive_local(
             chassis_speed.vx,
@@ -217,7 +183,7 @@ class Movement(StateMachine):
             chassis_speed.omega,
         )
 
-        self.time_to_goal = self.trajectory.totalTime() - state_tm
+        self.time_to_goal = self.trajectory.getTotalTime() - state_tm
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """

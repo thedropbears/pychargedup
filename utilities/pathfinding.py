@@ -1,8 +1,7 @@
 import math
-from utilities.game import FIELD_LENGTH
+from utilities.game import FIELD_LENGTH, field_flip_pose2d
 from dataclasses import dataclass
-from wpimath.geometry import Translation2d, Pose2d, Rotation2d
-from typing import Optional
+from wpimath.geometry import Pose2d
 import astar  # type: ignore
 
 Point = tuple[float, float]
@@ -36,11 +35,15 @@ class Rect:
     def line_intersect(self, A: Point, B: Point) -> bool:
         # if self.point_intersect(A) or self.point_intersect(B):
         #     return True
+        c1 = (self.x_min, self.y_min)
+        c2 = (self.x_max, self.y_min)
+        c3 = (self.x_max, self.y_max)
+        c4 = (self.x_min, self.y_max)
         return (
-            intersect(A, B, (self.x_min, self.y_min), (self.x_max, self.y_min))
-            or intersect(A, B, (self.x_max, self.y_min), (self.x_max, self.y_max))
-            or intersect(A, B, (self.x_max, self.y_max), (self.x_min, self.y_max))
-            or intersect(A, B, (self.x_min, self.y_max), (self.x_min, self.y_min))
+            intersect(A, B, c1, c2)
+            or intersect(A, B, c2, c3)
+            or intersect(A, B, c3, c4)
+            or intersect(A, B, c4, c1)
         )
 
     def flip(self) -> "Rect":
@@ -53,6 +56,13 @@ class Rect:
         self.y_min -= amount
         self.x_max += amount
         self.y_max += amount
+
+    def get_corners(self) -> list[Pose2d]:
+        c1 = Pose2d(self.x_min, self.y_min, 0)
+        c2 = Pose2d(self.x_max, self.y_min, 0)
+        c3 = Pose2d(self.x_max, self.y_max, 0)
+        c4 = Pose2d(self.x_min, self.y_max, 0)
+        return [c1, c2, c3, c4]
 
 
 ROBOT_LEN = 1.0105
@@ -70,42 +80,43 @@ def is_visible(p1: Point, p2: Point) -> bool:
     return all(not ob.line_intersect(p1, p2) for ob in OBSTACLES)
 
 
-waypoints_blue: list[Point] = [
-    (2.600, 0.754),
-    (5.600, 0.754),
-    (2.600, 4.732),
-    (5.600, 4.732),
-    (4.000, 6.118),
+# x, y, rotation
+waypoints_blue: list[Pose2d] = [
+    Pose2d(2.300, 0.7, 0),
+    Pose2d(5.600, 0.7, 0),
+    Pose2d(2.400, 4.50, 0),
+    Pose2d(5.700, 5.0, 0),
+    Pose2d(4.000, 6.118, 0),
 ]
-waypoints_red: list[Point] = []
+waypoints_red: list[Pose2d] = []
 for w in waypoints_blue:
-    waypoints_red.append((FIELD_LENGTH - w[0], w[1]))
+    waypoints_red.append(field_flip_pose2d(w))
 
-waypoints = [*waypoints_blue, *waypoints_red]
+all_waypoints = [*waypoints_blue, *waypoints_red]
 
 
-def _find_path(start: Point, goal: Point) -> Optional[list[Point]]:
-    new_waypoints = waypoints + [start, goal]
+def find_path(start: Pose2d, goal: Pose2d) -> list[Pose2d]:
+    new_waypoints = all_waypoints + [start, goal]
+    # cant use pose2d in find_path because it must be hashable
+    tuples: list[tuple[float, float, float]] = [
+        (p.x, p.y, p.rotation().radians()) for p in new_waypoints
+    ]
     iter_path = astar.find_path(
-        start,
-        goal,
-        neighbors_fnct=lambda p: [x for x in new_waypoints if is_visible(x, p)],
+        (start.x, start.y, start.rotation().radians()),
+        (goal.x, goal.y, goal.rotation().radians()),
+        neighbors_fnct=lambda a: [b for b in tuples if is_visible(b[:2], a)],
         reversePath=False,
         heuristic_cost_estimate_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
         distance_between_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
     )
     if iter_path is None:
-        return None
-    return list(iter_path)
-
-
-def find_path(start: Translation2d, end: Translation2d) -> list[Translation2d]:
-    path = _find_path((start.x, start.y), (end.x, end.y))
-    if path is None:
         print("no path")
-        return [start, end]
-    return [Translation2d(p[0], p[1]) for p in path]
+        return [start, goal]
+    return [Pose2d(p[0], p[1], p[2]) for p in iter_path]
 
 
-def to_poses(path: list[Translation2d]) -> list[Pose2d]:
-    return [Pose2d(t, Rotation2d()) for t in path]
+def get_all_corners() -> list[Pose2d]:
+    corners = []
+    for o in OBSTACLES:
+        corners.extend(o.get_corners())
+    return corners
