@@ -1,5 +1,5 @@
 import math
-from utilities.game import FIELD_LENGTH, field_flip_pose2d
+from utilities.game import FIELD_LENGTH, FIELD_WIDTH, field_flip_pose2d
 from dataclasses import dataclass
 from wpimath.geometry import Pose2d
 import astar  # type: ignore
@@ -33,8 +33,8 @@ class Rect:
         )
 
     def line_intersect(self, A: Point, B: Point) -> bool:
-        # if self.point_intersect(A) or self.point_intersect(B):
-        #     return True
+        if self.point_intersect(A) or self.point_intersect(B):
+            return True
         c1 = (self.x_min, self.y_min)
         c2 = (self.x_max, self.y_min)
         c3 = (self.x_max, self.y_max)
@@ -64,14 +64,29 @@ class Rect:
         c4 = Pose2d(self.x_min, self.y_max, 0)
         return [c1, c2, c3, c4]
 
+    def __eq__(self, __o: "Rect") -> bool:
+        return (
+            self.x_min == __o.x_min
+            and self.x_max == __o.x_max
+            and self.y_min == __o.y_min
+            and self.y_max == __o.y_max
+        )
 
-ROBOT_LEN = 1.0105
-ROBOT_WIDTH = 0.8705
+
+OBSTICLE_BUFFER = 0.4
 
 CHARGE_STATION = Rect(2.925, 1.527, 4.859, 3.947)
-CHARGE_STATION.expand(0.4)
+CHARGE_STATION.expand(OBSTICLE_BUFFER)
 DIVIDER = Rect(0, 5.45, 3.36, 5.5)
-DIVIDER.expand(0.4)
+DIVIDER.expand(OBSTICLE_BUFFER)
+EDGES = [
+    Rect(0, -0.5, FIELD_LENGTH, 0),
+    Rect(-0.5, 0, 0, FIELD_WIDTH),
+    Rect(0, FIELD_WIDTH, FIELD_LENGTH, FIELD_WIDTH + 0.5),
+    Rect(FIELD_LENGTH, 0, FIELD_LENGTH + 0.5, FIELD_WIDTH),
+]
+for e in EDGES:
+    e.expand(OBSTICLE_BUFFER)
 
 OBSTACLES = [CHARGE_STATION, CHARGE_STATION.flip(), DIVIDER, DIVIDER.flip()]
 
@@ -83,9 +98,9 @@ def is_visible(p1: Point, p2: Point) -> bool:
 # x, y, rotation
 waypoints_blue: list[Pose2d] = [
     Pose2d(2.300, 0.7, 0),
-    Pose2d(5.600, 0.7, 0),
-    Pose2d(2.400, 4.50, 0),
-    Pose2d(5.700, 5.0, 0),
+    Pose2d(5.600, 0.75, 0),
+    Pose2d(2.400, 4.40, 0),
+    Pose2d(5.700, 4.5, 0),
     Pose2d(4.000, 6.118, 0),
 ]
 waypoints_red: list[Pose2d] = []

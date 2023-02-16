@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis.strategies import floats
-from utilities.pathfinding import Rect, intersect, find_path, to_trajectory
-from wpimath.geometry import Translation2d
+from utilities.pathfinding import Rect, intersect, find_path
+from wpimath.geometry import Pose2d
 
 sensible_floats = floats(allow_infinity=False, allow_nan=False, width=16)
 
@@ -36,10 +36,10 @@ sensible_floats = floats(allow_infinity=False, allow_nan=False, width=16)
     y2=sensible_floats,
 )
 def test_find_path(x1: float, y1: float, x2: float, y2: float):
-    find_path(Translation2d(x1, y2), Translation2d(x2, y2))
+    find_path(Pose2d(x1, y2, 0), Pose2d(x2, y2, 0))
 
 
-def test_to_trajectory():
-    to_trajectory([Translation2d(), Translation2d(1, 1)])
-    to_trajectory([Translation2d()])
-    to_trajectory([])
+@given(x1=sensible_floats, y1=sensible_floats, x2=sensible_floats, y2=sensible_floats)
+def test_rect_flip(x1: float, y1: float, x2: float, y2: float):
+    rect = Rect(x1, y1, x2, y2)
+    assert rect.flip().flip() == rect

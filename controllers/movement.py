@@ -59,7 +59,6 @@ class Movement(StateMachine):
             self.waypoints_object.setPoses(all_waypoints)
             self.obsticles_object = self.field.getObject("obsticles")
             self.obsticles_object.setPoses(get_all_corners())
-            self.cur_goal_object = self.field.getObject("cur_trajectory_goal")
 
     def generate_trajectory(self) -> PathPlannerTrajectory:
         """Generates a trajectory to self.goal and displays it"""
@@ -67,7 +66,6 @@ class Movement(StateMachine):
         distance = pose.translation().distance(self.goal.translation())
         waypoints = find_path(pose, self.goal)
         # remove first and last nodes in path
-        waypoints.pop(0)
         if self.SHOW_PATHFINDING_DEBUG:
             self.path_object.setPoses(waypoints)
 
@@ -78,7 +76,7 @@ class Movement(StateMachine):
         # Add starting pathpoint
         if chassis_speed < 0.1:
             # if we're not moving control vector points towards next waypoint
-            dir_to_next = (waypoints[0].translation() - pose.translation()).angle()
+            dir_to_next = (waypoints[1].translation() - pose.translation()).angle()
             points.append(
                 PathPoint(
                     pose.translation(), dir_to_next, pose.rotation(), chassis_speed
@@ -90,9 +88,12 @@ class Movement(StateMachine):
             points[0].withNextControlLength(chassis_speed * 0.5)
 
         # Add waypoints from pathfinding
-        for cur, next in zip(waypoints, waypoints[1:]):
+        for last, cur, next in zip(waypoints, waypoints[1:], waypoints[2:]):
             dir_to_next = (next.translation() - cur.translation()).angle()
+            dir_from_prev = (cur.translation() - last.translation()).angle()
             points.append(PathPoint(cur.translation(), dir_to_next, cur.rotation()))
+            length = max(math.cos((dir_to_next - dir_from_prev).radians()) + 0.1, 0.1)
+            points[-1].withPrevControlLength(length)
 
         # Add waypoints near goal with low speed so the approach is slow
         approach_dist = min(self.slow_dist, distance)
@@ -118,7 +119,7 @@ class Movement(StateMachine):
 
         x_controller = PIDController(3.5, 0, 0)
         y_controller = PIDController(3.5, 0, 0)
-        heading_controller = PIDController(6.0, 0, 0)
+        heading_controller = PIDController(3.0, 0, 0)
         self.drive_controller = controllers.PPHolonomicDriveController(
             x_controller, y_controller, heading_controller
         )
@@ -169,8 +170,6 @@ class Movement(StateMachine):
             self.trajectory = self.generate_trajectory()
 
         target_state = self.trajectory.sample(state_tm)
-        if self.SHOW_PATHFINDING_DEBUG:
-            self.cur_goal_object.setPose(target_state.pose)
 
         # Calculating the speeds required to get to the target position.
         chassis_speed = self.drive_controller.calculate(
