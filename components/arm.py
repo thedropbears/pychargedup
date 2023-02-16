@@ -180,10 +180,10 @@ class Arm:
 
         # Hall effector
         self.hall_effector_inner_arm = self.extension_motor.getForwardLimitSwitch(
-            rev.SparkMaxLimitSwitch.Type.kNormallyClosed
+            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
         )
         self.hall_effector_forward_arm = self.extension_motor.getReverseLimitSwitch(
-            rev.SparkMaxLimitSwitch.Type.kNormallyClosed
+            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
         )
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
