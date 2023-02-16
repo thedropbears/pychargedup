@@ -83,7 +83,7 @@ for row in Rows:
 
 
 def get_nodes(alliance: wpilib.DriverStation.Alliance) -> list[list[Translation3d]]:
-    if alliance is wpilib.DriverStation.Alliance.kBlue:
+    if alliance == wpilib.DriverStation.Alliance.kBlue:
         return BLUE_NODES
     else:
         return RED_NODES
@@ -103,17 +103,17 @@ DOUBLE_SUBSTATION_RED_DRIVER = Translation3d(0.15, 6.007, 0.948)
 DOUBLE_SUBSTATION_BLUE_DRIVER = field_flip_translation3d(DOUBLE_SUBSTATION_RED_DRIVER)
 
 
-def get_double_substation(alliance: wpilib.DriverStation.Alliance, wall_side: bool):
-    if alliance is wpilib.DriverStation.Alliance.kBlue:
-        if wall_side:
-            return DOUBLE_SUBSTATION_BLUE_WALL
-        else:
-            return DOUBLE_SUBSTATION_BLUE_DRIVER
-    else:
+def get_double_substation(is_red: bool, wall_side: bool):
+    if is_red:
         if wall_side:
             return DOUBLE_SUBSTATION_RED_WALL
         else:
             return DOUBLE_SUBSTATION_RED_DRIVER
+    else:
+        if wall_side:
+            return DOUBLE_SUBSTATION_BLUE_WALL
+        else:
+            return DOUBLE_SUBSTATION_BLUE_DRIVER
 
 
 SINGLE_SUBSTATION_RED = Translation2d(2.303, 8.077)
@@ -121,7 +121,7 @@ SINGLE_SUBSTATION_BLUE = field_flip_translation2d(SINGLE_SUBSTATION_RED)
 
 
 def get_single_substation(alliance: wpilib.DriverStation.Alliance) -> Translation2d:
-    if alliance is wpilib.DriverStation.Alliance.kBlue:
+    if alliance == wpilib.DriverStation.Alliance.kBlue:
         return SINGLE_SUBSTATION_BLUE
     else:
         return SINGLE_SUBSTATION_RED
