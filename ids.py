@@ -32,9 +32,6 @@ class SparkMaxIds(enum.IntEnum):
 
     intake_motor = 16
 
-    hall_effector1 = 5
-    hall_effector2 = 6
-
 
 @enum.unique
 class PcmChannels(enum.IntEnum):
@@ -59,5 +56,3 @@ class DioChannels(enum.IntEnum):
     intake_break_beam_sensor = 2
 
     arm_absolute_encoder = 1
-
-    # hall_effector = 5  # no

@@ -1,5 +1,4 @@
 from magicbot import feedback, tunable
-from rev import CANSparkMax
 import wpilib
 from ids import SparkMaxIds, PcmChannels, DioChannels
 import math
@@ -9,7 +8,6 @@ from wpilib import (
     DutyCycleEncoder,
     SendableChooser,
     SmartDashboard,
-    DigitalInput,
 )
 from wpimath.controller import (
     ProfiledPIDController,
@@ -18,6 +16,7 @@ from wpimath.controller import (
 )
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
+import rev
 
 MIN_EXTENSION = 0.7  # meters
 MAX_EXTENSION = 1.3
@@ -86,17 +85,17 @@ class Arm:
 
     def __init__(self) -> None:
         # Create rotation things
-        self.rotation_motor = CANSparkMax(
-            SparkMaxIds.arm_rotation_main, CANSparkMax.MotorType.kBrushless
+        self.rotation_motor = rev.CANSparkMax(
+            SparkMaxIds.arm_rotation_main, rev.CANSparkMax.MotorType.kBrushless
         )
-        self.rotation_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self.rotation_motor.setInverted(False)
         # setup second motor to follow first
-        self._rotation_motor_follower = CANSparkMax(
-            SparkMaxIds.arm_rotation_follower, CANSparkMax.MotorType.kBrushless
+        self._rotation_motor_follower = rev.CANSparkMax(
+            SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_follower.follow(self.rotation_motor, invert=True)
-        self._rotation_motor_follower.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_follower.setInverted(False)
         self.relative_encoder = self.rotation_motor.getEncoder()
         self.relative_encoder.setPositionConversionFactor(1 / self.ROTATE_GEAR_RATIO)
@@ -121,10 +120,10 @@ class Arm:
         self.rotation_last_setpoint_vel = 0
 
         # Create extension things
-        self.extension_motor = CANSparkMax(
-            SparkMaxIds.arm_extension, CANSparkMax.MotorType.kBrushless
+        self.extension_motor = rev.CANSparkMax(
+            SparkMaxIds.arm_extension, rev.CANSparkMax.MotorType.kBrushless
         )
-        self.extension_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self.extension_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self.extension_motor.setInverted(False)
         self.extension_encoder = self.extension_motor.getEncoder()
         self.extension_encoder.setPositionConversionFactor(1 / self.EXTEND_OUTPUT_RATIO)
@@ -180,10 +179,12 @@ class Arm:
         )
 
         # Hall effector
-        self.hall_effector1 = DigitalInput(SparkMaxIds.hall_effector1)
-        self.hall_effector2 = DigitalInput(SparkMaxIds.hall_effector2)
-        self.hall_effect_far = True
-        self.hall_effect_close = False
+        self.hall_effector_inner_arm = self.extension_motor.getForwardLimitSwitch(
+            rev.SparkMaxLimitSwitch.Type.kNormallyClosed
+        )
+        self.hall_effector_forward_arm = self.extension_motor.getReverseLimitSwitch(
+            rev.SparkMaxLimitSwitch.Type.kNormallyClosed
+        )
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
@@ -226,14 +227,6 @@ class Arm:
         )
         rotation_ff = self.calculate_rotation_feedforwards()
         self.rotation_motor.setVoltage(pid_output + rotation_ff)
-
-        # Hall effector
-        if self.hall_effector1.get() is True and self.hall_effector2.get() is False:
-            self.hall_effect_close = True
-            self.hall_effect_far = False
-        elif self.hall_effector2.get() is True and self.hall_effector1.get() is False:
-            self.hall_effect_far = True
-            self.hall_effect_close = False
 
     def get_max_extension(self) -> float:
         """Gets the max extension to not exceed the height limit for the current angle and goal"""
@@ -290,17 +283,12 @@ class Arm:
         return self.extension_encoder.getVelocity()
 
     @feedback
-    def get_hall_effect(self) -> bool:
-        """"""
-        return self.hall_effector1.get() and self.hall_effector2.get()
+    def is_extended(self) -> bool:
+        return self.hall_effector_forward_arm.get()
 
     @feedback
-    def is_hall_effect_close(self) -> bool:
-        return self.hall_effect_close
-
-    @feedback
-    def is_hall_effect_far(self) -> bool:
-        return self.hall_effect_far
+    def is_retracted(self) -> bool:
+        return self.hall_effector_inner_arm.get()
 
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""
