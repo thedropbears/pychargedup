@@ -64,6 +64,8 @@ class Movement(StateMachine):
         """Generates a trajectory to self.goal and displays it"""
         pose = self.chassis.get_pose()
         distance = pose.translation().distance(self.goal.translation())
+        if distance < 0.02:
+            return PathPlannerTrajectory()
         waypoints = find_path(pose, self.goal)
         # remove first and last nodes in path
         if self.SHOW_PATHFINDING_DEBUG:
