@@ -1,6 +1,6 @@
 from magicbot import StateMachine, state, default_state, tunable
 from components.chassis import Chassis
-from utilities.pathfinding import find_path, all_waypoints, get_all_corners
+from utilities.pathfinding import find_path, all_waypoints, get_all_corners, OBSTACLES, OBSTACLE_EXIT_DISTANCE, Point
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from pathplannerlib import (
     PathPlanner,
@@ -64,16 +64,40 @@ class Movement(StateMachine):
         """Generates a trajectory to self.goal and displays it"""
         pose = self.chassis.get_pose()
         distance = pose.translation().distance(self.goal.translation())
-        if distance < 0.02:
-            return PathPlannerTrajectory()
-        waypoints = find_path(pose, self.goal)
-        # remove first and last nodes in path
+        #if distance < 0.02:
+        #    return PathPlannerTrajectory()
+
+        waypoints = []
+        pose_point: Point = (pose.x, pose.y)
+        cur_obstacle = next(filter(lambda o: o.point_intersect(pose_point), OBSTACLES), None)
+        if cur_obstacle:
+            dxmin = pose.x - cur_obstacle.x_min
+            dxmax = cur_obstacle.x_max - pose.x
+            dymin = pose.y - cur_obstacle.y_min
+            dymax = cur_obstacle.y_max - pose.y
+            dmin = min(dxmin, dxmax, dymin, dymax)
+            exit_point: Point = (0.0, 0.0)
+            if dmin == dxmin:
+                exit_point = (cur_obstacle.x_min - OBSTACLE_EXIT_DISTANCE, pose.y)
+            elif dmin == dxmax:
+                exit_point = (cur_obstacle.x_max + OBSTACLE_EXIT_DISTANCE, pose.y)
+            elif dmin == dymin:
+                exit_point = (pose.x, cur_obstacle.y_min - OBSTACLE_EXIT_DISTANCE)
+            elif dmin == dymax:
+                exit_point = (pose.x, cur_obstacle.y_max + OBSTACLE_EXIT_DISTANCE)
+            exit_pose = Pose2d(exit_point[0], exit_point[1], pose.rotation())
+            waypoints = [pose] + find_path(exit_pose, self.goal)
+        else:
+            waypoints = find_path(pose, self.goal)
+
+
         if self.SHOW_PATHFINDING_DEBUG:
             self.path_object.setPoses(waypoints)
 
         chassis_velocity = self.chassis.get_velocity()
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
         points: list[PathPoint] = []
+
 
         # Add starting pathpoint
         if chassis_speed < 0.1:
@@ -90,8 +114,8 @@ class Movement(StateMachine):
             points[0].withNextControlLength(chassis_speed * 0.5)
 
         # Add waypoints from pathfinding
-        for last, cur, next in zip(waypoints, waypoints[1:], waypoints[2:]):
-            dir_to_next = (next.translation() - cur.translation()).angle()
+        for last, cur, next_ in zip(waypoints, waypoints[1:], waypoints[2:]):
+            dir_to_next = (next_.translation() - cur.translation()).angle()
             dir_from_prev = (cur.translation() - last.translation()).angle()
             points.append(PathPoint(cur.translation(), dir_to_next, cur.rotation()))
             length = max(math.cos((dir_to_next - dir_from_prev).radians()) + 0.1, 0.1)
