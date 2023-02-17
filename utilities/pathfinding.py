@@ -117,21 +117,28 @@ def find_path(start: Pose2d, goal: Pose2d) -> list[Pose2d]:
     tuples: list[tuple[float, float, float]] = [
         (p.x, p.y, p.rotation().radians()) for p in new_waypoints
     ]
-    path = list(astar.find_path(
-        (start.x, start.y, start.rotation().radians()),
-        (goal.x, goal.y, goal.rotation().radians()),
-        neighbors_fnct=lambda a: [b for b in tuples if is_visible(b[:2], a)],
-        reversePath=False,
-        heuristic_cost_estimate_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
-        distance_between_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
-    ) or [])
+    path = list(
+        astar.find_path(
+            (start.x, start.y, start.rotation().radians()),
+            (goal.x, goal.y, goal.rotation().radians()),
+            neighbors_fnct=lambda a: [b for b in tuples if is_visible(b[:2], a)],
+            reversePath=False,
+            heuristic_cost_estimate_fnct=lambda a, b: math.hypot(
+                a[0] - b[0], a[1] - b[1]
+            ),
+            distance_between_fnct=lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]),
+        )
+        or []
+    )
     if len(path) == 1:
         return [start, goal]
     if len(path) == 0:
         print("!!!Zero length path")
         return [start, goal]
         start_point: Point = (start.x, start.y)
-        cur_obstacle = next(filter(lambda o: o.point_intersect(start_point), OBSTACLES), None)
+        cur_obstacle = next(
+            filter(lambda o: o.point_intersect(start_point), OBSTACLES), None
+        )
         if not cur_obstacle:
             print("No obstacle blocking way but no path, this should never happen")
         print(cur_obstacle)
@@ -152,7 +159,7 @@ def find_path(start: Pose2d, goal: Pose2d) -> list[Pose2d]:
             exit_point = (start.x, cur_obstacle.y_max + OBSTACLE_EXIT_DISTANCE)
         exit_pose = Pose2d(exit_point[0], exit_point[1], start.rotation())
         return [start, exit_pose]
-        
+
     return [Pose2d(p[0], p[1], p[2]) for p in path]
 
 

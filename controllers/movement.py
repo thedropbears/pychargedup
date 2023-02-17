@@ -1,6 +1,13 @@
 from magicbot import StateMachine, state, default_state, tunable
 from components.chassis import Chassis
-from utilities.pathfinding import find_path, all_waypoints, get_all_corners, OBSTACLES, OBSTACLE_EXIT_DISTANCE, Point
+from utilities.pathfinding import (
+    find_path,
+    all_waypoints,
+    get_all_corners,
+    OBSTACLES,
+    OBSTACLE_EXIT_DISTANCE,
+    Point,
+)
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from pathplannerlib import (
     PathPlanner,
@@ -64,12 +71,14 @@ class Movement(StateMachine):
         """Generates a trajectory to self.goal and displays it"""
         pose = self.chassis.get_pose()
         distance = pose.translation().distance(self.goal.translation())
-        #if distance < 0.02:
+        # if distance < 0.02:
         #    return PathPlannerTrajectory()
 
         waypoints = []
         pose_point: Point = (pose.x, pose.y)
-        cur_obstacle = next(filter(lambda o: o.point_intersect(pose_point), OBSTACLES), None)
+        cur_obstacle = next(
+            filter(lambda o: o.point_intersect(pose_point), OBSTACLES), None
+        )
         if cur_obstacle:
             dxmin = pose.x - cur_obstacle.x_min
             dxmax = cur_obstacle.x_max - pose.x
@@ -90,14 +99,12 @@ class Movement(StateMachine):
         else:
             waypoints = find_path(pose, self.goal)
 
-
         if self.SHOW_PATHFINDING_DEBUG:
             self.path_object.setPoses(waypoints)
 
         chassis_velocity = self.chassis.get_velocity()
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
         points: list[PathPoint] = []
-
 
         # Add starting pathpoint
         if chassis_speed < 0.1:
