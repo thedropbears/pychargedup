@@ -37,8 +37,8 @@ class ScoringController(StateMachine):
     PICKUP_CONE_PREPARE_TIME = tunable(3)
     PICKUP_CUBE_TIMEOUT = tunable(0.2)
 
-    DESIRED_ROW = tunable(0)
-    DESIRED_COLUMN = tunable(0)
+    desired_row = tunable(0)
+    desired_column = tunable(0)
 
     # swap the the side of the substation to test on a half field
     swap_substation = tunable(False)
@@ -161,7 +161,7 @@ class ScoringController(StateMachine):
                 self.arm.go_to_setpoint(Setpoints.STOW)
                 if len(self.score_queue):
                     self.score_queue.pop(0)
-                self.DESIRED_COLUMN = random.randint(0, 8)
+                self.desired_column = random.randint(0, 8)
         elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
@@ -235,7 +235,7 @@ class ScoringController(StateMachine):
             return self.score_location_from_node(self.score_queue[0], self.is_red())
         else:
             return self.score_location_from_node(
-                Node(Rows(self.DESIRED_ROW), self.DESIRED_COLUMN), self.is_red()
+                Node(Rows(self.desired_row), self.desired_column), self.is_red()
             )
 
     def score_location_from_node(
