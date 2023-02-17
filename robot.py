@@ -94,9 +94,19 @@ class MyRobot(magicbot.MagicRobot):
         self.vision.add_to_estimator = False
 
     def testPeriodic(self) -> None:
-        right_trigger = self.gamepad.getRightTriggerAxis()
-        left_trigger = self.gamepad.getLeftTriggerAxis()
-        self.arm.rotation_motor.set(right_trigger * 0.5 - left_trigger * 0.5)
+        self.gamepad.getRightTriggerAxis()
+        self.gamepad.getLeftTriggerAxis()
+        # self.arm.rotation_motor.set(right_trigger * 0.5 - left_trigger * 0.5)
+        dpad_angle = self.gamepad.getPOV()
+        # up
+        if dpad_angle == 0:
+            self.arm.go_to_setpoint(Setpoints.UPRIGHT)
+        # right
+        elif dpad_angle == 90:
+            self.arm.go_to_setpoint(Setpoints.FORWARDS)
+        # left
+        elif dpad_angle == 270:
+            self.arm.go_to_setpoint(Setpoints.BACKWARDS)
 
         extend_speed = 0.2
         if self.gamepad.getAButton():
@@ -112,6 +122,7 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButton():
             self.gripper.open()
 
+        self.arm.execute()
         self.gripper.execute()
         self.vision.execute()
 
