@@ -64,19 +64,9 @@ class Rect:
         c4 = Pose2d(self.x_min, self.y_max, 0)
         return [c1, c2, c3, c4]
 
-    def __eq__(self, __o: object) -> bool:
-        if not isinstance(__o, Rect):
-            return NotImplemented
-        return (
-            self.x_min == __o.x_min
-            and self.x_max == __o.x_max
-            and self.y_min == __o.y_min
-            and self.y_max == __o.y_max
-        )
 
-
-OBSTACLE_BUFFER = 0.4
-OBSTACLE_EXIT_DISTANCE = 1.5 * OBSTACLE_BUFFER
+OBSTACLE_BUFFER = 0.5
+OBSTACLE_EXIT_DISTANCE = 0.1  # 1.5 * OBSTACLE_BUFFER
 
 CHARGE_STATION = Rect(2.925, 1.527, 4.859, 3.947)
 CHARGE_STATION.expand(OBSTACLE_BUFFER)
@@ -137,30 +127,6 @@ def find_path(start: Pose2d, goal: Pose2d) -> list[Pose2d]:
     if len(path) == 0:
         print("!!!Zero length path")
         return [start, goal]
-        start_point: Point = (start.x, start.y)
-        cur_obstacle = next(
-            filter(lambda o: o.point_intersect(start_point), OBSTACLES), None
-        )
-        if not cur_obstacle:
-            print("No obstacle blocking way but no path, this should never happen")
-        print(cur_obstacle)
-        OBSTACLE_EXIT_DISTANCE = 0.5
-        dxmin = start.x - cur_obstacle.x_min
-        dxmax = cur_obstacle.x_max - start.x
-        dymin = start.y - cur_obstacle.y_min
-        dymax = cur_obstacle.y_max - start.y
-        dmin = min(dxmin, dxmax, dymin, dymax)
-        exit_point: Point = (0.0, 0.0)
-        if dmin == dxmin:
-            exit_point = (cur_obstacle.x_min - OBSTACLE_EXIT_DISTANCE, start.y)
-        elif dmin == dxmax:
-            exit_point = (cur_obstacle.x_max + OBSTACLE_EXIT_DISTANCE, start.y)
-        elif dmin == dymin:
-            exit_point = (start.x, cur_obstacle.y_min - OBSTACLE_EXIT_DISTANCE)
-        elif dmin == dymax:
-            exit_point = (start.x, cur_obstacle.y_max + OBSTACLE_EXIT_DISTANCE)
-        exit_pose = Pose2d(exit_point[0], exit_point[1], start.rotation())
-        return [start, exit_pose]
 
     return [Pose2d(p[0], p[1], p[2]) for p in path]
 
