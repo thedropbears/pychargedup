@@ -251,6 +251,11 @@ class Arm:
         should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
         return MIN_EXTENSION if should_retract else self.goal_extension
 
+    def get_near_intake(self) -> bool:
+        """Gets if the arm may hit the intake currently"""
+        # Assume all setpoints are good
+        return not self.at_goal() and self.get_angle() > 0
+
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
         next_speed: speed in rps"""
