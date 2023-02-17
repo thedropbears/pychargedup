@@ -64,7 +64,9 @@ class Rect:
         c4 = Pose2d(self.x_min, self.y_max, 0)
         return [c1, c2, c3, c4]
 
-    def __eq__(self, __o: "Rect") -> bool:
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, Rect):
+            return NotImplemented
         return (
             self.x_min == __o.x_min
             and self.x_max == __o.x_max
