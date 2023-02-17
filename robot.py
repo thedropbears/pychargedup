@@ -49,30 +49,30 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Automation
-        right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
-        left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
-        if right_trigger:
-            self.scoring.cone_pickup_side_right = True
-        if left_trigger:
-            self.scoring.cone_pickup_side_right = False
-        self.scoring.autodrive = right_trigger or left_trigger
+        # left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
+        # right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
+        # if right_trigger:
+        #     self.scoring.cone_pickup_side_right = True
+        # if left_trigger:
+        #     self.scoring.cone_pickup_side_right = False
+        # self.scoring.autodrive = right_trigger or left_trigger
 
         # Intake
         if self.gamepad.getRightBumperPressed():
-            self.scoring.wants_to_intake = True
+            self.intake.deploy()
         if self.gamepad.getLeftBumperPressed():
-            self.scoring.wants_to_intake = False
+            self.intake.retract()
 
-        self.scoring.engage()
+        # self.scoring.engage()
 
         # Manual overrides
         # Claw
-        if self.gamepad.getYButton():
+        if self.gamepad.getAButton():
             self.gripper.wants_to_close = not self.gripper.wants_to_close
+        if self.gamepad.getYButton():
+            self.gripper.close()
         if self.gamepad.getXButton():
             self.gripper.open()
-        if self.gamepad.getBButton():
-            self.gripper.close()
 
         # Arm
         dpad_angle = self.gamepad.getPOV()
