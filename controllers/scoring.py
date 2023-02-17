@@ -1,6 +1,7 @@
 from magicbot import state, StateMachine, tunable, feedback
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 import wpilib
+import random
 
 from components.gripper import Gripper
 from components.intake import Intake
@@ -14,6 +15,7 @@ from utilities.game import (
     field_flip_rotation2d,
     BLUE_NODES,
     Rows,
+    Node,
 )
 
 
@@ -46,7 +48,7 @@ class ScoringController(StateMachine):
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
         self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
-        self.score_queue: list[int] = []
+        self.score_queue: list[Node] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -157,6 +159,9 @@ class ScoringController(StateMachine):
             if self.gripper.get_full_open():
                 self.next_state("idle")
                 self.arm.go_to_setpoint(Setpoints.STOW)
+                if len(self.score_queue):
+                    self.score_queue.pop(0)
+                self.DESIRED_COLUMN = random.randint(0, 8)
         elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
@@ -173,9 +178,7 @@ class ScoringController(StateMachine):
 
     def get_current_piece(self) -> GamePiece:
         """What piece the gripper is currently holding in the gripper"""
-        if self.gripper.get_full_closed() or self.gripper.is_opening():
-            return self.is_holding
-        return GamePiece.NONE
+        return self.is_holding
 
     @feedback
     def get_current_piece_str(self) -> str:
@@ -229,34 +232,35 @@ class ScoringController(StateMachine):
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         if len(self.score_queue):  # is auto
-            return self.score_location_from_node(0, self.score_queue[0])
+            return self.score_location_from_node(self.score_queue[0], self.is_red())
         else:
-            return self.score_location_from_node(self.DESIRED_ROW, self.DESIRED_COLUMN)
+            return self.score_location_from_node(
+                Node(Rows(self.DESIRED_ROW), self.DESIRED_COLUMN), self.is_red()
+            )
 
     def score_location_from_node(
-        self, row, col
+        self, node: Node, is_red: bool
     ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        # TODO: pick actual scoring node
-        node_trans3d = BLUE_NODES[int(row)][int(col)]
+        node_trans3d = BLUE_NODES[node.row][node.col]
         node_trans = node_trans3d.toTranslation2d()
 
         setpoint = Setpoints.SCORE_CONE_HIGH
         if self.get_current_piece() == GamePiece.CONE:
-            if self.DESIRED_ROW == Rows.HIGH:
+            if node.row == Rows.HIGH:
                 setpoint = Setpoints.SCORE_CONE_HIGH
-            elif self.DESIRED_ROW == Rows.MID:
+            elif node.row == Rows.MID:
                 setpoint = Setpoints.SCORE_CONE_MID
         elif self.get_current_piece() == GamePiece.CUBE:
-            if self.DESIRED_ROW == Rows.HIGH:
+            if node.row == Rows.HIGH:
                 setpoint = Setpoints.SCORE_CUBE_HIGH
-            elif self.DESIRED_ROW == Rows.MID:
+            elif node.row == Rows.MID:
                 setpoint = Setpoints.SCORE_CUBE_MID
 
         offset_x, _ = setpoint.toCartesian()
         goal_trans = node_trans + Translation2d(-offset_x, 0)
         goal = Pose2d(goal_trans, Rotation2d(0))
         goal_approach = Rotation2d.fromDegrees(180)
-        if self.is_red():
+        if is_red:
             goal = field_flip_pose2d(goal)
             goal_approach = field_flip_rotation2d(goal_approach)
 

@@ -1,4 +1,5 @@
-from enum import Enum, auto
+from dataclasses import dataclass
+from enum import Enum, auto, IntEnum
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
@@ -24,7 +25,7 @@ class GamePiece(Enum):
     NONE = auto()
 
 
-class Rows(Enum):
+class Rows(IntEnum):
     HIGH = 0
     MID = 1
     LOW = 2
@@ -82,11 +83,10 @@ for row in Rows:
         RED_NODES[-1].append(field_flip_translation3d(blue_node))
 
 
-def get_nodes(alliance: wpilib.DriverStation.Alliance) -> list[list[Translation3d]]:
-    if alliance == wpilib.DriverStation.Alliance.kBlue:
-        return BLUE_NODES
-    else:
-        return RED_NODES
+@dataclass
+class Node:
+    row: Rows
+    col: int
 
 
 # edge of the hybrid node baffles
@@ -129,7 +129,7 @@ def get_single_substation(alliance: wpilib.DriverStation.Alliance) -> Translatio
 
 STAGED_PIECES_Y_OFFSET = 0.920
 STAGED_PIECES_Y_BETWEEN = 1.219
-STAGED_PIECES_X = 4  # 7.067
+STAGED_PIECES_X = 7.067
 
 STAGED_PIECES_BLUE: list[Translation2d] = []
 STAGED_PIECES_RED: list[Translation2d] = []

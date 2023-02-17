@@ -3,10 +3,11 @@ from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d
 from utilities.game import (
     GamePiece,
+    Node,
+    Rows,
     get_staged_pieces,
     field_flip_pose2d,
     field_flip_rotation2d,
-    BLUE_NODES,
 )
 import wpilib
 
@@ -18,19 +19,19 @@ class CubeAutoBase:
     chassis: Chassis
 
     def __init__(self) -> None:
-        self.start_pose = Pose2d(4, 3, 0)
         # list of cube idx and angle to hit pickup at as if was on blue alliance
         # 0 is closest to wall, 3 is closest to substations
         self.cubes: list[tuple[int, Rotation2d]] = []
         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-        self.nodes: list[int] = []
+        self.nodes: list[Node] = []
         self.finished = False
 
     def on_enable(self) -> None:
+        (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
         if self.scoring.is_red():
-            start_pose = field_flip_pose2d(self.start_pose)
+            start_pose = field_flip_pose2d(start_pose)
         else:
-            start_pose = self.start_pose
+            start_pose = start_pose
         self.chassis.set_pose(start_pose)
 
         self.scoring.wants_piece = GamePiece.CUBE
@@ -47,7 +48,7 @@ class CubeAutoBase:
             pose = Pose2d(position, angle)
             self.scoring.cube_queue.append((pose, angle))
 
-        self.scoring.score_queue = self.nodes
+        self.scoring.score_queue = self.nodes[:]
 
     def on_iteration(self, tm: float) -> None:
         if not self.finished:
@@ -64,9 +65,12 @@ class WallSide3(CubeAutoBase):
     MODE_NAME = "Wall side 3"
 
     def setup(self):
-        self.start_pose = Pose2d(1.88, BLUE_NODES[0][0].y, 0)
+        self.nodes = [
+            Node(row=Rows.HIGH, col=0),
+            Node(row=Rows.HIGH, col=1),
+            Node(row=Rows.MID, col=1),
+        ]
         self.cubes = [(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))]
-        self.nodes = [0, 1, 1]
 
 
 class SubstationSide3(CubeAutoBase):
@@ -74,6 +78,9 @@ class SubstationSide3(CubeAutoBase):
     DEFAULT = True
 
     def setup(self):
-        self.start_pose = Pose2d(1.88, BLUE_NODES[0][8].y, 0)
+        self.nodes = [
+            Node(row=Rows.HIGH, col=8),
+            Node(row=Rows.HIGH, col=7),
+            Node(row=Rows.MID, col=7),
+        ]
         self.cubes = [(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))]
-        self.nodes = [8, 7, 7]
