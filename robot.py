@@ -96,15 +96,23 @@ class MyRobot(magicbot.MagicRobot):
     def testPeriodic(self) -> None:
         right_trigger = self.gamepad.getRightTriggerAxis()
         left_trigger = self.gamepad.getLeftTriggerAxis()
-        self.arm.rotation_motor.set(right_trigger * 0.5)
-        self.arm._rotation_motor_follower.set(left_trigger * 0.5)
-        # self.arm.extension_motor.set(left_trigger * 0.1)
-        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
-        # self.arm.extension_motor.set(left_trigger * 0.1)
-        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
+        self.arm.rotation_motor.set(right_trigger * 0.5 - left_trigger * 0.5)
 
-        # self.arm.execute()
+        extend_speed = 0.2
+        if self.gamepad.getAButton():
+            self.arm.extension_motor.set(extend_speed)
+        elif self.gamepad.getBButton():
+            self.arm.extension_motor.set(-extend_speed)
+        else:
+            self.arm.extension_motor.set(0)
 
+        # Claw
+        if self.gamepad.getYButton():
+            self.gripper.close()
+        if self.gamepad.getXButton():
+            self.gripper.open()
+
+        self.gripper.execute()
         self.vision.execute()
 
     def disabledInit(self) -> None:

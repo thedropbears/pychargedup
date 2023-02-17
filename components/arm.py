@@ -78,6 +78,7 @@ class Arm:
     EXTEND_GRAVITY_FEEDFORWARD = 0
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
+    ARM_ENCODER_ANGLE_OFFSET = -3.05  # radians
     # how far either side of vertical will the arm retract if it is in
     # too avoid exceeding the max hieght
     UPRIGHT_ANGLE = math.radians(20)
@@ -111,7 +112,9 @@ class Arm:
 
         self.absolute_encoder = DutyCycleEncoder(DioChannels.arm_absolute_encoder)
         self.absolute_encoder.setDistancePerRotation(math.tau)
-        self.absolute_encoder.setPositionOffset(0)
+        self.absolute_encoder.setPositionOffset(
+            self.ARM_ENCODER_ANGLE_OFFSET / math.tau
+        )
 
         # TODO: get pid and feedforward values for arm and extension from sysid
         # running the controller on the rio rather than on the motor controller
