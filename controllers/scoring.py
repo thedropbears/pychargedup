@@ -67,6 +67,22 @@ class ScoringController(StateMachine):
         self.next_state(self.get_correct_autodrive_state())
 
     @state(first=True)
+    def initialize(self, initial_call: bool) -> None:
+        if initial_call:
+            self.arm.homing = True
+        self.gripper.set_solenoid = False
+        if self.arm.get_angle() > 0.5:
+            self.intake.deploy_without_running()
+        if self.arm.is_retracted():
+            self.arm.set_at_min_extension()
+            self.arm.homing = False
+            self.arm.go_to_setpoint(Setpoints.STOW)
+
+        if self.arm.get_angle() > 0.5 and self.arm.is_retracted():
+            self.next_state("idle")
+            self.gripper.set_solenoid = True
+
+    @state
     def idle(self, initial_call: bool):
         if self.autodrive:
             self.go_to_autodrive_state()
