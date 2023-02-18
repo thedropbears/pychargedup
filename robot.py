@@ -59,11 +59,11 @@ class MyRobot(magicbot.MagicRobot):
 
         # Intake
         if self.gamepad.getRightBumperPressed():
-            self.intake.deploy()
+            self.scoring.wants_to_intake = True
         if self.gamepad.getLeftBumperPressed():
-            self.intake.retract()
+            self.scoring.wants_to_intake = False
 
-        # self.scoring.engage()
+        self.scoring.engage()
 
         # Manual overrides
         # Claw
@@ -111,14 +111,6 @@ class MyRobot(magicbot.MagicRobot):
         # left
         elif dpad_angle == 270:
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
-
-        # extend_speed = 0.2
-        # if self.gamepad.getAButton():
-        #     self.arm.extension_motor.set(extend_speed)
-        # elif self.gamepad.getBButton():
-        #     self.arm.extension_motor.set(-extend_speed)
-        # else:
-        #     self.arm.extension_motor.set(0)
 
         # Claw
         if self.gamepad.getYButton():

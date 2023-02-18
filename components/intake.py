@@ -1,6 +1,6 @@
 from rev import CANSparkMax
 from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
-from magicbot import tunable
+from magicbot import tunable, feedback
 import ids
 from components.arm import Arm
 
@@ -22,6 +22,7 @@ class Intake:
             ids.PcmChannels.intake_piston_reverse,
         )
 
+    @feedback
     def is_game_piece_present(self) -> bool:
         return not self.break_beam.get()
 

@@ -58,7 +58,7 @@ class Setpoint:
 
 class Setpoints:
     PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
-    HANDOFF = Setpoint(0.95, MIN_EXTENSION + 0.05)
+    HANDOFF = Setpoint(0.9, MIN_EXTENSION + 0.02)
     STOW = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.2)
     SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
     SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
@@ -125,7 +125,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            15, 0, 0.1, rotation_constraints
+            10, 0, 0.1, rotation_constraints
         )
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -146,7 +146,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            25, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=2.0)
+            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=2.0)
         )
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
@@ -233,12 +233,12 @@ class Arm:
         self.calculate_extension_feedforward()
         self.extension_motor.setVoltage(pid_output)
 
-        # if self.at_goal_angle() and self.is_angle_still():
-        #     self.brake()
-        #     self.rotation_motor.set(0)
-        #     return
-        # else:
-        #     self.unbrake()
+        if self.at_goal_angle() and self.is_angle_still():
+            self.brake()
+            self.rotation_motor.set(0)
+            return
+        else:
+            self.unbrake()
 
         # Calculate rotation motor output
         pid_output = self.rotation_controller.calculate(
@@ -263,7 +263,7 @@ class Arm:
     def get_near_intake(self) -> bool:
         """Gets if the arm may hit the intake currently"""
         # Assume all setpoints are good
-        return not self.at_goal() and self.get_angle() > 0
+        return not self.at_goal() and self.get_angle() > math.radians(20)
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -330,14 +330,14 @@ class Arm:
         self.set_length(value.extension)
         self.set_angle(value.angle)
 
-    DEFAULT_ALLOWABLE_ANGLE_ERROR = math.radians(2)
+    DEFAULT_ALLOWABLE_ANGLE_ERROR = math.radians(5)
 
     def at_goal_angle(
         self, allowable_error: float = DEFAULT_ALLOWABLE_ANGLE_ERROR
     ) -> bool:
         return abs(self.get_angle() - self.goal_angle) < allowable_error
 
-    def at_goal_extension(self, allowable_error=0.05) -> bool:
+    def at_goal_extension(self, allowable_error=0.1) -> bool:
         return abs(self.get_extension() - self.goal_extension) < allowable_error
 
     def is_angle_still(self, allowable_speed=0.01) -> bool:

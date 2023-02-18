@@ -74,11 +74,12 @@ class ScoringController(StateMachine):
         if self.autodrive:
             self.go_to_autodrive_state()
         if not self.wants_to_intake:
-            self.next_state("idle")
-            self.intake.retract
+            self.next_state("grab_from_well")
+            self.intake.retract()
             return
 
         self.arm.go_to_setpoint(Setpoints.HANDOFF)
+        self.gripper.open()
         self.intake.deploy()
         if self.intake.is_game_piece_present():
             self.intake.retract()
@@ -88,13 +89,12 @@ class ScoringController(StateMachine):
     def grab_from_well(self):
         """Grabs a cube from the well, assumes there is a cube in the well"""
         self.arm.go_to_setpoint(Setpoints.HANDOFF)
-        self.gripper.open()
-        if self.arm.at_goal():
-            self.gripper.close()
-            if self.gripper.get_full_closed():
-                self.is_holding = GamePiece.CUBE
-                self.next_state("idle")
-                self.arm.go_to_setpoint(Setpoints.STOW)
+        self.gripper.close()
+        if self.gripper.get_full_closed():
+            self.is_holding = GamePiece.CUBE
+            self.next_state("idle")
+            self.wants_to_intake = False
+            # self.arm.go_to_setpoint(Setpoints.STOW)
 
     @state
     def auto_pickup_cube(self):
