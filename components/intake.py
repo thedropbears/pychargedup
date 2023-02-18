@@ -15,6 +15,7 @@ class Intake:
         self.motor = CANSparkMax(
             ids.SparkMaxIds.intake_motor, CANSparkMax.MotorType.kBrushless
         )
+        self.motor.restoreFactoryDefaults()
         self.motor.setInverted(True)
         self.piston = DoubleSolenoid(
             PneumaticsModuleType.CTREPCM,

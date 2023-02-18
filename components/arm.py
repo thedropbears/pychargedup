@@ -98,12 +98,14 @@ class Arm:
         self.rotation_motor = rev.CANSparkMax(
             SparkMaxIds.arm_rotation_main, rev.CANSparkMax.MotorType.kBrushless
         )
+        self.rotation_motor.restoreFactoryDefaults()
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setInverted(True)
         # setup second motor to follow first
         self._rotation_motor_follower = rev.CANSparkMax(
             SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
         )
+        self._rotation_motor_follower.restoreFactoryDefaults()
         self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self._rotation_motor_follower.setInverted(True)
@@ -136,6 +138,7 @@ class Arm:
         self.extension_motor = rev.CANSparkMax(
             SparkMaxIds.arm_extension, rev.CANSparkMax.MotorType.kBrushless
         )
+        self.extension_motor.restoreFactoryDefaults()
         self.extension_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.extension_motor.setInverted(True)
         self.extension_encoder = self.extension_motor.getEncoder()
