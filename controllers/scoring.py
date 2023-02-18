@@ -80,9 +80,9 @@ class ScoringController(StateMachine):
 
         self.arm.go_to_setpoint(Setpoints.HANDOFF)
         self.intake.deploy()
-        # if self.intake.is_game_piece_present():
-        #     self.intake.retract()
-        #     self.next_state("grab_from_well")
+        if self.intake.is_game_piece_present():
+            self.intake.retract()
+            self.next_state("grab_from_well")
 
     @state
     def grab_from_well(self):

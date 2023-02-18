@@ -67,11 +67,11 @@ class MyRobot(magicbot.MagicRobot):
 
         # Manual overrides
         # Claw
-        if self.gamepad.getAButton():
+        if self.gamepad.getAButtonPressed():
             self.gripper.wants_to_close = not self.gripper.wants_to_close
-        if self.gamepad.getYButton():
+        if self.gamepad.getStartButtonPressed():
             self.gripper.close()
-        if self.gamepad.getXButton():
+        if self.gamepad.getBackButtonPressed():
             self.gripper.open()
 
         # Arm
@@ -81,13 +81,14 @@ class MyRobot(magicbot.MagicRobot):
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
         # right
         elif dpad_angle == 90:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
+            self.arm.go_to_setpoint(Setpoints.FORWARDS)
         # down
         elif dpad_angle == 180:
+            self.gripper.open()
             self.arm.go_to_setpoint(Setpoints.HANDOFF)
         # left
         elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
+            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
     def testInit(self) -> None:
         self.arm.on_enable()
@@ -96,25 +97,28 @@ class MyRobot(magicbot.MagicRobot):
     def testPeriodic(self) -> None:
         self.gamepad.getRightTriggerAxis()
         self.gamepad.getLeftTriggerAxis()
-        # self.arm.rotation_motor.set(right_trigger * 0.5 - left_trigger * 0.5)
         dpad_angle = self.gamepad.getPOV()
         # up
         if dpad_angle == 0:
-            self.arm.go_to_setpoint(Setpoints.UPRIGHT)
+            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
         # right
         elif dpad_angle == 90:
             self.arm.go_to_setpoint(Setpoints.FORWARDS)
+        # down
+        elif dpad_angle == 180:
+            self.gripper.open()
+            self.arm.go_to_setpoint(Setpoints.HANDOFF)
         # left
         elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.BACKWARDS)
+            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
-        extend_speed = 0.2
-        if self.gamepad.getAButton():
-            self.arm.extension_motor.set(extend_speed)
-        elif self.gamepad.getBButton():
-            self.arm.extension_motor.set(-extend_speed)
-        else:
-            self.arm.extension_motor.set(0)
+        # extend_speed = 0.2
+        # if self.gamepad.getAButton():
+        #     self.arm.extension_motor.set(extend_speed)
+        # elif self.gamepad.getBButton():
+        #     self.arm.extension_motor.set(-extend_speed)
+        # else:
+        #     self.arm.extension_motor.set(0)
 
         # Claw
         if self.gamepad.getYButton():
