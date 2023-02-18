@@ -278,7 +278,7 @@ class ScoringController(StateMachine):
     def score_location_from_node(
         self, node: Node, is_red: bool
     ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        node_trans3d = BLUE_NODES[node.row.value][node.col]
+        node_trans3d = BLUE_NODES[int(node.row.value)][int(node.col)]
         node_trans = node_trans3d.toTranslation2d()
 
         setpoint = Setpoints.SCORE_CONE_HIGH
