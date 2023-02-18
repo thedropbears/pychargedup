@@ -10,8 +10,10 @@ from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm, Setpoints
 from components.gripper import Gripper
+from components.leds import StatusLights
 from utilities.scalers import rescale_js
 
+from ids import PwmChannels
 
 class MyRobot(magicbot.MagicRobot):
     # Controllers
@@ -24,6 +26,7 @@ class MyRobot(magicbot.MagicRobot):
     arm: Arm
     intake: Intake
     gripper: Gripper
+    status_lights: StatusLights
 
     max_speed = magicbot.tunable(Chassis.max_wheel_speed * 0.95)
 
@@ -35,6 +38,8 @@ class MyRobot(magicbot.MagicRobot):
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
+
+        self.leds = wpilib.AddressableLED(PwmChannels.leds)
 
     def teleopInit(self) -> None:
         self.vision.add_to_estimator = True
