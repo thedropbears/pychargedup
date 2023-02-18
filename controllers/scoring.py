@@ -87,7 +87,6 @@ class ScoringController(StateMachine):
         self.gripper.open()
         self.intake.deploy()
         if self.intake.is_game_piece_present():
-            self.intake.retract()
             self.next_state("grab_from_well")
 
     @state
