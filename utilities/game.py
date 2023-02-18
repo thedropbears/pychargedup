@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum, auto, IntEnum
+from enum import Enum, auto
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
@@ -25,7 +25,7 @@ class GamePiece(Enum):
     NONE = auto()
 
 
-class Rows(IntEnum):
+class Rows(Enum):
     HIGH = 0
     MID = 1
     LOW = 2
