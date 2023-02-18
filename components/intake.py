@@ -43,6 +43,3 @@ class Intake:
             self.piston.set(DoubleSolenoid.Value.kForward)
         else:
             self.piston.set(DoubleSolenoid.Value.kReverse)
-
-        if self.is_game_piece_present():
-            self.deployed = False

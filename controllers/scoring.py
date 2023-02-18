@@ -67,11 +67,13 @@ class ScoringController(StateMachine):
         self.next_state(self.get_correct_autodrive_state())
 
     @state(first=True)
-    def idle(self):
+    def idle(self, initial_call: bool):
         if self.autodrive:
             self.go_to_autodrive_state()
         if self.wants_to_intake:
             self.next_state("intaking")
+        if initial_call:
+            self.arm.go_to_setpoint(Setpoints.STOW)
         self.intake.retract()
 
     @state
@@ -79,10 +81,9 @@ class ScoringController(StateMachine):
         if self.autodrive:
             self.go_to_autodrive_state()
         if not self.wants_to_intake:
-            self.next_state("grab_from_well")
+            self.next_state("idle")
             self.intake.retract()
             return
-
         self.arm.go_to_setpoint(Setpoints.HANDOFF)
         self.gripper.open()
         self.intake.deploy()
@@ -96,9 +97,6 @@ class ScoringController(StateMachine):
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
             self.wants_to_intake = False
-            self.next_state("idle")
-            if len(self.cube_queue):
-                self.cube_queue.pop(0)
 
     @state
     def auto_pickup_cube(self):
@@ -113,7 +111,6 @@ class ScoringController(StateMachine):
             self.intake.deploy()
             if (
                 self.intake.is_game_piece_present()
-                or self.gripper.game_piece_in_reach()
                 or self.movement.time_to_goal < -self.PICKUP_CUBE_TIMEOUT
             ):
                 self.next_state("grab_from_well")

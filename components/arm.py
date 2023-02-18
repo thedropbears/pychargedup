@@ -219,11 +219,6 @@ class Arm:
         self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
         self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
-        setpoint: Setpoint = self.chooser.getSelected()  # type: ignore
-        if setpoint != self.last_selection:
-            self.go_to_setpoint(setpoint)
-        self.last_selection = setpoint
-
         # if self.is_extended():
         #     self.extension_encoder.setPosition(MAX_EXTENSION)
         # if self.is_retracted():
@@ -367,7 +362,5 @@ class Arm:
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
-        self.set_angle(self.get_angle())
-        self.set_length(self.get_extension())
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())

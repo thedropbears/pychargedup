@@ -107,7 +107,7 @@ class MyRobot(magicbot.MagicRobot):
         # down
         elif dpad_angle == 180:
             self.gripper.open()
-            self.arm.go_to_setpoint(Setpoints.HANDOFF)
+            self.arm.go_to_setpoint(Setpoints.STOW)
         # left
         elif dpad_angle == 270:
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
@@ -118,7 +118,13 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButton():
             self.gripper.open()
 
+        if self.gamepad.getRightBumperPressed():
+            self.intake.deploy()
+        if self.gamepad.getLeftBumperPressed():
+            self.intake.retract()
+
         self.arm.execute()
+        self.intake.execute()
         self.gripper.execute()
         self.vision.execute()
 
