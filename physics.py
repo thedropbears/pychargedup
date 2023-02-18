@@ -96,7 +96,7 @@ class PhysicsEngine:
             extension_motors_sim,
             robot.arm.EXTEND_GEAR_RATIO,
             4,
-            robot.arm.SPOOL_CIRCUMFERANCE / math.tau,
+            robot.arm.SPOOL_CIRCUMFERENCE / math.tau,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
             simulateGravity=False,
