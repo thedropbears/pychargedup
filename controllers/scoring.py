@@ -181,7 +181,9 @@ class ScoringController(StateMachine):
                 if len(self.score_stack):
                     self.score_stack.pop()
                 self.desired_column = random.randint(0, 8)
-        elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
+                return
+
+        if self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)

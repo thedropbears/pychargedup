@@ -92,7 +92,7 @@ def is_visible(p1: Point, p2: Point) -> bool:
 waypoints_blue: list[Pose2d] = [
     Pose2d(2.300, 0.7, 0),
     Pose2d(5.600, 0.75, 0),
-    Pose2d(2.400, 4.40, 0),
+    Pose2d(2.400, 4.5, 0),
     Pose2d(5.700, 4.5, 0),
     Pose2d(4.000, 6.118, 0),
 ]

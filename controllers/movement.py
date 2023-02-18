@@ -54,6 +54,7 @@ class Movement(StateMachine):
         self.is_pickup = False
         self.time_to_goal = 3
         self.slow_dist = 0
+        self.no_trajectory = False
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -71,8 +72,14 @@ class Movement(StateMachine):
         """Generates a trajectory to self.goal and displays it"""
         pose = self.chassis.get_pose()
         distance = pose.translation().distance(self.goal.translation())
-        # if distance < 0.02:
-        #    return PathPlannerTrajectory()
+        if distance < 0.02:
+            self.no_trajectory = True
+            point = PathPoint(pose.translation(), pose.rotation(), pose.rotation())
+            points = [point, point]
+            empty_traj = PathPlanner.generatePath(PathConstraints(0.1, 0.1), points)
+            self.robot_object.setTrajectory(empty_traj.asWPILibTrajectory())
+            return empty_traj
+        self.no_trajectory = False
 
         waypoints = []
         pose_point: Point = (pose.x, pose.y)
@@ -164,7 +171,7 @@ class Movement(StateMachine):
         self,
         goal: Pose2d,
         approach_direction: Rotation2d,
-        slow_dist=0.5,
+        slow_dist=0.2,
     ) -> None:
         if goal == self.goal and approach_direction == self.goal_approach_dir:
             return
@@ -202,6 +209,9 @@ class Movement(StateMachine):
         if initial_call:
             self.trajectory = self.generate_trajectory()
 
+        if self.no_trajectory:
+            self.time_to_goal = -state_tm
+            return
         target_state = self.trajectory.sample(state_tm)
 
         # Calculating the speeds required to get to the target position.
@@ -209,13 +219,12 @@ class Movement(StateMachine):
             self.chassis.get_pose(),
             target_state,
         )
+        self.time_to_goal = self.trajectory.getTotalTime() - state_tm
         self.chassis.drive_local(
             chassis_speed.vx,
             chassis_speed.vy,
             chassis_speed.omega,
         )
-
-        self.time_to_goal = self.trajectory.getTotalTime() - state_tm
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """
