@@ -49,13 +49,13 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Automation
-        right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
-        left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
-        if right_trigger:
-            self.scoring.cone_pickup_side_right = True
-        if left_trigger:
-            self.scoring.cone_pickup_side_right = False
-        self.scoring.autodrive = right_trigger or left_trigger
+        # left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
+        # right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
+        # if right_trigger:
+        #     self.scoring.cone_pickup_side_right = True
+        # if left_trigger:
+        #     self.scoring.cone_pickup_side_right = False
+        # self.scoring.autodrive = right_trigger or left_trigger
 
         # Intake
         if self.gamepad.getRightBumperPressed():
@@ -67,12 +67,12 @@ class MyRobot(magicbot.MagicRobot):
 
         # Manual overrides
         # Claw
-        if self.gamepad.getYButton():
+        if self.gamepad.getAButtonPressed():
             self.gripper.wants_to_close = not self.gripper.wants_to_close
-        if self.gamepad.getXButton():
-            self.gripper.open()
-        if self.gamepad.getBButton():
+        if self.gamepad.getStartButtonPressed():
             self.gripper.close()
+        if self.gamepad.getBackButtonPressed():
+            self.gripper.open()
 
         # Arm
         dpad_angle = self.gamepad.getPOV()
@@ -81,30 +81,45 @@ class MyRobot(magicbot.MagicRobot):
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
         # right
         elif dpad_angle == 90:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
+            self.arm.go_to_setpoint(Setpoints.FORWARDS)
         # down
         elif dpad_angle == 180:
+            self.gripper.open()
             self.arm.go_to_setpoint(Setpoints.HANDOFF)
         # left
         elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
+            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
     def testInit(self) -> None:
         self.arm.on_enable()
         self.vision.add_to_estimator = False
 
     def testPeriodic(self) -> None:
-        right_trigger = self.gamepad.getRightTriggerAxis()
-        left_trigger = self.gamepad.getLeftTriggerAxis()
-        self.arm.rotation_motor.set(right_trigger * 0.5)
-        self.arm._rotation_motor_follower.set(left_trigger * 0.5)
-        # self.arm.extension_motor.set(left_trigger * 0.1)
-        # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
-        # self.arm.extension_motor.set(left_trigger * 0.1)
-        # self.arm.set_length(self.arm.goal_extension + (left_trigger - right_trigger) * 0.02 * 2)
+        self.gamepad.getRightTriggerAxis()
+        self.gamepad.getLeftTriggerAxis()
+        dpad_angle = self.gamepad.getPOV()
+        # up
+        if dpad_angle == 0:
+            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
+        # right
+        elif dpad_angle == 90:
+            self.arm.go_to_setpoint(Setpoints.FORWARDS)
+        # down
+        elif dpad_angle == 180:
+            self.gripper.open()
+            self.arm.go_to_setpoint(Setpoints.HANDOFF)
+        # left
+        elif dpad_angle == 270:
+            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
-        # self.arm.execute()
+        # Claw
+        if self.gamepad.getYButton():
+            self.gripper.close()
+        if self.gamepad.getXButton():
+            self.gripper.open()
 
+        self.arm.execute()
+        self.gripper.execute()
         self.vision.execute()
 
     def disabledInit(self) -> None:

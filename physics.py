@@ -96,7 +96,7 @@ class PhysicsEngine:
             extension_motors_sim,
             robot.arm.EXTEND_GEAR_RATIO,
             4,
-            robot.arm.SPOOL_DIAMETER / 2,
+            robot.arm.SPOOL_CIRCUMFERENCE / math.tau,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
             simulateGravity=False,
@@ -126,8 +126,8 @@ class PhysicsEngine:
     def update_sim(self, now: float, tm_diff: float) -> None:
         # Update rotation sim
         self.arm_sim.setInputVoltage(-self.arm_motor_output.get())
-        if self.arm_brake.getOutput():
-            self.arm_sim.update(tm_diff)
+        # if self.arm_brake.getOutput():
+        self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
         self.arm_motor_vel.set(-self.arm_sim.getVelocity())
         # Update extension sim
