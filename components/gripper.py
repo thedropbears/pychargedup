@@ -22,6 +22,7 @@ class Gripper:
         )
 
         self.game_piece_switch = DigitalInput(ids.DioChannels.gripper_game_piece_switch)
+        self.set_solenoid = False
 
     def open(self) -> None:
         self.opened = True
@@ -56,10 +57,11 @@ class Gripper:
             self.change_time = time.monotonic()
         self.last_opened = self.opened
 
-        if self.opened:
-            self.solenoid.set(DoubleSolenoid.Value.kReverse)
-        else:
-            self.solenoid.set(DoubleSolenoid.Value.kForward)
+        if self.set_solenoid:
+            if self.opened:
+                self.solenoid.set(DoubleSolenoid.Value.kReverse)
+            else:
+                self.solenoid.set(DoubleSolenoid.Value.kForward)
 
     @feedback
     def game_piece_in_reach(self) -> bool:
