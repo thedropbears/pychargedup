@@ -1,3 +1,4 @@
+from collections import deque
 from controllers.scoring import ScoringController
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d
@@ -36,7 +37,7 @@ class CubeAutoBase:
 
         self.scoring.wants_piece = GamePiece.CUBE
         self.scoring.is_holding = GamePiece.CONE
-        self.scoring.cube_queue = []
+        self.scoring.cube_queue = deque()
         all_pieces = get_staged_pieces(wpilib.DriverStation.getAlliance())
         for idx, rotation in self.cubes:
             position = all_pieces[idx]
@@ -48,7 +49,7 @@ class CubeAutoBase:
             pose = Pose2d(position, angle)
             self.scoring.cube_queue.append((pose, angle))
 
-        self.scoring.score_queue = self.nodes[:]
+        self.scoring.score_queue = deque(self.nodes)
 
     def on_iteration(self, tm: float) -> None:
         if not self.finished:

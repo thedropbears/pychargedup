@@ -18,6 +18,8 @@ from utilities.game import (
     Node,
 )
 
+from collections import deque
+
 
 class ScoringController(StateMachine):
     gripper: Gripper
@@ -47,8 +49,8 @@ class ScoringController(StateMachine):
         self.is_holding = GamePiece.NONE
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
-        self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
-        self.score_queue: list[Node] = []
+        self.cube_queue: deque[tuple[Pose2d, Rotation2d]] = deque()
+        self.score_queue: deque[Node] = deque()
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -67,7 +69,7 @@ class ScoringController(StateMachine):
         self.next_state(self.get_correct_autodrive_state())
 
     @state(first=True)
-    def initialize(self, initial_call: bool) -> None:
+    def initialize(self, initial_call: bool, state_tm: float) -> None:
         if initial_call:
             self.arm.homing = True
         self.gripper.set_solenoid = False
@@ -78,7 +80,9 @@ class ScoringController(StateMachine):
             self.arm.homing = False
             self.arm.go_to_setpoint(Setpoints.STOW)
 
-        if self.arm.get_angle() > 0.5 and self.arm.is_retracted():
+        if (self.arm.get_angle() < 0.5 and not self.arm.homing) or (
+            wpilib.DriverStation.isAutonomous() and state_tm > 0.5
+        ):
             self.next_state("idle")
             self.gripper.set_solenoid = True
 
@@ -113,6 +117,8 @@ class ScoringController(StateMachine):
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
             self.wants_to_intake = False
+            self.cube_queue.popleft()
+            self.next_state("idle")
 
     @state
     def auto_pickup_cube(self):
@@ -156,7 +162,7 @@ class ScoringController(StateMachine):
         self.movement.do_autodrive()
 
     @state
-    def score(self, initial_call):
+    def score(self, initial_call, tm):
         if not self.autodrive:
             self.next_state("idle")
 
@@ -169,16 +175,16 @@ class ScoringController(StateMachine):
             self.gripper.open()
             self.is_holding = GamePiece.NONE
             if self.gripper.get_full_open():
+                print("scored at", tm)
                 self.next_state("idle")
                 self.arm.go_to_setpoint(Setpoints.STOW)
                 if len(self.score_queue):
-                    self.score_queue.pop(0)
+                    self.score_queue.popleft()
                 self.desired_column = random.randint(0, 8)
         elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)
-
         self.movement.do_autodrive()
 
     @feedback
