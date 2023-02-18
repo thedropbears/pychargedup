@@ -1,5 +1,4 @@
 from magicbot import feedback, tunable
-from rev import CANSparkMax
 import wpilib
 from ids import SparkMaxIds, PcmChannels, DioChannels
 import math
@@ -17,6 +16,7 @@ from wpimath.controller import (
 )
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
+import rev
 
 MIN_EXTENSION = 0.7  # meters
 MAX_EXTENSION = 1.3
@@ -91,17 +91,17 @@ class Arm:
 
     def __init__(self) -> None:
         # Create rotation things
-        self.rotation_motor = CANSparkMax(
-            SparkMaxIds.arm_rotation_main, CANSparkMax.MotorType.kBrushless
+        self.rotation_motor = rev.CANSparkMax(
+            SparkMaxIds.arm_rotation_main, rev.CANSparkMax.MotorType.kBrushless
         )
-        self.rotation_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self.rotation_motor.setInverted(False)
         # setup second motor to follow first
-        self._rotation_motor_follower = CANSparkMax(
-            SparkMaxIds.arm_rotation_follower, CANSparkMax.MotorType.kBrushless
+        self._rotation_motor_follower = rev.CANSparkMax(
+            SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
-        self._rotation_motor_follower.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self._rotation_motor_follower.setInverted(False)
         self.relative_encoder = self.rotation_motor.getEncoder()
         self.relative_encoder.setPositionConversionFactor(1 / self.ROTATE_GEAR_RATIO)
@@ -126,10 +126,10 @@ class Arm:
         self.rotation_last_setpoint_vel = 0
 
         # Create extension things
-        self.extension_motor = CANSparkMax(
-            SparkMaxIds.arm_extension, CANSparkMax.MotorType.kBrushless
+        self.extension_motor = rev.CANSparkMax(
+            SparkMaxIds.arm_extension, rev.CANSparkMax.MotorType.kBrushless
         )
-        self.extension_motor.setIdleMode(CANSparkMax.IdleMode.kCoast)
+        self.extension_motor.setIdleMode(rev.CANSparkMax.IdleMode.kCoast)
         self.extension_motor.setInverted(False)
         self.extension_encoder = self.extension_motor.getEncoder()
         self.extension_encoder.setPositionConversionFactor(1 / self.EXTEND_OUTPUT_RATIO)
@@ -183,6 +183,15 @@ class Arm:
             4,
             wpilib.Color8Bit(68, 117, 26),
         )
+
+        # Hall effector
+        self.hall_effector_inner_arm = self.extension_motor.getForwardLimitSwitch(
+            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+        )
+        self.hall_effector_forward_arm = self.extension_motor.getReverseLimitSwitch(
+            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+        )
+
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
@@ -279,6 +288,14 @@ class Arm:
     def get_extension_speed(self) -> float:
         """Gets the extension speed in m/s"""
         return self.extension_encoder.getVelocity()
+
+    @feedback
+    def is_extended(self) -> bool:
+        return self.hall_effector_forward_arm.get()
+
+    @feedback
+    def is_retracted(self) -> bool:
+        return self.hall_effector_inner_arm.get()
 
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""
