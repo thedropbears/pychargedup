@@ -397,9 +397,13 @@ class StatusLights:
                         else PickupFromSide.LEFT,
                     )
             case GamePiece.CUBE:
-                self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+                self.set(
+                    PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
+                )
             case GamePiece.CONE:
-                self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+                self.set(
+                    PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
+                )
 
         color = self.color
         if self.pattern == DisplayType.SOLID:

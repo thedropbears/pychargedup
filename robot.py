@@ -15,6 +15,7 @@ from utilities.scalers import rescale_js
 
 from ids import PwmChannels
 
+
 class MyRobot(magicbot.MagicRobot):
     # Controllers
     scoring: ScoringController
