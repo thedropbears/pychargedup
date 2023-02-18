@@ -59,7 +59,7 @@ class Setpoint:
 class Setpoints:
     PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
     HANDOFF = Setpoint(0.9, MIN_EXTENSION + 0.02)
-    STOW = Setpoint(MAX_ANGLE, MIN_EXTENSION + 0.2)
+    STOW = Setpoint(0.45, MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
     SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
     SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.3)
@@ -127,7 +127,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            10, 0, 0.1, rotation_constraints
+            15, 0, 0.1, rotation_constraints
         )
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -236,12 +236,14 @@ class Arm:
         self.calculate_extension_feedforward()
         self.extension_motor.setVoltage(pid_output)
 
-        if self.at_goal_angle() and self.is_angle_still():
+        if self.at_goal_angle(math.radians(3)) and self.is_angle_still():
             self.brake()
+        if not self.at_goal_angle(math.radians(5)):
+            self.unbrake()
+
+        if self.is_braking():
             self.rotation_motor.set(0)
             return
-        else:
-            self.unbrake()
 
         # Calculate rotation motor output
         pid_output = self.rotation_controller.calculate(
@@ -357,6 +359,9 @@ class Arm:
 
     def unbrake(self) -> None:
         self.brake_solenoid.set(True)
+
+    def is_braking(self) -> bool:
+        return not self.brake_solenoid.get()
 
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
