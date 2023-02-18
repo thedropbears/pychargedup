@@ -190,7 +190,7 @@ class ScoringController(StateMachine):
 
     def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         """Gets where to auto pickup cubes from"""
-        if len(self.cube_queue) == 0:
+        if not self.cube_queue:
             return self.get_single_substation_cube_pickup()
         else:
             return self.get_auto_cube_pickup()
