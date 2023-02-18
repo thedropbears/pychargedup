@@ -6,8 +6,6 @@ from wpilib import (
     Solenoid,
     PneumaticsModuleType,
     DutyCycleEncoder,
-    SendableChooser,
-    SmartDashboard,
 )
 from wpimath.controller import (
     ProfiledPIDController,
@@ -60,6 +58,7 @@ class Setpoints:
     PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
     HANDOFF = Setpoint(0.9, MIN_EXTENSION + 0.02)
     STOW = Setpoint(0.45, MIN_EXTENSION)
+    START = Setpoint(math.radians(20), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
     SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
     SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.3)
@@ -90,7 +89,6 @@ class Arm:
     goal_extension = tunable(MIN_EXTENSION)
     # automatically retract the extension when rotating overhead
     do_auto_retract = tunable(True)
-    arm_enabled = tunable(False)
 
     control_loop_wait_time: float
 
@@ -150,7 +148,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=2.0)
+            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=2.0, maxAcceleration=4.0)
         )
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
@@ -158,15 +156,6 @@ class Arm:
         self.brake_solenoid = Solenoid(
             PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
         )
-        self.chooser = SendableChooser()
-        self.chooser.addOption("Score Cone High", Setpoints.SCORE_CONE_HIGH)
-        self.chooser.addOption("Score Cube High", Setpoints.SCORE_CUBE_HIGH)
-        self.chooser.addOption("Score Cone Mid", Setpoints.SCORE_CONE_MID)
-        self.chooser.addOption("Score Cube mid", Setpoints.SCORE_CUBE_MID)
-        self.chooser.addOption("Handoff", Setpoints.HANDOFF)
-        self.chooser.setDefaultOption("Handoff", Setpoints.HANDOFF)
-        SmartDashboard.putData("Arm Setpoint Chooser", self.chooser)
-        self.last_selection = Setpoint(0, 0)
 
         # Create arm display
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)
@@ -202,11 +191,11 @@ class Arm:
         self.hall_effector_inner_arm = self.extension_motor.getReverseLimitSwitch(
             rev.SparkMaxLimitSwitch.Type.kNormallyOpen
         )
+        self.homing = False
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
-        self.set_angle(self.get_angle())
         self.set_length(self.get_extension())
 
     def execute(self) -> None:
@@ -224,19 +213,23 @@ class Arm:
         # if self.is_retracted():
         #     self.extension_encoder.setPosition(MIN_EXTENSION)
 
-        extension_goal = self.get_max_extension()
-        # Calculate extension motor output
-        pid_output = self.extension_controller.calculate(
-            self.get_extension(), extension_goal
-        )
-        self.calculate_extension_feedforward()
-        self.extension_motor.setVoltage(pid_output)
+        if self.homing:
+            self.extension_motor.set(-0.1)
+            self.rotation_motor.set(0)
+            return
+        else:
+            extension_goal = self.get_max_extension()
+            # Calculate extension motor output
+            pid_output = self.extension_controller.calculate(
+                self.get_extension(), extension_goal
+            )
+            self.calculate_extension_feedforward()
+            self.extension_motor.setVoltage(pid_output)
 
         if self.at_goal_angle(math.radians(3)) and self.is_angle_still():
             self.brake()
         if not self.at_goal_angle(math.radians(5)):
             self.unbrake()
-
         if self.is_braking():
             self.rotation_motor.set(0)
             return
@@ -315,6 +308,10 @@ class Arm:
     def is_extended(self) -> bool:
         return self.hall_effector_forward_arm.get()
 
+    def set_at_min_extension(self) -> None:
+        """Sets the extension position to the min extension"""
+        self.extension_encoder.setPosition(MIN_EXTENSION)
+
     @feedback
     def is_retracted(self) -> bool:
         return self.hall_effector_inner_arm.get()
@@ -348,7 +345,7 @@ class Arm:
     def at_goal(self) -> bool:
         return (
             self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
-        ) or not self.arm_enabled
+        )
 
     def brake(self) -> None:
         self.brake_solenoid.set(False)
@@ -364,3 +361,7 @@ class Arm:
             self.runtime_offset = -math.tau
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
+
+    def stop(self) -> None:
+        self.rotation_motor.set(0)
+        self.extension_motor.set(0)
