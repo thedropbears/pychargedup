@@ -232,11 +232,10 @@ class ScoringController(StateMachine):
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         if self.score_queue:  # is auto
-            return self.score_location_from_node(self.score_queue[0], self.is_red())
+            node = self.score_queue[0]
         else:
-            return self.score_location_from_node(
-                Node(Rows(self.desired_row), self.desired_column), self.is_red()
-            )
+            node = Node(Rows(self.desired_row), self.desired_column)
+        return self.score_location_from_node(node, self.is_red())
 
     def score_location_from_node(
         self, node: Node, is_red: bool
