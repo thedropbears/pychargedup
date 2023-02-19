@@ -73,7 +73,7 @@ class ScoringController(StateMachine):
         if initial_call:
             self.arm.homing = True
         self.gripper.set_solenoid = False
-        if self.arm.get_angle() > 0.5:
+        if self.arm.get_angle() > 0.5 and not self.arm.homing:
             self.intake.deploy_without_running()
         if self.arm.is_retracted():
             self.arm.set_at_min_extension()
@@ -83,6 +83,8 @@ class ScoringController(StateMachine):
         if (self.arm.get_angle() < 0.5 and not self.arm.homing) or (
             wpilib.DriverStation.isAutonomous() and state_tm > 0.5
         ):
+            self.arm.on_enable()
+            self.arm.go_to_setpoint(Setpoints.STOW)
             self.next_state("idle")
             self.gripper.set_solenoid = True
 

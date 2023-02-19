@@ -126,7 +126,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            15, 0, 0.1, rotation_constraints
+            10, 0, 0.1, rotation_constraints
         )
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -214,7 +214,7 @@ class Arm:
         #     self.extension_encoder.setPosition(MIN_EXTENSION)
 
         if self.homing:
-            self.extension_motor.set(-0.1)
+            self.extension_motor.set(-0.2)
             self.rotation_motor.set(0)
             return
         else:

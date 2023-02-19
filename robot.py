@@ -97,9 +97,10 @@ class MyRobot(magicbot.MagicRobot):
         self.arm.homing = False
 
     def testPeriodic(self) -> None:
-        self.gamepad.getRightTriggerAxis()
-        self.gamepad.getLeftTriggerAxis()
+        right_trigger = self.gamepad.getRightTriggerAxis()
+        left_trigger = self.gamepad.getLeftTriggerAxis()
         self.arm.unbrake()
+        self.arm.rotation_motor.set(0.3 * (right_trigger - left_trigger))
         dpad_angle = self.gamepad.getPOV()
         # up
         if dpad_angle == 0:
