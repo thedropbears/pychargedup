@@ -54,4 +54,4 @@ We use RobotPy's Magicbot framework
 
 `autonomous/`: Controls robot during autonomous period.
 
-`ids.py`: Has CAN ids, PCM channels and other port numbers.
+`ids.py`: Has CAN ids, PH channels and other port numbers.
