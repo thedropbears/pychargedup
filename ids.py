@@ -34,7 +34,7 @@ class SparkMaxIds(enum.IntEnum):
 
 
 @enum.unique
-class PcmChannels(enum.IntEnum):
+class PhChannels(enum.IntEnum):
     arm_brake = 4
 
     intake_piston_forward = 6
