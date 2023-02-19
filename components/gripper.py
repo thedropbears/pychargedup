@@ -16,9 +16,9 @@ class Gripper:
         self.wants_to_close = False
 
         self.solenoid = DoubleSolenoid(
-            PneumaticsModuleType.CTREPCM,
-            ids.PcmChannels.gripper_solenoid_forward,
-            ids.PcmChannels.gripper_solenoid_reverse,
+            PneumaticsModuleType.REVPH,
+            ids.PhChannels.gripper_solenoid_forward,
+            ids.PhChannels.gripper_solenoid_reverse,
         )
 
         self.game_piece_switch = DigitalInput(ids.DioChannels.gripper_game_piece_switch)
