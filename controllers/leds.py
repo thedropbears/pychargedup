@@ -33,7 +33,7 @@ class LedController:
         self.want = PieceColour.CONE
 
     def place_left(self) -> None:
-        self.side = 
+        self.side =
 
     def execute(self) -> None:
         CONE = self.gripper.get_full_closed() and self.gripped_piece_is_cone()

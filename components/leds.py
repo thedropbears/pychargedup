@@ -497,13 +497,9 @@ class StatusLights:
                     else PickupFromSide.LEFT,
                 )
         elif self.scoring.get_current_piece() == GamePiece.CUBE:
-            self.set(
-                PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
-            )
+            self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
         elif self.scoring.get_current_piece() == GamePiece.CONE:
-            self.set(
-                PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
-            )
+            self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
 
         # use the current color as a fallback if (for whatever reason) there is no pattern set.
         color = self.color
