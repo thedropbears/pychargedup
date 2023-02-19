@@ -43,6 +43,8 @@ class ScoringController(StateMachine):
     # swap the the side of the substation to test on a half field
     swap_substation = tunable(False)
 
+    snap_to_closest_node = tunable(True)
+
     def __init__(self) -> None:
         self.is_holding = GamePiece.NONE
         self.autodrive = False
@@ -250,13 +252,32 @@ class ScoringController(StateMachine):
         if self.score_stack:  # is auto
             node = self.score_stack[-1]
         else:
-            node = Node(Rows(self.desired_row), self.desired_column)
+            if self.snap_to_closest_node:
+                score_locations = []
+                if self.get_current_piece() == GamePiece.CONE:
+                    score_locations = [
+                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
+                        for i in range(0, 9, 3)
+                        if i % 3 != 1
+                    ]
+                elif self.get_current_piece == GamePiece.CUBE:
+                    score_locations = [
+                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
+                        for i in range(1, 9, 3)
+                    ]
+                score_poses = [t[0][0] for t in score_locations]
+                if len(score_poses) == 0:
+                    node = Node(Rows(self.desired_row), self.desired_column)
+                nearest = self.movement.chassis.get_pose().nearest(score_poses)
+                return next(loc for loc in score_locations if loc[0][0] == nearest)
+            else:
+                node = Node(Rows(self.desired_row), self.desired_column)
         return self.score_location_from_node(node, self.is_red())
 
     def score_location_from_node(
         self, node: Node, is_red: bool
     ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        node_trans3d = BLUE_NODES[node.row.value][node.col]
+        node_trans3d = BLUE_NODES[node.row.value][int(node.col)]
         node_trans = node_trans3d.toTranslation2d()
 
         setpoint = Setpoints.SCORE_CONE_HIGH
