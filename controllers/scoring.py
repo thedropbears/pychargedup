@@ -257,16 +257,21 @@ class ScoringController(StateMachine):
             node = self.score_stack[-1]
         else:
             if self.snap_to_closest_node:
+                desired_rows = Rows.HIGH if self.driver_requests_right else Rows.MID
                 score_locations = []
                 if self.get_current_piece() == GamePiece.CONE:
                     score_locations = [
-                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
+                        self.score_location_from_node(
+                            Node(desired_rows, i), self.is_red()
+                        )
                         for i in range(9)
                         if i % 3 != 1
                     ]
                 elif self.get_current_piece == GamePiece.CUBE:
                     score_locations = [
-                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
+                        self.score_location_from_node(
+                            Node(desired_rows, i), self.is_red()
+                        )
                         for i in range(1, 9, 3)
                     ]
                 score_poses = [t[0][0] for t in score_locations]
@@ -279,10 +284,8 @@ class ScoringController(StateMachine):
         return self.score_location_from_node(node, self.is_red())
 
     def score_location_from_node(
-        self, node_: Node, is_red: bool
+        self, node: Node, is_red: bool
     ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        node = node_
-        node.row = Rows.HIGH if self.driver_requests_right else Rows.MID
         node_trans3d = BLUE_NODES[node.row.value][int(node.col)]
         node_trans = node_trans3d.toTranslation2d()
 
