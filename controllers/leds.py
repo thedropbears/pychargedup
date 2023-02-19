@@ -1,4 +1,4 @@
-from components.leds import StatusLights, LedColors, DisplayType
+"""from components.leds import StatusLights, LedColors, DisplayType, PieceColour, PickupFromSide
 from components.gripper import Gripper
 from components.intake import Intake
 
@@ -7,11 +7,13 @@ class LedController:
     status_lights: StatusLights
     gripper: Gripper
     intake: Intake
+    want: PieceColour
+    side: PickupFromSide
 
     def __init__(self) -> None:
-        ...
+        self.want = PieceColour.NONE
+        self.side = PickupFromSide.NONE
 
-    # is this needed?
     def gripped_piece_is_cone(self) -> bool:
         return False
 
@@ -23,6 +25,15 @@ class LedController:
 
     def wants_cube(self) -> bool:
         return False
+
+    def want_cube(self) -> None:
+        self.want = PieceColour.CUBE
+
+    def want_cone(self) -> None:
+        self.want = PieceColour.CONE
+
+    def place_left(self) -> None:
+        self.side = 
 
     def execute(self) -> None:
         CONE = self.gripper.get_full_closed() and self.gripped_piece_is_cone()
@@ -48,3 +59,4 @@ class LedController:
         else:
             self.status_lights.set_display_pattern(DisplayType.SOLID)
             self.status_lights.set_color(LedColors.OFF)
+"""
