@@ -4,6 +4,7 @@ import math
 import typing
 
 import ctre
+import rev
 import numpy as np
 import wpilib
 from wpilib.simulation import (
@@ -119,6 +120,7 @@ class PhysicsEngine:
         self.arm_extension_pos = self.arm_extension.getDouble("Position")
         self.arm_extension_vel = self.arm_extension.getDouble("Velocity")
         self.arm_extension_output = self.arm_extension.getDouble("Applied Output")
+        self.arm_extension_fault_bits = self.arm_extension.getInt("Faults")
 
         self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
@@ -135,6 +137,28 @@ class PhysicsEngine:
         self.extension_sim.update(tm_diff)
         self.arm_extension_pos.set(self.extension_sim.getPosition())
         self.arm_extension_vel.set(self.extension_sim.getVelocity())
+
+        if self.extension_sim.hasHitUpperLimit():
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                | 1 << rev.CANSparkMax.FaultID.kHardLimitFwd.value
+            )
+        else:
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                & ~(1 << rev.CANSparkMax.FaultID.kHardLimitFwd.value)
+            )
+
+        if self.extension_sim.hasHitLowerLimit():
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                | 1 << rev.CANSparkMax.FaultID.kHardLimitRev.value
+            )
+        else:
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                & ~(1 << rev.CANSparkMax.FaultID.kHardLimitRev.value)
+            )
 
         for wheel in self.wheels:
             wheel.update(tm_diff)
