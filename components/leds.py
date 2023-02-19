@@ -4,6 +4,7 @@ import time
 from enum import Enum, auto
 from utilities.scalers import scale_value
 import random
+from ids import PwmChannels
 
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
@@ -155,8 +156,6 @@ class WolframAutomata:
 
 
 class StatusLights:
-    leds: wpilib.AddressableLED
-
     FLASH_FREQUENCY = 10
     PULSE_PERIOD = 1
     PACMAN_PERIOD = 60
@@ -165,6 +164,8 @@ class StatusLights:
     WOLFRAM_PERIOD = 0.1
 
     def __init__(self):
+        self.leds = wpilib.AddressableLED(PwmChannels.leds)
+
         self.led_length = 275
 
         self.start_time = time.monotonic()
