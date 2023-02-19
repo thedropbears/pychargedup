@@ -74,6 +74,7 @@ class ScoringController(StateMachine):
         if initial_call:
             self.arm.homing = True
         self.gripper.set_solenoid = False
+        self.arm.unbrake()
         if self.arm.get_angle() > 0.5 and not self.arm.homing:
             self.intake.deploy_without_running()
         if self.arm.is_retracted():
@@ -123,7 +124,8 @@ class ScoringController(StateMachine):
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
             self.wants_to_intake = False
-            self.cube_stack.pop()
+            if self.cube_stack:
+                self.cube_stack.pop()
             self.next_state("idle")
 
     @state
@@ -204,7 +206,9 @@ class ScoringController(StateMachine):
 
     def get_current_piece(self) -> GamePiece:
         """What piece the gripper is currently holding in the gripper"""
-        return self.is_holding
+        if self.gripper.get_full_closed() or self.gripper.is_closing():
+            return self.is_holding
+        return GamePiece.NONE
 
     @feedback
     def get_current_piece_str(self) -> str:

@@ -55,9 +55,9 @@ class Setpoint:
 
 
 class Setpoints:
-    PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
-    HANDOFF = Setpoint(0.9, MIN_EXTENSION + 0.02)
-    STOW = Setpoint(0.45, MIN_EXTENSION)
+    PICKUP_CONE = Setpoint(-3.11, 0.97)
+    HANDOFF = Setpoint(0.8, MIN_EXTENSION)
+    STOW = Setpoint(0.42, MIN_EXTENSION)
     START = Setpoint(math.radians(20), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
     SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
