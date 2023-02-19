@@ -11,7 +11,6 @@ from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm, Setpoints
 from components.gripper import Gripper
-from components.leds import StatusLights
 from utilities.scalers import rescale_js
 
 from ids import PwmChannels

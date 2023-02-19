@@ -98,7 +98,7 @@ class WolframAutomata:
         self.rule = random.randint(0, 255)
 
     def step(self) -> None:
-        new_world = [0] * self.n
+        new_world = [False] * self.n
         for i in range(self.n):
             r = (
                 (self.world[(i + 1) % self.n] << 0)
