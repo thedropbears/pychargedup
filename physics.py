@@ -21,7 +21,7 @@ from wpimath.system.plant import DCMotor
 from components.chassis import SwerveModule
 from components import arm
 from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
-from ids import PcmChannels, SparkMaxIds
+from ids import PhChannels, SparkMaxIds
 
 if typing.TYPE_CHECKING:
     from robot import MyRobot
@@ -115,7 +115,7 @@ class PhysicsEngine:
         # Get arm objects
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
         self.arm_brake = SolenoidSim(
-            wpilib.PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
+            wpilib.PneumaticsModuleType.CTREPCM, PhChannels.arm_brake
         )
 
         self.arm_motor = SimDeviceSim("SPARK MAX ", SparkMaxIds.arm_rotation_main)
