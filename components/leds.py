@@ -4,7 +4,6 @@ import time
 from enum import Enum, auto
 from utilities.scalers import scale_value
 import random
-from ids import PwmChannels
 
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
@@ -51,7 +50,7 @@ class PieceColour(Enum):
 class PickupFromSide(Enum):
     LEFT = LedColors.GREEN
     RIGHT = LedColors.RED
-    NONE = LedColors.OFF
+    NONE = LedColors.CYAN
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
@@ -156,6 +155,8 @@ class WolframAutomata:
 
 
 class StatusLights:
+    leds: wpilib.AddressableLED
+
     FLASH_FREQUENCY = 10
     PULSE_PERIOD = 1
     PACMAN_PERIOD = 60
@@ -164,15 +165,13 @@ class StatusLights:
     WOLFRAM_PERIOD = 0.1
 
     def __init__(self):
-        self.leds = wpilib.AddressableLED(PwmChannels.leds)
-
         self.led_length = 275
 
         self.start_time = time.monotonic()
 
-        self.color = LedColors.CYAN.value
+        self.color = (0, 0, 0)
 
-        self.pattern = DisplayType.RAINBOW
+        self.pattern = DisplayType.SOLID
 
         self.side = PickupFromSide.RIGHT
 
@@ -186,7 +185,6 @@ class StatusLights:
         self.choose_morse_message()
         self.leds.setLength(self.led_length)
         self.single_led_data = wpilib.AddressableLED.LEDData()
-        self.single_led_data.setHSV(*self.color)
         self.leds_data = [self.single_led_data] * self.led_length
         self.leds.setData(self.leds_data)
         self.leds.start()
@@ -232,6 +230,9 @@ class StatusLights:
 
     def want_cube_right(self) -> None:
         self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def want_cube(self) -> None:
+        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.NONE)
 
     def cone_onboard(self) -> None:
         self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)

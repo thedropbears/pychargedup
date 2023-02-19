@@ -1,8 +1,8 @@
 from magicbot import state, StateMachine, tunable, feedback
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 import wpilib
-import random
 
+from components.leds import StatusLights
 from components.gripper import Gripper
 from components.intake import Intake
 from components.arm import Arm, Setpoints, Setpoint
@@ -15,7 +15,6 @@ from utilities.game import (
     field_flip_rotation2d,
     BLUE_NODES,
     Rows,
-    Node,
 )
 
 
@@ -24,6 +23,7 @@ class ScoringController(StateMachine):
     intake: Intake
     arm: Arm
     movement: Movement
+    status_lights: StatusLights
 
     # how long before reaching pickup shelf to start closing claw
     GRAB_PRE_TIME = tunable(0.5)
@@ -35,22 +35,17 @@ class ScoringController(StateMachine):
     PICKUP_CUBE_PREPARE_TIME = tunable(3)
     SCORE_PREPARE_TIME = tunable(3)
     PICKUP_CONE_PREPARE_TIME = tunable(3)
-    PICKUP_CUBE_TIMEOUT = tunable(0.2)
 
-    desired_row = tunable(0)
-    desired_column = tunable(0)
+    DESIRED_ROW = tunable(0)
+    DESIRED_COLUMN = tunable(0)
 
     # swap the the side of the substation to test on a half field
     swap_substation = tunable(False)
-
-    snap_to_closest_node = tunable(True)
 
     def __init__(self) -> None:
         self.is_holding = GamePiece.NONE
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
-        self.cube_stack: list[tuple[Pose2d, Rotation2d]] = []
-        self.score_stack: list[Node] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -69,31 +64,11 @@ class ScoringController(StateMachine):
         self.next_state(self.get_correct_autodrive_state())
 
     @state(first=True)
-    def initialize(self, initial_call: bool, state_tm: float) -> None:
-        if initial_call:
-            self.arm.homing = True
-        self.gripper.set_solenoid = False
-        if self.arm.get_angle() > 0.5:
-            self.intake.deploy_without_running()
-        if self.arm.is_retracted():
-            self.arm.set_at_min_extension()
-            self.arm.homing = False
-            self.arm.go_to_setpoint(Setpoints.STOW)
-
-        if (self.arm.get_angle() < 0.5 and not self.arm.homing) or (
-            wpilib.DriverStation.isAutonomous() and state_tm > 0.5
-        ):
-            self.next_state("idle")
-            self.gripper.set_solenoid = True
-
-    @state
-    def idle(self, initial_call: bool):
+    def idle(self):
         if self.autodrive:
             self.go_to_autodrive_state()
         if self.wants_to_intake:
             self.next_state("intaking")
-        if initial_call:
-            self.arm.go_to_setpoint(Setpoints.STOW)
         self.intake.retract()
 
     @state
@@ -102,46 +77,56 @@ class ScoringController(StateMachine):
             self.go_to_autodrive_state()
         if not self.wants_to_intake:
             self.next_state("idle")
-            self.intake.retract()
+            self.intake.retract
             return
+
         self.arm.go_to_setpoint(Setpoints.HANDOFF)
-        self.gripper.open()
         self.intake.deploy()
-        if self.intake.is_game_piece_present():
-            self.next_state("grab_from_well")
+        # if self.intake.is_game_piece_present():
+        #     self.intake.retract()
+        #     self.next_state("grab_from_well")
 
     @state
     def grab_from_well(self):
         """Grabs a cube from the well, assumes there is a cube in the well"""
-        self.gripper.close()
-        if self.gripper.get_full_closed():
-            self.is_holding = GamePiece.CUBE
-            self.wants_to_intake = False
-            self.cube_stack.pop()
-            self.next_state("idle")
+        self.arm.go_to_setpoint(Setpoints.HANDOFF)
+        self.gripper.open()
+        if self.arm.at_goal():
+            self.gripper.close()
+            if self.gripper.get_full_closed():
+                self.is_holding = GamePiece.CUBE
+                self.next_state("idle")
+                self.arm.go_to_setpoint(Setpoints.STOW)
 
     @state
     def auto_pickup_cube(self):
         """Drives to intake a cube from the ground"""
+        self.status_lights.want_cube()
         if not self.autodrive:
             self.next_state("idle")
 
-        self.movement.set_goal(*self.get_cube_pickup(), slow_dist=0)
+        self.movement.set_goal(*self.get_cube_pickup())
         if self.movement.time_to_goal < self.PICKUP_CUBE_PREPARE_TIME:
             self.arm.go_to_setpoint(Setpoints.HANDOFF)
             self.gripper.open()
             self.intake.deploy()
             if (
                 self.intake.is_game_piece_present()
-                or self.movement.time_to_goal < -self.PICKUP_CUBE_TIMEOUT
+                or self.gripper.game_piece_in_reach()
             ):
                 self.next_state("grab_from_well")
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)
+        self.status_lights.cube_onboard()
         self.movement.do_autodrive()
 
     @state
     def auto_pickup_cone(self):
+        if self.cone_pickup_side_right:
+            self.status_lights.want_cone_right()
+        else:
+            self.status_lights.want_cone_left()
+            
         if not self.autodrive:
             self.next_state("idle")
 
@@ -158,11 +143,11 @@ class ScoringController(StateMachine):
             self.gripper.open()
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)
-
+        self.status_lights.cone_onboard()
         self.movement.do_autodrive()
 
     @state
-    def score(self, initial_call, tm):
+    def score(self, initial_call):
         if not self.autodrive:
             self.next_state("idle")
 
@@ -175,16 +160,13 @@ class ScoringController(StateMachine):
             self.gripper.open()
             self.is_holding = GamePiece.NONE
             if self.gripper.get_full_open():
-                print("scored at", tm)
                 self.next_state("idle")
                 self.arm.go_to_setpoint(Setpoints.STOW)
-                if len(self.score_stack):
-                    self.score_stack.pop()
-                self.desired_column = random.randint(0, 8)
         elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)
+
         self.movement.do_autodrive()
 
     @feedback
@@ -196,7 +178,9 @@ class ScoringController(StateMachine):
 
     def get_current_piece(self) -> GamePiece:
         """What piece the gripper is currently holding in the gripper"""
-        return self.is_holding
+        if self.gripper.get_full_closed() or self.gripper.is_opening():
+            return self.is_holding
+        return GamePiece.NONE
 
     @feedback
     def get_current_piece_str(self) -> str:
@@ -208,20 +192,12 @@ class ScoringController(StateMachine):
 
     def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         """Gets where to auto pickup cubes from"""
-        if not self.cube_stack:
-            return self.get_single_substation_cube_pickup()
-        else:
-            return self.get_auto_cube_pickup()
-
-    def get_single_substation_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
+        # can be changed for autonomous period?
         goal_trans = get_single_substation(wpilib.DriverStation.Alliance.kBlue)
         goal_rotation = (
             field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
         )
         return Pose2d(goal_trans, goal_rotation), goal_rotation
-
-    def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        return self.cube_stack[-1]
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         # use the shelf closest to the wall, furthest from the nodes
@@ -249,54 +225,27 @@ class ScoringController(StateMachine):
         )
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        if self.score_stack:  # is auto
-            node = self.score_stack[-1]
-        else:
-            if self.snap_to_closest_node:
-                score_locations = []
-                if self.get_current_piece() == GamePiece.CONE:
-                    score_locations = [
-                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
-                        for i in range(9)
-                        if i % 3 != 1
-                    ]
-                elif self.get_current_piece == GamePiece.CUBE:
-                    score_locations = [
-                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
-                        for i in range(1, 9, 3)
-                    ]
-                score_poses = [t[0][0] for t in score_locations]
-                if len(score_poses) == 0:
-                    node = Node(Rows(self.desired_row), self.desired_column)
-                nearest = self.movement.chassis.get_pose().nearest(score_poses)
-                return next(loc for loc in score_locations if loc[0][0] == nearest)
-            else:
-                node = Node(Rows(self.desired_row), self.desired_column)
-        return self.score_location_from_node(node, self.is_red())
-
-    def score_location_from_node(
-        self, node: Node, is_red: bool
-    ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        node_trans3d = BLUE_NODES[node.row.value][int(node.col)]
+        # TODO: pick actual scoring node
+        node_trans3d = BLUE_NODES[int(self.DESIRED_ROW)][int(self.DESIRED_COLUMN)]
         node_trans = node_trans3d.toTranslation2d()
 
         setpoint = Setpoints.SCORE_CONE_HIGH
         if self.get_current_piece() == GamePiece.CONE:
-            if node.row == Rows.HIGH:
+            if self.DESIRED_ROW == Rows.HIGH:
                 setpoint = Setpoints.SCORE_CONE_HIGH
-            elif node.row == Rows.MID:
+            elif self.DESIRED_ROW == Rows.MID:
                 setpoint = Setpoints.SCORE_CONE_MID
         elif self.get_current_piece() == GamePiece.CUBE:
-            if node.row == Rows.HIGH:
+            if self.DESIRED_ROW == Rows.HIGH:
                 setpoint = Setpoints.SCORE_CUBE_HIGH
-            elif node.row == Rows.MID:
+            elif self.DESIRED_ROW == Rows.MID:
                 setpoint = Setpoints.SCORE_CUBE_MID
 
         offset_x, _ = setpoint.toCartesian()
         goal_trans = node_trans + Translation2d(-offset_x, 0)
         goal = Pose2d(goal_trans, Rotation2d(0))
         goal_approach = Rotation2d.fromDegrees(180)
-        if is_red:
+        if self.is_red():
             goal = field_flip_pose2d(goal)
             goal_approach = field_flip_rotation2d(goal_approach)
 
