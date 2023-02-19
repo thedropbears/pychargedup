@@ -48,10 +48,6 @@ dmypy.json
 !.vscode/extensions.json
 
 ### WPILib ###
-networktables.ini
-imgui.ini
+networktables.json
 simgui*.json
 *.wpilog
-
-### Project-specific ###
-gitid

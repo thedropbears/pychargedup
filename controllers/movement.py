@@ -38,9 +38,11 @@ class Movement(StateMachine):
         self.drive_local = False
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
+        self.goal_approach_dir = Rotation2d()
+        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
-        self.time_remaining = 3
+        self.time_to_goal = 3
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -125,7 +127,11 @@ class Movement(StateMachine):
         waypoints: tuple[Translation2d, ...] = (),
         slow_dist=0.5,
     ) -> None:
-        if goal == self.goal:
+        if (
+            goal == self.goal
+            and approach_direction == self.goal_approach_dir
+            and waypoints == self.waypoints
+        ):
             return
         self.goal = goal
         self.goal_approach_dir = approach_direction
@@ -141,26 +147,10 @@ class Movement(StateMachine):
         )
         self.waypoints = waypoints
         if self.current_state == "autodrive":
+            # to reset the state_tm and regen trajectory
             self.trajectory = self.generate_trajectory()
-
-    def execute_trajectory(self, trajectory: Trajectory, state_tm: float) -> None:
-        target_state = trajectory.sample(
-            state_tm
-        )  # Grabbing the target position at the current point in time from the trajectory.
-
-        # Calculating the speeds required to get to the target position.
-        chassis_speed = self.drive_controller.calculate(
-            self.chassis.get_pose(),
-            target_state,
-            self.goal.rotation(),
-        )
-        self.chassis.drive_local(
-            chassis_speed.vx,
-            chassis_speed.vy,
-            chassis_speed.omega,
-        )
-
-        self.time_remaining = trajectory.totalTime() - state_tm
+            self.time_to_goal = self.trajectory.totalTime()
+            self.next_state("autodrive")
 
     def is_at_goal(self) -> bool:
         return (
@@ -184,19 +174,23 @@ class Movement(StateMachine):
         if initial_call:
             self.trajectory = self.generate_trajectory()
 
-        self.execute_trajectory(self.trajectory, state_tm)
+        target_state = self.trajectory.sample(
+            state_tm
+        )  # Grabbing the target position at the current point in time from the trajectory.
 
-        if self.is_at_goal():
-            # self.done()
-            ...
-        elif self.time_remaining < 0.2:
-            # TODO Tell other components to begin action
-            # print("Began scoring")
-            ...
-        elif self.time_remaining < 1:
-            # TODO Tell other components to prepare for action
-            # print("Preparing for scoring")
-            ...
+        # Calculating the speeds required to get to the target position.
+        chassis_speed = self.drive_controller.calculate(
+            self.chassis.get_pose(),
+            target_state,
+            self.goal.rotation(),
+        )
+        self.chassis.drive_local(
+            chassis_speed.vx,
+            chassis_speed.vy,
+            chassis_speed.omega,
+        )
+
+        self.time_to_goal = self.trajectory.totalTime() - state_tm
 
     def set_input(self, vx: float, vy: float, vz: float, local: bool):
         """

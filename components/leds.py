@@ -3,6 +3,11 @@ import wpilib
 import time
 from enum import Enum, auto
 from utilities.scalers import scale_value
+<<<<<<< HEAD
+=======
+from controllers.scoring import ScoringController
+from utilities.game import GamePiece
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
 import random
 
 
@@ -40,7 +45,11 @@ class RobotState(Enum):
     OTHER = auto()
 
 
+<<<<<<< HEAD
 class Piece(Enum):
+=======
+class PieceColour(Enum):
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
     CONE = LedColors.YELLOW
     CUBE = LedColors.VIOLET
     NONE = LedColors.OFF
@@ -65,6 +74,11 @@ def make_pattern(
 
 
 class StatusLights:
+<<<<<<< HEAD
+=======
+    scoring: ScoringController
+
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
     leds: wpilib.AddressableLED
 
     FLASH_PERIOD = 0.4
@@ -98,7 +112,11 @@ class StatusLights:
     def set_color(self, color: LedColors):
         self.color = color.value
 
+<<<<<<< HEAD
     def set_piece(self, piece: Piece):
+=======
+    def set_piece(self, piece: PieceColour):
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
         self.set_color(piece.value)
 
     def set_state(self, state: RobotState):
@@ -117,7 +135,11 @@ class StatusLights:
 
     def set(
         self,
+<<<<<<< HEAD
         piece: Piece,
+=======
+        piece: PieceColour,
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
         state: RobotState,
         side: PickupFromSide,
     ):
@@ -126,6 +148,7 @@ class StatusLights:
         self.set_intake_side(side)
 
     def want_cone_left(self) -> None:
+<<<<<<< HEAD
         self.set(Piece.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
 
     def want_cube_left(self) -> None:
@@ -142,6 +165,24 @@ class StatusLights:
 
     def cube_onboard(self) -> None:
         self.set(Piece.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+=======
+        self.set(PieceColour.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
+
+    def want_cube_left(self) -> None:
+        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
+
+    def want_cone_right(self) -> None:
+        self.set(PieceColour.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def want_cube_right(self) -> None:
+        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def cone_onboard(self) -> None:
+        self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+
+    def cube_onboard(self) -> None:
+        self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
 
     def calc_half(self) -> None:
         led_data: list[wpilib.AddressableLED.LEDData] = []
@@ -376,6 +417,34 @@ class StatusLights:
 
     def execute(self):
         # use the current color as a fallback if (for whatever reason) there is no pattern set.
+<<<<<<< HEAD
+=======
+        match self.scoring.get_current_piece():
+            case GamePiece.NONE:
+                wants = None
+                match self.scoring.wants_piece:
+                    case GamePiece.CONE:
+                        wants = PieceColour.CONE
+                    case GamePiece.CUBE:
+                        wants = PieceColour.CUBE
+                if wants:
+                    self.set(
+                        wants,
+                        RobotState.LOOKING_FOR_PIECE,
+                        PickupFromSide.RIGHT
+                        if self.scoring.cone_pickup_side_right
+                        else PickupFromSide.LEFT,
+                    )
+            case GamePiece.CUBE:
+                self.set(
+                    PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
+                )
+            case GamePiece.CONE:
+                self.set(
+                    PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
+                )
+
+>>>>>>> 75464f69efd58bf4317b5f0e3d784e92e9ec0a73
         color = self.color
         if self.pattern == DisplayType.SOLID:
             color = self.calc_solid()

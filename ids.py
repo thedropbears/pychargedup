@@ -18,10 +18,10 @@ class TalonIds(enum.IntEnum):
 
 @enum.unique
 class CancoderIds(enum.IntEnum):
-    swerve_1 = 9
-    swerve_2 = 10
-    swerve_3 = 11
-    swerve_4 = 12
+    swerve_1 = 1
+    swerve_2 = 2
+    swerve_3 = 3
+    swerve_4 = 4
 
 
 @enum.unique
@@ -30,7 +30,7 @@ class SparkMaxIds(enum.IntEnum):
     arm_rotation_follower = 14
     arm_extension = 15
 
-    intake_motor = 16
+    intake_motor = 3
 
 
 @enum.unique
