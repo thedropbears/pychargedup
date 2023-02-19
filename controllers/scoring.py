@@ -79,12 +79,13 @@ class ScoringController(StateMachine):
             self.intake.deploy_without_running()
         if self.arm.is_retracted():
             self.arm.set_at_min_extension()
+            self.arm.reset_controllers()
             self.arm.homing = False
             self.arm.go_to_setpoint(Setpoints.STOW)
 
         if (
             (self.arm.get_angle() < 0.5 and not self.arm.homing)
-            or (wpilib.DriverStation.isAutonomous() and state_tm > 0.5)
+            # or (wpilib.DriverStation.isAutonomous() and state_tm > 0.5)
             or wpilib.RobotBase.isSimulation()
         ):
             self.arm.on_enable()
@@ -179,7 +180,7 @@ class ScoringController(StateMachine):
             self.movement.set_goal(*move_goal)
 
         self.intake.retract()
-        if self.movement.time_to_goal < self.SCORE_PRE_TIME:
+        if self.movement.time_to_goal < self.SCORE_PRE_TIME and self.arm.at_goal():
             self.gripper.open()
             self.is_holding = GamePiece.NONE
             if self.gripper.get_full_open():
@@ -306,7 +307,7 @@ class ScoringController(StateMachine):
 
         # offset_x, _ = setpoint.toCartesian()
         drivebase_length = 1.0105
-        score_x = GRIDS_EDGE_X + drivebase_length / 2
+        score_x = 0.05 + GRIDS_EDGE_X + drivebase_length / 2
         goal_trans = Translation2d(score_x, node_trans.y)
         goal = Pose2d(goal_trans, Rotation2d(0))
         goal_approach = Rotation2d.fromDegrees(180)

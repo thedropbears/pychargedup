@@ -54,6 +54,8 @@ class CubeAutoBase:
         if not self.finished:
             self.scoring.autodrive = True
             self.scoring.engage()
+        else:
+            self.scoring.autodrive = False
         if len(self.scoring.cube_stack) == 0 and len(self.scoring.score_stack) == 0:
             self.finished = True
 

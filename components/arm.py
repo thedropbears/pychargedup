@@ -345,7 +345,7 @@ class Arm:
     def at_goal(self) -> bool:
         return (
             self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
-        )
+        ) or wpilib.RobotBase.isSimulation()
 
     def brake(self) -> None:
         self.brake_solenoid.set(False)
@@ -359,10 +359,13 @@ class Arm:
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
-        self.extension_controller.reset(self.get_extension())
-        self.rotation_controller.reset(self.get_angle())
+        self.reset_controllers()
         self.unbrake()
 
     def stop(self) -> None:
         self.rotation_motor.set(0)
         self.extension_motor.set(0)
+
+    def reset_controllers(self) -> None:
+        self.extension_controller.reset(self.get_extension())
+        self.rotation_controller.reset(self.get_angle())

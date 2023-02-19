@@ -29,6 +29,7 @@ class Vision:
     data_log: wpiutil.log.DataLog
 
     add_to_estimator = tunable(True)
+    disabled = tunable(True)
 
     def __init__(self) -> None:
         left_rot = Rotation3d(
@@ -118,7 +119,7 @@ class Vision:
                 else:
                     self.rejected_in_row /= 2
 
-                if self.add_to_estimator:
+                if self.add_to_estimator and not self.disabled:
                     self.chassis.estimator.addVisionMeasurement(
                         pose,
                         timestamp,
