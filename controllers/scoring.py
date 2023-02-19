@@ -126,7 +126,7 @@ class ScoringController(StateMachine):
             self.status_lights.want_cone_right()
         else:
             self.status_lights.want_cone_left()
-            
+
         if not self.autodrive:
             self.next_state("idle")
 
