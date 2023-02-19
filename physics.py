@@ -115,7 +115,7 @@ class PhysicsEngine:
         # Get arm objects
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
         self.arm_brake = SolenoidSim(
-            wpilib.PneumaticsModuleType.CTREPCM, PhChannels.arm_brake
+            wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake
         )
 
         self.arm_motor = SimDeviceSim("SPARK MAX ", SparkMaxIds.arm_rotation_main)
