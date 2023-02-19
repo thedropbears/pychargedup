@@ -21,9 +21,9 @@ class CubeAutoBase:
     def __init__(self, cubes: list[tuple[int, Rotation2d]], nodes: list[Node]) -> None:
         # list of cube idx and angle to hit pickup at as if was on blue alliance
         # 0 is closest to wall, 3 is closest to substations
-        self.cubes: list[tuple[int, Rotation2d]] = cubes
+        self.cubes = cubes
         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-        self.nodes: list[Node] = nodes
+        self.nodes = nodes
         self.finished = False
 
     def on_enable(self) -> None:
