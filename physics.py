@@ -81,7 +81,12 @@ class PhysicsEngine:
         # Create arm simulation
         arm_motors_sim = DCMotor.NEO(2)
         arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
-        arm_moi = SingleJointedArmSim.estimateMOI(arm_len, mass=2.5)
+        # This value was pulled from the CAD Model on 19/02/23
+        ARM_MASS = 2.305
+        END_EFFECTOR_MASS = 0.724
+        arm_moi = SingleJointedArmSim.estimateMOI(
+            arm_len, mass=ARM_MASS + END_EFFECTOR_MASS
+        )
         self.arm_sim = SingleJointedArmSim(
             arm_motors_sim,
             robot.arm.ROTATE_GEAR_RATIO,
@@ -93,10 +98,12 @@ class PhysicsEngine:
             measurementStdDevs=[math.radians(0.01)],
         )
         extension_motors_sim = DCMotor.NEO550(1)
+        # This value was pulled from the CAD Model on 19/02/23
+        ELEVATOR_CARRIAGE_MASS = 0.655
         self.extension_sim = ElevatorSim(
             extension_motors_sim,
             robot.arm.EXTEND_GEAR_RATIO,
-            4,
+            ELEVATOR_CARRIAGE_MASS + END_EFFECTOR_MASS,
             robot.arm.SPOOL_CIRCUMFERENCE / math.tau,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
