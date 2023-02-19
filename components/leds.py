@@ -50,7 +50,7 @@ class PieceColour(Enum):
 class PickupFromSide(Enum):
     LEFT = LedColors.GREEN
     RIGHT = LedColors.RED
-    NONE = LedColors.OFF
+    NONE = LedColors.CYAN
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
@@ -230,6 +230,9 @@ class StatusLights:
 
     def want_cube_right(self) -> None:
         self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def want_cube(self) -> None:
+        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.NONE)
 
     def cone_onboard(self) -> None:
         self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)

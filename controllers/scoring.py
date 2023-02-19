@@ -2,6 +2,7 @@ from magicbot import state, StateMachine, tunable, feedback
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 import wpilib
 
+from components.leds import StatusLights
 from components.gripper import Gripper
 from components.intake import Intake
 from components.arm import Arm, Setpoints, Setpoint
@@ -22,6 +23,7 @@ class ScoringController(StateMachine):
     intake: Intake
     arm: Arm
     movement: Movement
+    status_lights: StatusLights
 
     # how long before reaching pickup shelf to start closing claw
     GRAB_PRE_TIME = tunable(0.5)
@@ -99,6 +101,7 @@ class ScoringController(StateMachine):
     @state
     def auto_pickup_cube(self):
         """Drives to intake a cube from the ground"""
+        self.status_lights.want_cube()
         if not self.autodrive:
             self.next_state("idle")
 
@@ -114,10 +117,16 @@ class ScoringController(StateMachine):
                 self.next_state("grab_from_well")
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)
+        self.status_lights.cube_onboard()
         self.movement.do_autodrive()
 
     @state
     def auto_pickup_cone(self):
+        if self.cone_pickup_side_right:
+            self.status_lights.want_cone_right()
+        else:
+            self.status_lights.want_cone_left()
+            
         if not self.autodrive:
             self.next_state("idle")
 
@@ -134,7 +143,7 @@ class ScoringController(StateMachine):
             self.gripper.open()
         elif self.movement.time_to_goal > self.AUTO_STOW_CUTOFF:
             self.arm.go_to_setpoint(Setpoints.STOW)
-
+        self.status_lights.cone_onboard()
         self.movement.do_autodrive()
 
     @state
