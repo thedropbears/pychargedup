@@ -81,7 +81,7 @@ class PhysicsEngine:
         # Create arm simulation
         arm_motors_sim = DCMotor.NEO(2)
         arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
-        arm_moi = SingleJointedArmSim.estimateMOI(arm_len, mass=5)
+        arm_moi = SingleJointedArmSim.estimateMOI(arm_len, mass=2.5)
         self.arm_sim = SingleJointedArmSim(
             arm_motors_sim,
             robot.arm.ROTATE_GEAR_RATIO,
