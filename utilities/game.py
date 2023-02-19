@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum, auto
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
@@ -82,11 +83,10 @@ for row in Rows:
         RED_NODES[-1].append(field_flip_translation3d(blue_node))
 
 
-def get_nodes(alliance: wpilib.DriverStation.Alliance) -> list[list[Translation3d]]:
-    if alliance == wpilib.DriverStation.Alliance.kBlue:
-        return BLUE_NODES
-    else:
-        return RED_NODES
+@dataclass
+class Node:
+    row: Rows
+    col: int
 
 
 # edge of the hybrid node baffles

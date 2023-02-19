@@ -113,7 +113,7 @@ class Vision:
                 )
                 if change > 1.0:
                     self.rejected_in_row += 1
-                    if self.rejected_in_row < 50:
+                    if self.rejected_in_row < 20:
                         continue
                 else:
                     self.rejected_in_row /= 2

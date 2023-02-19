@@ -11,6 +11,7 @@ class Intake:
 
     def __init__(self) -> None:
         self.deployed = False
+        self.running = False
         self.break_beam = DigitalInput(ids.DioChannels.intake_break_beam_sensor)
         self.motor = CANSparkMax(
             ids.SparkMaxIds.intake_motor, CANSparkMax.MotorType.kBrushless
@@ -29,12 +30,18 @@ class Intake:
 
     def deploy(self) -> None:
         self.deployed = True
+        self.running = True
+
+    def deploy_without_running(self):
+        self.deployed = True
+        self.running = True
 
     def retract(self) -> None:
+        self.running = False
         self.deployed = False
 
     def execute(self) -> None:
-        if self.deployed:
+        if self.running:
             self.motor.set(self.intake_speed)
         else:
             self.motor.set(0.0)
@@ -43,6 +50,3 @@ class Intake:
             self.piston.set(DoubleSolenoid.Value.kForward)
         else:
             self.piston.set(DoubleSolenoid.Value.kReverse)
-
-        if self.is_game_piece_present():
-            self.deployed = False

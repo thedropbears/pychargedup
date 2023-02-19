@@ -93,10 +93,13 @@ class MyRobot(magicbot.MagicRobot):
     def testInit(self) -> None:
         self.arm.on_enable()
         self.vision.add_to_estimator = False
+        self.arm.stop()
+        self.arm.homing = False
 
     def testPeriodic(self) -> None:
         self.gamepad.getRightTriggerAxis()
         self.gamepad.getLeftTriggerAxis()
+        self.arm.unbrake()
         dpad_angle = self.gamepad.getPOV()
         # up
         if dpad_angle == 0:
@@ -107,18 +110,26 @@ class MyRobot(magicbot.MagicRobot):
         # down
         elif dpad_angle == 180:
             self.gripper.open()
-            self.arm.go_to_setpoint(Setpoints.HANDOFF)
+            self.arm.go_to_setpoint(Setpoints.STOW)
         # left
         elif dpad_angle == 270:
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
         # Claw
         if self.gamepad.getYButton():
+            self.gripper.set_solenoid = True
             self.gripper.close()
         if self.gamepad.getXButton():
+            self.gripper.set_solenoid = True
             self.gripper.open()
 
-        self.arm.execute()
+        if self.gamepad.getRightBumperPressed():
+            self.intake.deploy()
+        if self.gamepad.getLeftBumperPressed():
+            self.intake.retract()
+
+        # self.arm.execute()
+        self.intake.execute()
         self.gripper.execute()
         self.vision.execute()
 
