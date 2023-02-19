@@ -53,7 +53,7 @@ class ScoringController(StateMachine):
         self.score_stack: list[Node] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
-        self.cone_pickup_side_right = False
+        self.driver_requests_right = False
 
     def get_correct_autodrive_state(self) -> str:
         cur_piece = self.get_current_piece()
@@ -225,7 +225,7 @@ class ScoringController(StateMachine):
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         # use the shelf closest to the wall, furthest from the nodes
-        is_wall_side = self.cone_pickup_side_right == self.is_red()
+        is_wall_side = self.driver_requests_right == self.is_red()
         # if we want the substation to be as if we are on the red alliance
         is_red = self.is_red() != self.swap_substation
         cone_trans = get_double_substation(is_red, is_wall_side).toTranslation2d()
@@ -248,21 +248,30 @@ class ScoringController(StateMachine):
             goal_approach,
         )
 
+    def set_direction_to_find_place(self, driver_requests_right: bool) -> None:
+        """setting the side of the robot wants to get a cone or cube, also setting what side it wants to score"""
+        self.driver_requests_right = driver_requests_right
+
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         if self.score_stack:  # is auto
             node = self.score_stack[-1]
         else:
             if self.snap_to_closest_node:
+                desired_rows = Rows.HIGH if self.driver_requests_right else Rows.MID
                 score_locations = []
                 if self.get_current_piece() == GamePiece.CONE:
                     score_locations = [
-                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
+                        self.score_location_from_node(
+                            Node(desired_rows, i), self.is_red()
+                        )
                         for i in range(9)
                         if i % 3 != 1
                     ]
                 elif self.get_current_piece == GamePiece.CUBE:
                     score_locations = [
-                        self.score_location_from_node(Node(Rows.HIGH, i), self.is_red())
+                        self.score_location_from_node(
+                            Node(desired_rows, i), self.is_red()
+                        )
                         for i in range(1, 9, 3)
                     ]
                 score_poses = [t[0][0] for t in score_locations]
