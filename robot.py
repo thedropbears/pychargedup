@@ -130,10 +130,13 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getLeftBumperPressed():
             self.intake.retract()
 
-        # self.arm.execute()
+        # self.scoring.execute()
+        self.arm.execute()
         self.intake.execute()
         self.gripper.execute()
         self.vision.execute()
+
+        # self.scoring.engage()
 
     def disabledInit(self) -> None:
         self.vision.add_to_estimator = False
