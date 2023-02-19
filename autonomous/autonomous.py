@@ -18,12 +18,12 @@ class CubeAutoBase:
     scoring: ScoringController
     chassis: Chassis
 
-    def __init__(self) -> None:
+    def __init__(self, cubes: list[tuple[int, Rotation2d]], nodes: list[Node]) -> None:
         # list of cube idx and angle to hit pickup at as if was on blue alliance
         # 0 is closest to wall, 3 is closest to substations
-        self.cubes: list[tuple[int, Rotation2d]] = []
+        self.cubes: list[tuple[int, Rotation2d]] = cubes
         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-        self.nodes: list[Node] = []
+        self.nodes: list[Node] = nodes
         self.finished = False
 
     def on_enable(self) -> None:
@@ -36,7 +36,7 @@ class CubeAutoBase:
 
         self.scoring.wants_piece = GamePiece.CUBE
         self.scoring.is_holding = GamePiece.CONE
-        self.scoring.cube_queue = []
+        self.scoring.cube_stack = []
         all_pieces = get_staged_pieces(wpilib.DriverStation.getAlliance())
         for idx, rotation in self.cubes[::-1]:
             position = all_pieces[idx]
@@ -46,15 +46,15 @@ class CubeAutoBase:
             )
             # approach angle is the same as chassis heading
             pose = Pose2d(position, angle)
-            self.scoring.cube_queue.append((pose, angle))
+            self.scoring.cube_stack.append((pose, angle))
 
-        self.scoring.score_queue = self.nodes[::-1]
+        self.scoring.score_stack = self.nodes[::-1]
 
     def on_iteration(self, tm: float) -> None:
         if not self.finished:
             self.scoring.autodrive = True
             self.scoring.engage()
-        if len(self.scoring.cube_queue) == 0 and len(self.scoring.score_queue) == 0:
+        if len(self.scoring.cube_stack) == 0 and len(self.scoring.score_stack) == 0:
             self.finished = True
 
     def on_disable(self) -> None:
@@ -64,23 +64,27 @@ class CubeAutoBase:
 class WallSide3(CubeAutoBase):
     MODE_NAME = "Wall side 3"
 
-    def setup(self):
-        self.nodes = [
-            Node(row=Rows.HIGH, col=0),
-            Node(row=Rows.HIGH, col=1),
-            Node(row=Rows.MID, col=1),
-        ]
-        self.cubes = [(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))]
+    def __init__(self):
+        super().__init__(
+            cubes=[(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))],
+            nodes=[
+                Node(row=Rows.HIGH, col=0),
+                Node(row=Rows.HIGH, col=1),
+                Node(row=Rows.MID, col=1),
+            ],
+        )
 
 
 class SubstationSide3(CubeAutoBase):
     MODE_NAME = "Substation side 3"
     DEFAULT = True
 
-    def setup(self):
-        self.nodes = [
-            Node(row=Rows.HIGH, col=8),
-            Node(row=Rows.HIGH, col=7),
-            Node(row=Rows.MID, col=7),
-        ]
-        self.cubes = [(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))]
+    def __init__(self):
+        super().__init__(
+            cubes=[(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))],
+            nodes=[
+                Node(row=Rows.HIGH, col=8),
+                Node(row=Rows.HIGH, col=7),
+                Node(row=Rows.MID, col=7),
+            ],
+        )

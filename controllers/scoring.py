@@ -47,8 +47,8 @@ class ScoringController(StateMachine):
         self.is_holding = GamePiece.NONE
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
-        self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
-        self.score_queue: list[Node] = []
+        self.cube_stack: list[tuple[Pose2d, Rotation2d]] = []
+        self.score_stack: list[Node] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -115,7 +115,7 @@ class ScoringController(StateMachine):
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
             self.wants_to_intake = False
-            self.cube_queue.pop()
+            self.cube_stack.pop()
             self.next_state("idle")
 
     @state
@@ -176,8 +176,8 @@ class ScoringController(StateMachine):
                 print("scored at", tm)
                 self.next_state("idle")
                 self.arm.go_to_setpoint(Setpoints.STOW)
-                if len(self.score_queue):
-                    self.score_queue.pop()
+                if len(self.score_stack):
+                    self.score_stack.pop()
                 self.desired_column = random.randint(0, 8)
         elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
@@ -206,7 +206,7 @@ class ScoringController(StateMachine):
 
     def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         """Gets where to auto pickup cubes from"""
-        if not self.cube_queue:
+        if not self.cube_stack:
             return self.get_single_substation_cube_pickup()
         else:
             return self.get_auto_cube_pickup()
@@ -219,7 +219,7 @@ class ScoringController(StateMachine):
         return Pose2d(goal_trans, goal_rotation), goal_rotation
 
     def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        return self.cube_queue[-1][:2]
+        return self.cube_stack[-1]
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         # use the shelf closest to the wall, furthest from the nodes
@@ -247,8 +247,8 @@ class ScoringController(StateMachine):
         )
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        if self.score_queue:  # is auto
-            node = self.score_queue[-1]
+        if self.score_stack:  # is auto
+            node = self.score_stack[-1]
         else:
             node = Node(Rows(self.desired_row), self.desired_column)
         return self.score_location_from_node(node, self.is_red())
