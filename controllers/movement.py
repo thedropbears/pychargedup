@@ -34,8 +34,8 @@ class Movement(StateMachine):
     POSITION_TOLERANCE = 0.025
     ANGLE_TOLERANCE = math.radians(2)
     # constraints for path following
-    MAX_VEL = 0.5
-    MAX_ACCEL = 1
+    MAX_VEL = 1.0
+    MAX_ACCEL = 1.0
     MAX_CENTR_ACCEL = 2.5
 
     # spacing of additional waypoints added to mimic the wpilib region constraint

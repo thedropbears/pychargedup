@@ -81,14 +81,14 @@ class MyRobot(magicbot.MagicRobot):
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
         # right
         elif dpad_angle == 90:
-            self.arm.go_to_setpoint(Setpoints.FORWARDS)
+            self.arm.go_to_setpoint(Setpoints.START)
         # down
         elif dpad_angle == 180:
             self.gripper.open()
             self.arm.go_to_setpoint(Setpoints.HANDOFF)
         # left
         elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
+            self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
 
     def testInit(self) -> None:
         self.arm.on_enable()
@@ -114,7 +114,7 @@ class MyRobot(magicbot.MagicRobot):
             self.arm.go_to_setpoint(Setpoints.STOW)
         # left
         elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
+            self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
 
         # Claw
         if self.gamepad.getYButton():

@@ -294,6 +294,7 @@ class ScoringController(StateMachine):
         node_trans = node_trans3d.toTranslation2d()
 
         setpoint = Setpoints.SCORE_CONE_HIGH
+        offset_x = 0.0
         if self.get_current_piece() == GamePiece.CONE:
             if node.row == Rows.HIGH:
                 setpoint = Setpoints.SCORE_CONE_HIGH
@@ -303,11 +304,12 @@ class ScoringController(StateMachine):
             if node.row == Rows.HIGH:
                 setpoint = Setpoints.SCORE_CUBE_HIGH
             elif node.row == Rows.MID:
+                offset_x = 0.1
                 setpoint = Setpoints.SCORE_CUBE_MID
 
         # offset_x, _ = setpoint.toCartesian()
         drivebase_length = 1.0105
-        score_x = 0.05 + GRIDS_EDGE_X + drivebase_length / 2
+        score_x = 0.05 + offset_x + GRIDS_EDGE_X + drivebase_length / 2
         goal_trans = Translation2d(score_x, node_trans.y)
         goal = Pose2d(goal_trans, Rotation2d(0))
         goal_approach = Rotation2d.fromDegrees(180)

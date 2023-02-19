@@ -55,14 +55,14 @@ class Setpoint:
 
 
 class Setpoints:
-    PICKUP_CONE = Setpoint(-3.11, 0.97)
+    PICKUP_CONE = Setpoint(-3.05, 0.97)
     HANDOFF = Setpoint(0.8, MIN_EXTENSION)
-    STOW = Setpoint(0.42, MIN_EXTENSION)
-    START = Setpoint(math.radians(20), MIN_EXTENSION)
-    SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
-    SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
-    SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.3)
-    SCORE_CUBE_HIGH = Setpoint.fromCartesian(-1.22, 0.10)
+    STOW = Setpoint(0.35, MIN_EXTENSION)
+    START = Setpoint(-math.radians(30), MIN_EXTENSION)
+    SCORE_CONE_MID = Setpoint(-2.80, 0.89)
+    SCORE_CUBE_MID = Setpoint(-3.2, 0.89)
+    SCORE_CONE_HIGH = Setpoint(-2.89, 1.17)
+    SCORE_CUBE_HIGH = Setpoint(-3, 1.17)
     UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
     FORWARDS = Setpoint(0, MIN_EXTENSION)
     BACKWARDS = Setpoint(-math.pi, MIN_EXTENSION)
