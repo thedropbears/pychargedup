@@ -49,13 +49,13 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Automation
-        # left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
-        # right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
-        # if right_trigger:
-        #     self.scoring.cone_pickup_side_right = True
-        # if left_trigger:
-        #     self.scoring.cone_pickup_side_right = False
-        # self.scoring.autodrive = right_trigger or left_trigger
+        left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
+        right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
+        if right_trigger:
+            self.scoring.cone_pickup_side_right = True
+        if left_trigger:
+            self.scoring.cone_pickup_side_right = False
+        self.scoring.autodrive = right_trigger or left_trigger
 
         # Intake
         if self.gamepad.getRightBumperPressed():
