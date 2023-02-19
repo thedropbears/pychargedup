@@ -202,7 +202,7 @@ class StatusLights:
             self.pattern = DisplayType.SOLID
         elif state == RobotState.LOOKING_FOR_PIECE:
             self.pattern = DisplayType.HALF_HALF
-        elif RobotState.OTHER:
+        elif state == RobotState.OTHER:
             self.set_color(LedColors.OFF)
 
     def set_intake_side(self, side: PickupFromSide):
