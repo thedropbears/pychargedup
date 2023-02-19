@@ -157,7 +157,6 @@ class WolframAutomata:
 
 
 class StatusLights:
-    scoring: ScoringController
 
     leds: wpilib.AddressableLED
 
@@ -481,26 +480,6 @@ class StatusLights:
             self.leds.setData(self.wolfram.leds_data)
 
     def execute(self):
-        # use the current color as a fallback if (for whatever reason) there is no pattern set.
-        if self.scoring.get_current_piece() == GamePiece.NONE:
-            wants = None
-            if self.scoring.wants_piece == GamePiece.CONE:
-                wants = PieceColour.CONE
-            elif self.scoring.wants_piece == GamePiece.CUBE:
-                wants = PieceColour.CUBE
-            if wants:
-                self.set(
-                    wants,
-                    RobotState.LOOKING_FOR_PIECE,
-                    PickupFromSide.RIGHT
-                    if self.scoring.cone_pickup_side_right
-                    else PickupFromSide.LEFT,
-                )
-        elif self.scoring.get_current_piece() == GamePiece.CUBE:
-            self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
-        elif self.scoring.get_current_piece() == GamePiece.CONE:
-            self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
-
         # use the current color as a fallback if (for whatever reason) there is no pattern set.
         color = self.color
         if self.pattern == DisplayType.SOLID:
