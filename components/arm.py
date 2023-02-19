@@ -361,6 +361,7 @@ class Arm:
             self.runtime_offset = -math.tau
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
+        self.unbrake()
 
     def stop(self) -> None:
         self.rotation_motor.set(0)

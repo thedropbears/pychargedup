@@ -29,7 +29,7 @@ class Movement(StateMachine):
 
     # When on True, a trajectory is generated every code run to be displayed
     # When on False, a trajectory is only generated when needed to save resources.
-    debug_trajectory = tunable(True)
+    debug_trajectory = tunable(False)
 
     POSITION_TOLERANCE = 0.025
     ANGLE_TOLERANCE = math.radians(2)
@@ -42,7 +42,7 @@ class Movement(StateMachine):
     SLOW_DIST_SPACING = 0.1
     SLOW_VEL = 0.5
 
-    SHOW_PATHFINDING_DEBUG = True
+    SHOW_PATHFINDING_DEBUG = False
 
     def __init__(self) -> None:
         self.inputs = (0.0, 0.0, 0.0)

@@ -6,7 +6,7 @@ import ids
 
 
 class Gripper:
-    CLOSE_TIME_THERESHOLD: float = 0.5
+    CLOSE_TIME_THERESHOLD: float = 0.2
     OPEN_TIME_THERESHOLD: float = 0.5
 
     def __init__(self) -> None:

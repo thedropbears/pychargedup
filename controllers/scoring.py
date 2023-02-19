@@ -8,6 +8,7 @@ from components.intake import Intake
 from components.arm import Arm, Setpoints, Setpoint
 from controllers.movement import Movement
 from utilities.game import (
+    GRIDS_EDGE_X,
     GamePiece,
     field_flip_pose2d,
     get_double_substation,
@@ -80,12 +81,15 @@ class ScoringController(StateMachine):
             self.arm.homing = False
             self.arm.go_to_setpoint(Setpoints.STOW)
 
-        if (self.arm.get_angle() < 0.5 and not self.arm.homing) or (
-            wpilib.DriverStation.isAutonomous() and state_tm > 0.5
+        if (
+            (self.arm.get_angle() < 0.5 and not self.arm.homing)
+            or (wpilib.DriverStation.isAutonomous() and state_tm > 0.5)
+            or wpilib.RobotBase.isSimulation()
         ):
             self.arm.on_enable()
             self.arm.go_to_setpoint(Setpoints.STOW)
             self.next_state("idle")
+            self.arm.homing = False
             self.gripper.set_solenoid = True
 
     @state
@@ -296,8 +300,10 @@ class ScoringController(StateMachine):
             elif node.row == Rows.MID:
                 setpoint = Setpoints.SCORE_CUBE_MID
 
-        offset_x, _ = setpoint.toCartesian()
-        goal_trans = node_trans + Translation2d(-offset_x, 0)
+        # offset_x, _ = setpoint.toCartesian()
+        drivebase_length = 1.0105
+        score_x = GRIDS_EDGE_X + drivebase_length / 2
+        goal_trans = Translation2d(score_x, node_trans.y)
         goal = Pose2d(goal_trans, Rotation2d(0))
         goal_approach = Rotation2d.fromDegrees(180)
         if is_red:
