@@ -34,6 +34,7 @@ class DisplayType(Enum):
     ALTERNATING = auto()
     HALF_HALF = auto()
     MORSE = auto()
+    WOLFRAM_AUTOMATA = auto()
 
 
 class RobotState(Enum):
@@ -66,6 +67,95 @@ def make_pattern(
     return pattern_data
 
 
+# Runs Wolfram cellular automata, randomly transitioning between rules
+class WolframAutomata:
+    def __init__(self, n: int) -> None:
+        self.rule = 4
+        self.n = n
+        self.m = n // 2
+
+        self.world = [False] * n
+        self.world[self.m] = True
+        self.old_world = self.world[:]
+        self.ages = [0] * n
+
+        self.leds_data = [wpilib.AddressableLED.LEDData(0, 0, 0) for _ in range(n)]
+
+        self.gen = 0
+        self.gen_rule = 0
+        self.genspan_min = 8
+        self.genspan_max = 32
+        self.genspan = self.genspan_min  # How much will the current rule last
+
+        self.length_thresh = (
+            8  # Prevent changes of at least this many cells in a row over 1 generation
+        )
+        self.age_hue_mul = 0.5
+
+    def reset_rule(self) -> None:
+        self.gen_rule = 0
+        self.genspan = random.randint(self.genspan_min, self.genspan_max)
+        self.rule = random.randint(0, 255)
+
+    def step(self) -> None:
+        new_world = [0] * self.n
+        for i in range(self.n):
+            r = (
+                (self.world[(i + 1) % self.n] << 0)
+                + (self.world[i] << 1)
+                + (self.world[(i - 1) % self.n] << 2)
+            )
+            new_world[i] = (self.rule >> r) & 1 != 0
+        if self.gen_rule > self.genspan:
+            if (
+                new_world == self.world
+                or new_world == self.old_world
+                or all(
+                    self.world[i] == new_world[(i - 1) % self.n] for i in range(self.n)
+                )
+                or all(
+                    self.world[i] == new_world[(i + 1) % self.n] for i in range(self.n)
+                )
+            ):
+                self.reset_rule()  # Reset rule if nothing interesting happened
+            if random.random() < (self.gen_rule - self.genspan) * 0.001:
+                self.reset_rule()
+        change = [a ^ b for a, b in zip(self.world, new_world)]
+        for i in range(self.n):
+            if all(change[(i + j) % self.n] for j in range(self.length_thresh)):
+                new_world = self.old_world[:]
+                self.world = self.old_world[:]
+                self.reset_rule()
+                break
+
+        if all(new_world) or not any(new_world):
+            new_world = self.old_world[:]
+            self.reset_rule()
+        self.old_world = self.world[:]
+        self.world = new_world[:]
+        for i in range(self.n):
+            if self.world[i]:
+                self.ages[i] += 1
+            else:
+                self.ages[i] = 0
+        self.gen += 1
+        self.gen_rule += 1
+
+    def age_to_hsv(self, a: int) -> (int, int, int):
+        return (
+            (self.gen + int(a * self.genspan * self.age_hue_mul)) % 180,
+            255,
+            MAX_BRIGHTNESS,
+        )
+
+    def set_leds_data(self) -> None:
+        for i in range(self.n):
+            if self.world[i]:
+                self.leds_data[i].setHSV(*self.age_to_hsv(self.ages[i]))
+            else:
+                self.leds_data[i].setRGB(0, 0, 0)
+
+
 class StatusLights:
     scoring: ScoringController
 
@@ -76,6 +166,7 @@ class StatusLights:
     PACMAN_PERIOD = 60
     RAINBOW_PERIOD = 15
     ALTERNATING_PERIOD = 60
+    WOLFRAM_PERIOD = 0.1
 
     def __init__(self):
         self.led_length = 131
@@ -90,6 +181,9 @@ class StatusLights:
 
         self._morse_message = ""
         self.pattern_start_time = time.monotonic()
+        self.last_triggered = time.monotonic()
+
+        self.wolfram = WolframAutomata(self.led_length)
 
     def setup(self) -> None:
         self.choose_morse_message()
@@ -378,8 +472,15 @@ class StatusLights:
         # Add more space at the end
         self._morse_message += "  "
 
+    def calc_wolfram(self):
+        now = time.monotonic()
+        if now - self.last_triggered > self.WOLFRAM_PERIOD:
+            self.last_triggered = now
+            self.wolfram.step()
+            self.wolfram.set_leds_data()
+            self.leds.setData(self.wolfram.leds_data)
+
     def execute(self):
-        # use the current color as a fallback if (for whatever reason) there is no pattern set.
         match self.scoring.get_current_piece():
             case GamePiece.NONE:
                 wants = None
@@ -405,26 +506,32 @@ class StatusLights:
                     PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE
                 )
 
+        # use the current color as a fallback if (for whatever reason) there is no pattern set.
         color = self.color
-        if self.pattern == DisplayType.SOLID:
-            color = self.calc_solid()
-        elif self.pattern == DisplayType.FLASH:
-            color = self.calc_flash()
-        elif self.pattern == DisplayType.PULSE:
-            color = self.calc_pulse()
-        elif self.pattern == DisplayType.RAINBOW:
-            color = self.calc_rainbow()
-        elif self.pattern == DisplayType.MORSE:
-            color = self.calc_morse()
-        elif self.pattern == DisplayType.HALF_HALF:
-            self.calc_half()
-            return  # sets LEDs
-        elif self.pattern == DisplayType.PACMAN:
-            self.calc_pacman()
-            return  # ''
-        elif self.pattern == DisplayType.ALTERNATING:
-            self.calc_alternating()
-            return  # ''
+        match self.pattern:
+            case DisplayType.SOLID:
+                color = self.calc_solid()
+            case DisplayType.FLASH:
+                color = self.calc_flash()
+            case DisplayType.PULSE:
+                color = self.calc_pulse()
+            case DisplayType.RAINBOW:
+                color = self.calc_rainbow()
+            case DisplayType.MORSE:
+                color = self.calc_morse()
+            # Those set data directly
+            case DisplayType.HALF_HALF:
+                self.calc_half()
+                return
+            case DisplayType.PACMAN:
+                self.calc_pacman()
+                return
+            case DisplayType.ALTERNATING:
+                self.calc_alternating()
+                return
+            case DisplayType.WOLFRAM_AUTOMATA:
+                self.calc_wolfram()
+                return
 
         self.single_led_data.setHSV(color[0], color[1], color[2])
         self.leds.setData(self.leds_data)
