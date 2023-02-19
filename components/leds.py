@@ -157,15 +157,15 @@ class WolframAutomata:
 class StatusLights:
     leds: wpilib.AddressableLED
 
-    FLASH_PERIOD = 0.4
+    FLASH_FREQUENCY = 10
     PULSE_PERIOD = 1
     PACMAN_PERIOD = 60
     RAINBOW_PERIOD = 15
-    ALTERNATING_PERIOD = 60
+    ALTERNATING_PERIOD = 1
     WOLFRAM_PERIOD = 0.1
 
     def __init__(self):
-        self.led_length = 131
+        self.led_length = 275
 
         self.start_time = time.monotonic()
 
@@ -253,8 +253,12 @@ class StatusLights:
 
     def calc_flash(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
-        brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
-        return (self.color[0], self.color[1], self.color[2] * round(brightness))
+        brightness = math.cos(self.FLASH_FREQUENCY * elapsed_time * math.tau) / 2 + 0.5
+        return (self.color[0], self.color[1], int(self.color[2] * round(brightness)))
+
+        # elapsed_time = time.monotonic() - self.pattern_start_time
+        # brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
+        # return (self.colour[0], self.colour[1], self.colour[2] * round(brightness))
 
     def calc_rainbow(self) -> tuple[int, int, int]:
         elapsed_time = time.monotonic() - self.start_time
@@ -495,9 +499,6 @@ class StatusLights:
             return
         elif self.pattern == DisplayType.PACMAN:
             self.calc_pacman()
-            return
-        elif self.pattern == DisplayType.ALTERNATING:
-            self.calc_alternating()
             return
         elif self.pattern == DisplayType.WOLFRAM_AUTOMATA:
             self.calc_wolfram()

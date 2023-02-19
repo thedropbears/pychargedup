@@ -3,7 +3,7 @@
 import wpilib
 import magicbot
 
-from components.leds import StatusLights
+from components.leds import StatusLights, DisplayType, LedColors
 from controllers.movement import Movement
 from controllers.scoring import ScoringController
 from components.intake import Intake
@@ -104,6 +104,10 @@ class MyRobot(magicbot.MagicRobot):
         left_trigger = self.gamepad.getLeftTriggerAxis()
         self.arm.rotation_motor.set(right_trigger * 0.5)
         self.arm._rotation_motor_follower.set(left_trigger * 0.5)
+
+        self.status_lights.set_display_pattern(DisplayType.FLASH)
+        self.status_lights.set_color(LedColors.BLUE)
+
         # self.arm.extension_motor.set(left_trigger * 0.1)
         # self.arm.set_angle(self.arm.goal_angle + right_trigger * 0.02)
         # self.arm.extension_motor.set(left_trigger * 0.1)
@@ -112,6 +116,7 @@ class MyRobot(magicbot.MagicRobot):
         # self.arm.execute()
 
         self.vision.execute()
+        self.status_lights.execute()
 
     def disabledInit(self) -> None:
         self.vision.add_to_estimator = False
