@@ -18,8 +18,6 @@ from utilities.game import (
     Node,
 )
 
-from collections import deque
-
 
 class ScoringController(StateMachine):
     gripper: Gripper
@@ -49,8 +47,8 @@ class ScoringController(StateMachine):
         self.is_holding = GamePiece.NONE
         self.autodrive = False
         self.wants_piece = GamePiece.CONE
-        self.cube_queue: deque[tuple[Pose2d, Rotation2d]] = deque()
-        self.score_queue: deque[Node] = deque()
+        self.cube_queue: list[tuple[Pose2d, Rotation2d]] = []
+        self.score_queue: list[Node] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.cone_pickup_side_right = False
@@ -117,7 +115,7 @@ class ScoringController(StateMachine):
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
             self.wants_to_intake = False
-            self.cube_queue.popleft()
+            self.cube_queue.pop()
             self.next_state("idle")
 
     @state
@@ -179,7 +177,7 @@ class ScoringController(StateMachine):
                 self.next_state("idle")
                 self.arm.go_to_setpoint(Setpoints.STOW)
                 if len(self.score_queue):
-                    self.score_queue.popleft()
+                    self.score_queue.pop()
                 self.desired_column = random.randint(0, 8)
         elif self.movement.time_to_goal < self.SCORE_PREPARE_TIME:
             self.arm.go_to_setpoint(self.arm_setpoint)
@@ -221,7 +219,7 @@ class ScoringController(StateMachine):
         return Pose2d(goal_trans, goal_rotation), goal_rotation
 
     def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        return self.cube_queue[0][:2]
+        return self.cube_queue[-1][:2]
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
         # use the shelf closest to the wall, furthest from the nodes
@@ -250,7 +248,7 @@ class ScoringController(StateMachine):
 
     def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
         if self.score_queue:  # is auto
-            node = self.score_queue[0]
+            node = self.score_queue[-1]
         else:
             node = Node(Rows(self.desired_row), self.desired_column)
         return self.score_location_from_node(node, self.is_red())
