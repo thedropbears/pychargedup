@@ -52,7 +52,7 @@ class Movement(StateMachine):
         self.goal_approach_dir = Rotation2d()
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
-        self.time_to_goal = 3
+        self.time_to_goal = 0.0
         self.slow_dist = 0
         self.no_trajectory = False
 
@@ -72,6 +72,7 @@ class Movement(StateMachine):
         """Generates a trajectory to self.goal and displays it"""
         pose = self.chassis.get_pose()
         distance = pose.translation().distance(self.goal.translation())
+        points: list[PathPoint]
         if distance < 0.02:
             self.no_trajectory = True
             point = PathPoint(pose.translation(), pose.rotation(), pose.rotation())
@@ -111,7 +112,7 @@ class Movement(StateMachine):
 
         chassis_velocity = self.chassis.get_velocity()
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
-        points: list[PathPoint] = []
+        points = []
 
         # Add starting pathpoint
         if chassis_speed < 0.1:
