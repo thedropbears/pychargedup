@@ -3,8 +3,6 @@ import wpilib
 import time
 from enum import Enum, auto
 from utilities.scalers import scale_value
-from controllers.scoring import ScoringController
-from utilities.game import GamePiece
 import random
 
 
@@ -157,7 +155,6 @@ class WolframAutomata:
 
 
 class StatusLights:
-
     leds: wpilib.AddressableLED
 
     FLASH_PERIOD = 0.4
