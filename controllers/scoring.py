@@ -80,8 +80,10 @@ class ScoringController(StateMachine):
             self.arm.homing = False
             self.arm.go_to_setpoint(Setpoints.STOW)
 
-        if (self.arm.get_angle() < 0.5 and not self.arm.homing) or (
-            wpilib.DriverStation.isAutonomous() and state_tm > 0.5
+        if (
+            (self.arm.get_angle() < 0.5 and not self.arm.homing)
+            or (wpilib.DriverStation.isAutonomous() and state_tm > 0.5)
+            or wpilib.RobotBase.isSimulation()
         ):
             self.next_state("idle")
             self.gripper.set_solenoid = True
