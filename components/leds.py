@@ -33,25 +33,6 @@ class DisplayType(Enum):
     MORSE = auto()
     WOLFRAM_AUTOMATA = auto()
 
-
-class RobotState(Enum):
-    PICKED_UP_PIECE = auto()
-    LOOKING_FOR_PIECE = auto()
-    OTHER = auto()
-
-
-class PieceColour(Enum):
-    CONE = LedColors.YELLOW
-    CUBE = LedColors.VIOLET
-    NONE = LedColors.OFF
-
-
-class PickupFromSide(Enum):
-    LEFT = LedColors.RED
-    RIGHT = LedColors.GREEN
-    NONE = LedColors.VIOLET
-
-
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
     data: list[tuple[LedColors, int]]
@@ -172,8 +153,6 @@ class StatusLights:
 
         self.pattern = DisplayType.SOLID
 
-        self.side = PickupFromSide.RIGHT
-
         self._morse_message = ""
         self.pattern_start_time = time.monotonic()
         self.last_triggered = time.monotonic()
@@ -196,68 +175,45 @@ class StatusLights:
             new_colors.append((i.value[0], i.value[1], i.value[2]))
         self.color = new_colors
 
-    def set_piece(self, piece: PieceColour):
-        self.set_color([piece.value])
-
-    def set_state(self, state: RobotState):
-        if state == RobotState.PICKED_UP_PIECE:
-            self.pattern = DisplayType.SOLID
-        elif state == RobotState.LOOKING_FOR_PIECE:
-            self.pattern = DisplayType.FLASH
-        elif RobotState.OTHER:
-            self.set_color([LedColors.OFF])
-
-    def set_intake_side(self, side: PickupFromSide):
-        self.side = side
-
     def set_display_pattern(self, pattern: DisplayType):
         self.pattern = pattern
 
-    def set(
-        self,
-        piece: PieceColour,
-        state: RobotState,
-        side: PickupFromSide,
-    ):
-        # self.set_piece(piece)
-        if piece == PieceColour.CUBE or side == PickupFromSide.RIGHT:
-            self.set_color(
-                [
-                    *([piece.value] * (self.led_length // 2)),
-                    *([side.value] * (self.led_length // 2)),
-                ]
-            )
-        else:
-            self.set_color(
-                [
-                    *([side.value] * (self.led_length // 2)),
-                    *([piece.value] * (self.led_length // 2)),
-                ]
-            )
-        self.set_state(state)
-        self.set_intake_side(side)
-
     def want_cone_left(self) -> None:
-        self.set(PieceColour.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
-
-    # def want_cube_left(self) -> None:
-    #     self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
+        self.set_color(
+                        [
+                            *([LedColors.YELLOW] * (self.led_length // 2)),
+                            *([LedColors.RED] * (self.led_length // 2)),
+                        ]
+                      )
+        self.set_display_pattern(DisplayType.FLASH)
 
     def want_cone_right(self) -> None:
-        self.set(PieceColour.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
-
-    # def want_cube_right(self) -> None:
-    #     self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+        self.set_color(
+                        [
+                            *([LedColors.GREEN] * (self.led_length // 2)),
+                            *([LedColors.YELLOW] * (self.led_length // 2)),
+                        ]
+                      )
+        self.set_display_pattern(DisplayType.FLASH)
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
-        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.NONE)
+        self.set_color(
+                        [LedColors.VIOLET] * self.led_length
+                      )
+        self.set_display_pattern(DisplayType.FLASH)
 
     def cone_onboard(self) -> None:
-        self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+        self.set_color(
+                        [LedColors.YELLOW] * self.led_length
+                      )
+        self.set_display_pattern(DisplayType.SOLID)
 
     def cube_onboard(self) -> None:
-        self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+        self.set_color(
+                        [LedColors.VIOLET] * self.led_length
+                      )
+        self.set_display_pattern(DisplayType.SOLID)
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
         return self.color
