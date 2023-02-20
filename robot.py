@@ -2,12 +2,13 @@
 
 import wpilib
 import magicbot
+from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 
 from controllers.movement import Movement
 from controllers.scoring import ScoringController
 from components.intake import Intake
 from components.chassis import Chassis
-from components.vision import Vision
+from components.vision import VisualLocalizer
 from components.arm import Arm, Setpoints
 from components.gripper import Gripper
 from components.leds import StatusLights, DisplayType, LedColors
@@ -21,11 +22,13 @@ class MyRobot(magicbot.MagicRobot):
 
     # Components
     chassis: Chassis
-    vision: Vision
     arm: Arm
     intake: Intake
     status_lights: StatusLights
     gripper: Gripper
+
+    port_localizer: VisualLocalizer
+    starboard_localizer: VisualLocalizer
 
     max_speed = magicbot.tunable(Chassis.max_wheel_speed * 0.95)
 
@@ -38,8 +41,30 @@ class MyRobot(magicbot.MagicRobot):
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
+        self.port_localizer_name = "cam_port"
+        self.port_localizer_pos = Translation3d(-0.35001, 0.06583, 0.25)
+        self.port_localizer_rot = Rotation3d(
+            Quaternion(
+                -0.2156163454055786,
+                0.0850898027420044,
+                0.018863987177610397,
+                0.9725808501243591,
+            )
+        )
+
+        self.starboard_localizer_name = "cam_starboard"
+        self.starboard_localizer_pos = Translation3d(-0.35001, -0.06583, 0.247)
+        self.starboard_localizer_rot = Rotation3d(
+            Quaternion(
+                0.21561579406261444,
+                0.08508981764316559,
+                -0.018863940611481667,
+                0.9725809693336487,
+            )
+        )
+
     def teleopInit(self) -> None:
-        self.vision.add_to_estimator = True
+        pass
 
     def teleopPeriodic(self) -> None:
         # Driving
@@ -94,7 +119,6 @@ class MyRobot(magicbot.MagicRobot):
 
     def testInit(self) -> None:
         self.arm.on_enable()
-        self.vision.add_to_estimator = False
         self.arm.stop()
         self.arm.homing = False
 
@@ -154,16 +178,18 @@ class MyRobot(magicbot.MagicRobot):
         self.arm.execute()
         self.intake.execute()
         self.gripper.execute()
-        self.vision.execute()
+        self.port_localizer.execute()
+        self.starboard_localizer.execute()
         self.status_lights.execute()
 
         # self.scoring.engage()
 
     def disabledInit(self) -> None:
-        self.vision.add_to_estimator = False
+        pass
 
     def disabledPeriodic(self):
-        self.vision.execute()
+        self.port_localizer.execute()
+        self.starboard_localizer.execute()
 
 
 if __name__ == "__main__":
