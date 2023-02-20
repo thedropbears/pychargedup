@@ -51,13 +51,13 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Automation
-        # left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
-        # right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
-        # if right_trigger:
-        #     self.scoring.cone_pickup_side_right = True
-        # if left_trigger:
-        #     self.scoring.cone_pickup_side_right = False
-        # self.scoring.autodrive = right_trigger or left_trigger
+        left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
+        right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
+        if right_trigger:
+            self.scoring.set_direction_to_find_place(True)
+        if left_trigger:
+            self.scoring.set_direction_to_find_place(False)
+        self.scoring.autodrive = right_trigger or left_trigger
 
         # Intake
         if self.gamepad.getRightBumperPressed():
@@ -146,11 +146,14 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getLeftBumperPressed():
             self.intake.retract()
 
-        # self.arm.execute()
+        # self.scoring.execute()
+        self.arm.execute()
         self.intake.execute()
         self.gripper.execute()
         self.vision.execute()
         self.status_lights.execute()
+
+        # self.scoring.engage()
 
     def disabledInit(self) -> None:
         self.vision.add_to_estimator = False

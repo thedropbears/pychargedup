@@ -4,6 +4,7 @@ import math
 import typing
 
 import ctre
+import rev
 import numpy as np
 import wpilib
 from wpilib.simulation import (
@@ -80,7 +81,12 @@ class PhysicsEngine:
         # Create arm simulation
         arm_motors_sim = DCMotor.NEO(2)
         arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
-        arm_moi = SingleJointedArmSim.estimateMOI(arm_len, mass=5)
+        # This value was pulled from the CAD Model on 19/02/23
+        ARM_MASS = 2.305
+        END_EFFECTOR_MASS = 0.724
+        arm_moi = SingleJointedArmSim.estimateMOI(
+            arm_len, mass=ARM_MASS + END_EFFECTOR_MASS
+        )
         self.arm_sim = SingleJointedArmSim(
             arm_motors_sim,
             robot.arm.ROTATE_GEAR_RATIO,
@@ -92,10 +98,12 @@ class PhysicsEngine:
             measurementStdDevs=[math.radians(0.01)],
         )
         extension_motors_sim = DCMotor.NEO550(1)
+        # This value was pulled from the CAD Model on 19/02/23
+        ELEVATOR_CARRIAGE_MASS = 0.655
         self.extension_sim = ElevatorSim(
             extension_motors_sim,
             robot.arm.EXTEND_GEAR_RATIO,
-            4,
+            ELEVATOR_CARRIAGE_MASS + END_EFFECTOR_MASS,
             robot.arm.SPOOL_CIRCUMFERENCE / math.tau,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
@@ -119,6 +127,7 @@ class PhysicsEngine:
         self.arm_extension_pos = self.arm_extension.getDouble("Position")
         self.arm_extension_vel = self.arm_extension.getDouble("Velocity")
         self.arm_extension_output = self.arm_extension.getDouble("Applied Output")
+        self.arm_extension_fault_bits = self.arm_extension.getInt("Faults")
 
         self.imu = SimDeviceSim("navX-Sensor", 4)
         self.imu_yaw = self.imu.getDouble("Yaw")
@@ -135,6 +144,28 @@ class PhysicsEngine:
         self.extension_sim.update(tm_diff)
         self.arm_extension_pos.set(self.extension_sim.getPosition())
         self.arm_extension_vel.set(self.extension_sim.getVelocity())
+
+        if self.extension_sim.hasHitUpperLimit():
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                | 1 << rev.CANSparkMax.FaultID.kHardLimitFwd.value
+            )
+        else:
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                & ~(1 << rev.CANSparkMax.FaultID.kHardLimitFwd.value)
+            )
+
+        if self.extension_sim.hasHitLowerLimit():
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                | 1 << rev.CANSparkMax.FaultID.kHardLimitRev.value
+            )
+        else:
+            self.arm_extension_fault_bits.set(
+                self.arm_extension_fault_bits.get()
+                & ~(1 << rev.CANSparkMax.FaultID.kHardLimitRev.value)
+            )
 
         for wheel in self.wheels:
             wheel.update(tm_diff)

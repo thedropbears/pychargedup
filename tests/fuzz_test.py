@@ -99,7 +99,7 @@ def _test_fuzz(control: TestController, fuzz_disabled_hids: bool) -> None:
         control.step_timing(seconds=0.2, autonomous=False, enabled=True)
 
         # Teleop
-        for _ in range(10):
+        for _ in range(20):
             things.fuzz()
             hids.fuzz()
             control.step_timing(seconds=0.1, autonomous=False, enabled=True)
