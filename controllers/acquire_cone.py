@@ -54,6 +54,7 @@ class AcquireConeController(StateMachine):
         Move forward until the limit switch is triggered on the wall.
         """
 
+        self.arm.extend(0.2)
         if self.gripper.game_piece_in_reach():
             self.next_state("grabbing")
 
@@ -62,7 +63,9 @@ class AcquireConeController(StateMachine):
         """
         Close the gripper on the cone.
         """
-        self.done()
+        self.gripper.close()
+        if self.gripper.get_full_closed():
+            self.done()
 
     def target_left(self) -> None:
         self.targeting_left = True
