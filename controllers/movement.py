@@ -67,26 +67,28 @@ class Movement(StateMachine):
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
         pose = self.chassis.get_pose()
 
-        translation = self.goal.translation() - pose.translation()
-        translation_distance = translation.norm()
+        translation_to_end = self.goal.translation() - pose.translation()
+        distance_to_goal = translation_to_end.norm()
 
         # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
         # return an empty trajectory that starts at the end point so the robot won't move.
-        if translation_distance <= 0.01:
+        if distance_to_goal <= 0.01:
             return Trajectory([Trajectory.State(0, 0, 0, pose)])
+
+        if self.waypoints:
+            translation_to_next = self.waypoints[0] - pose.translation()
+        else:
+            translation_to_next = translation_to_end
 
         if chassis_speed < 0.2:
             # If the robot is stationary, instead of accounting for the momentum of the robot,
-            # this section of code will point the control vector at the goal to avoid the robot
-            # taking unnecessary turns before moving towards the goal.
+            # point the control vector at the goal
             kD = 0.3
 
-            spline_start_momentum_x = translation.x * kD
-            spline_start_momentum_y = translation.y * kD
-
+            spline_start_momentum_x = translation_to_next.x * kD
+            spline_start_momentum_y = translation_to_next.y * kD
         else:
-            # It is more efficient to make trajectories account for the robot's current momentum so
-            # the robot doesn't make a sudden stop to reverse.
+            # make trajectories account for the robot's current momentum
             # In most cases, this will generate a smooth curve that works better than simply reversing
             # the robot.
             kvx = 3
@@ -99,7 +101,7 @@ class Movement(StateMachine):
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        end_control_vec = min(10, translation_distance * 2.8)
+        end_control_vec = min(10, distance_to_goal * 1)
 
         goal_spline = Spline3.ControlVector(
             (self.goal.X(), self.goal_approach_dir.cos() * end_control_vec),

@@ -1,4 +1,6 @@
-from magicbot import state, StateMachine, tunable, feedback
+from dataclasses import dataclass
+from typing import Optional
+from magicbot import state, StateMachine, tunable, feedback, will_reset_to
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 import wpilib
 import random
@@ -8,15 +10,35 @@ from components.intake import Intake
 from components.arm import Arm, Setpoints, Setpoint
 from controllers.movement import Movement
 from utilities.game import (
+    GRIDS_EDGE_X,
     GamePiece,
     field_flip_pose2d,
+    field_flip_translation2d,
     get_double_substation,
     get_single_substation,
     field_flip_rotation2d,
     BLUE_NODES,
     Rows,
     Node,
+    get_staged_pieces,
 )
+
+
+@dataclass
+class PickupMovement:
+    # 0 is closest to wall, 3 is closest to substations
+    cube_idx: int
+    # angle as if on the blue alliance
+    approach_dir: Rotation2d
+    # waypoints as if on the blue alliance
+    waypoints: list[Translation2d]
+
+
+@dataclass
+class ScoreMovement:
+    # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
+    node: Node
+    waypoints: list[Translation2d]
 
 
 class ScoringController(StateMachine):
@@ -44,13 +66,13 @@ class ScoringController(StateMachine):
     swap_substation = tunable(False)
 
     snap_to_closest_node = tunable(True)
+    autodrive = will_reset_to(False)
 
     def __init__(self) -> None:
         self.is_holding = GamePiece.NONE
-        self.autodrive = False
         self.wants_piece = GamePiece.CONE
-        self.cube_stack: list[tuple[Pose2d, Rotation2d]] = []
-        self.score_stack: list[Node] = []
+        self.cube_stack: list[PickupMovement] = []
+        self.score_stack: list[ScoreMovement] = []
         self.wants_to_intake = False
         # use double substation shelf on right side from drivers pov
         self.driver_requests_right = False
@@ -208,24 +230,38 @@ class ScoringController(StateMachine):
     def get_wants_piece_str(self) -> str:
         return self.wants_piece.name
 
-    def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
+    def get_cube_pickup(self) -> tuple[Pose2d, Rotation2d, tuple[Translation2d, ...]]:
         """Gets where to auto pickup cubes from"""
         if not self.cube_stack:
             return self.get_single_substation_cube_pickup()
         else:
             return self.get_auto_cube_pickup()
 
-    def get_single_substation_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
+    def get_single_substation_cube_pickup(
+        self,
+    ) -> tuple[Pose2d, Rotation2d, tuple[Translation2d, ...]]:
         goal_trans = get_single_substation(wpilib.DriverStation.Alliance.kBlue)
         goal_rotation = (
             field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
         )
-        return Pose2d(goal_trans, goal_rotation), goal_rotation
+        return Pose2d(goal_trans, goal_rotation), goal_rotation, ()
 
-    def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        return self.cube_stack[-1]
+    def get_auto_cube_pickup(
+        self,
+    ) -> tuple[Pose2d, Rotation2d, tuple[Translation2d, ...]]:
+        piece = self.cube_stack[-1]
+        direction = (
+            field_flip_rotation2d(piece.approach_dir)
+            if self.is_red()
+            else piece.approach_dir
+        )
+        piece_trans = get_staged_pieces(self.get_team())[piece.cube_idx]
+        # point intake in same direction as approach direction
+        pose = Pose2d(piece_trans, direction)
+        return pose, direction, tuple(piece.waypoints)
 
     def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
+        """Returns (Goal, approach dir, waypoints)"""
         # use the shelf closest to the wall, furthest from the nodes
         is_wall_side = self.driver_requests_right == self.is_red()
         # if we want the substation to be as if we are on the red alliance
@@ -254,43 +290,43 @@ class ScoringController(StateMachine):
         """setting the side of the robot wants to get a cone or cube, also setting what side it wants to score"""
         self.driver_requests_right = driver_requests_right
 
-    def get_score_location(self) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
+    def get_score_location(
+        self,
+    ) -> tuple[tuple[Pose2d, Rotation2d, tuple[Translation2d, ...]], Setpoint]:
+        """Returns ((Goal, approach dir, waypoints), arm setpoint)"""
         if self.score_stack:  # is auto
-            node = self.score_stack[-1]
+            node = self.score_stack[-1].node
+            waypoints = self.score_stack[-1].waypoints
+            waypoints = tuple(
+                field_flip_translation2d(w) if self.is_red() else w for w in waypoints
+            )
+        elif self.snap_to_closest_node:
+            node = self.get_nearest_node(Rows.HIGH if self.driver_requests_right else Rows.MID)
+            waypoints = ()
         else:
-            if self.snap_to_closest_node:
-                desired_rows = Rows.HIGH if self.driver_requests_right else Rows.MID
-                score_locations = []
-                if self.get_current_piece() == GamePiece.CONE:
-                    score_locations = [
-                        self.score_location_from_node(
-                            Node(desired_rows, i), self.is_red()
-                        )
-                        for i in range(9)
-                        if i % 3 != 1
-                    ]
-                elif self.get_current_piece == GamePiece.CUBE:
-                    score_locations = [
-                        self.score_location_from_node(
-                            Node(desired_rows, i), self.is_red()
-                        )
-                        for i in range(1, 9, 3)
-                    ]
-                score_poses = [t[0][0] for t in score_locations]
-                if len(score_poses) == 0:
-                    node = Node(Rows(self.desired_row), self.desired_column)
-                nearest = self.movement.chassis.get_pose().nearest(score_poses)
-                return next(loc for loc in score_locations if loc[0][0] == nearest)
-            else:
-                node = Node(Rows(self.desired_row), self.desired_column)
-        return self.score_location_from_node(node, self.is_red())
+            node = Node(Rows(self.desired_row), self.desired_column)
+            waypoints = ()
+
+        goal, approach = self.score_location_from_node(node)
+        arm_setpoint = self.arm_setpoint_from_node(node)
+        return (goal, approach, waypoints), arm_setpoint
 
     def score_location_from_node(
-        self, node: Node, is_red: bool
-    ) -> tuple[tuple[Pose2d, Rotation2d], Setpoint]:
-        node_trans3d = BLUE_NODES[node.row.value][int(node.col)]
-        node_trans = node_trans3d.toTranslation2d()
+        self, node: Node, is_red: Optional[bool] = None
+    ) -> tuple[Pose2d, Rotation2d]:
+        if is_red is None:
+            is_red = self.is_red()
+        node_trans = BLUE_NODES[node.row.value][int(node.col)]
+        robot_length = 1.0105
+        goal = Pose2d((GRIDS_EDGE_X + robot_length / 2), node_trans.y, Rotation2d(0))
+        goal_approach = Rotation2d.fromDegrees(180)
+        if is_red:
+            goal = field_flip_pose2d(goal)
+            goal_approach = field_flip_rotation2d(goal_approach)
 
+        return goal, goal_approach
+
+    def arm_setpoint_from_node(self, node: Node) -> Setpoint:
         setpoint = Setpoints.SCORE_CONE_HIGH
         if self.get_current_piece() == GamePiece.CONE:
             if node.row == Rows.HIGH:
@@ -302,13 +338,19 @@ class ScoringController(StateMachine):
                 setpoint = Setpoints.SCORE_CUBE_HIGH
             elif node.row == Rows.MID:
                 setpoint = Setpoints.SCORE_CUBE_MID
+        return setpoint
 
-        offset_x, _ = setpoint.toCartesian()
-        goal_trans = node_trans + Translation2d(-offset_x, 0)
-        goal = Pose2d(goal_trans, Rotation2d(0))
-        goal_approach = Rotation2d.fromDegrees(180)
-        if is_red:
-            goal = field_flip_pose2d(goal)
-            goal_approach = field_flip_rotation2d(goal_approach)
+    def get_nearest_node(self, row: Rows) -> Node:
+        """Gets nearest node of the correct type"""
+        cur_pos = self.movement.chassis.get_pose().translation()
 
-        return (goal, goal_approach), setpoint
+        def get_node_dist(node) -> float:
+            return (
+                self.score_location_from_node(node)[0].translation().distance(cur_pos)
+            )
+
+        if self.get_current_piece() == GamePiece.CONE:
+            nodes = [Node(row, i) for i in range(9) if i % 3 != 1]
+        else:  # cube
+            nodes = [Node(row, i) for i in range(1, 9, 3)]
+        return min(nodes, key=get_node_dist)

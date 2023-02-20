@@ -1,15 +1,11 @@
-from controllers.scoring import ScoringController
+from controllers.scoring import ScoringController, ScoreMovement, PickupMovement
 from components.chassis import Chassis
-from wpimath.geometry import Pose2d, Rotation2d
+from wpimath.geometry import Rotation2d, Translation2d
 from utilities.game import (
     GamePiece,
     Node,
     Rows,
-    get_staged_pieces,
-    field_flip_pose2d,
-    field_flip_rotation2d,
 )
-import wpilib
 
 
 class CubeAutoBase:
@@ -18,37 +14,19 @@ class CubeAutoBase:
     scoring: ScoringController
     chassis: Chassis
 
-    def __init__(self, cubes: list[tuple[int, Rotation2d]], nodes: list[Node]) -> None:
-        # list of cube idx and angle to hit pickup at as if was on blue alliance
-        # 0 is closest to wall, 3 is closest to substations
-        self.cubes = cubes
-        # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-        self.nodes = nodes
+    def __init__(self, cubes: list[PickupMovement], nodes: list[ScoreMovement]) -> None:
+        self.pickup_list = cubes
+        self.score_list = nodes
         self.finished = False
 
     def on_enable(self) -> None:
-        (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
-        if self.scoring.is_red():
-            start_pose = field_flip_pose2d(start_pose)
-        else:
-            start_pose = start_pose
+        start_pose, _ = self.scoring.score_location_from_node(self.score_list[0].node)
         self.chassis.set_pose(start_pose)
 
         self.scoring.wants_piece = GamePiece.CUBE
         self.scoring.is_holding = GamePiece.CONE
-        self.scoring.cube_stack = []
-        all_pieces = get_staged_pieces(wpilib.DriverStation.getAlliance())
-        for idx, rotation in self.cubes[::-1]:
-            position = all_pieces[idx]
-            # flip angle, position is already correctly flipped
-            angle = (
-                field_flip_rotation2d(rotation) if self.scoring.is_red() else rotation
-            )
-            # approach angle is the same as chassis heading
-            pose = Pose2d(position, angle)
-            self.scoring.cube_stack.append((pose, angle))
-
-        self.scoring.score_stack = self.nodes[::-1]
+        self.scoring.cube_stack = self.pickup_list[::-1]
+        self.scoring.score_stack = self.score_list[::-1]
 
     def on_iteration(self, tm: float) -> None:
         if not self.finished:
@@ -66,11 +44,14 @@ class WallSide3(CubeAutoBase):
 
     def __init__(self):
         super().__init__(
-            cubes=[(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))],
+            cubes=[
+                PickupMovement(0, Rotation2d(0), []),
+                PickupMovement(1, Rotation2d.fromDegrees(40), []),
+            ],
             nodes=[
-                Node(row=Rows.HIGH, col=0),
-                Node(row=Rows.HIGH, col=1),
-                Node(row=Rows.MID, col=1),
+                ScoreMovement(Node(row=Rows.HIGH, col=0), []),
+                ScoreMovement(Node(row=Rows.HIGH, col=1), []),
+                ScoreMovement(Node(row=Rows.MID, col=1), []),
             ],
         )
 
@@ -81,10 +62,13 @@ class SubstationSide3(CubeAutoBase):
 
     def __init__(self):
         super().__init__(
-            cubes=[(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))],
+            cubes=[
+                PickupMovement(3, Rotation2d.fromDegrees(-10), []),
+                PickupMovement(2, Rotation2d.fromDegrees(-40), []),
+            ],
             nodes=[
-                Node(row=Rows.HIGH, col=8),
-                Node(row=Rows.HIGH, col=7),
-                Node(row=Rows.MID, col=7),
+                ScoreMovement(Node(row=Rows.HIGH, col=8), []),
+                ScoreMovement(Node(row=Rows.HIGH, col=7), []),
+                ScoreMovement(Node(row=Rows.MID, col=7), [Translation2d(5, 4.5)]),
             ],
         )
