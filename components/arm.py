@@ -214,7 +214,7 @@ class Arm:
         #     self.extension_encoder.setPosition(MIN_EXTENSION)
 
         if self.homing:
-            self.extension_motor.set(-0.1)
+            self.extension_motor.set(-0.2)
             self.rotation_motor.set(0)
             return
         else:
@@ -359,9 +359,13 @@ class Arm:
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
-        self.extension_controller.reset(self.get_extension())
-        self.rotation_controller.reset(self.get_angle())
+        self.reset_controllers()
+        self.unbrake()
 
     def stop(self) -> None:
         self.rotation_motor.set(0)
         self.extension_motor.set(0)
+
+    def reset_controllers(self) -> None:
+        self.extension_controller.reset(self.get_extension())
+        self.rotation_controller.reset(self.get_angle())

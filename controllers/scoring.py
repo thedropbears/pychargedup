@@ -78,11 +78,10 @@ class ScoringController(StateMachine):
         if self.arm.is_retracted():
             self.arm.set_at_min_extension()
             self.arm.homing = False
+            self.arm.reset_controllers()
             self.arm.go_to_setpoint(Setpoints.STOW)
 
-        if (self.arm.get_angle() < 0.5 and not self.arm.homing) or (
-            wpilib.DriverStation.isAutonomous() and state_tm > 0.5
-        ):
+        if self.arm.get_angle() < 0.5 and not self.arm.homing:
             self.next_state("idle")
             self.gripper.set_solenoid = True
 
@@ -117,7 +116,8 @@ class ScoringController(StateMachine):
         if self.gripper.get_full_closed():
             self.is_holding = GamePiece.CUBE
             self.wants_to_intake = False
-            self.cube_stack.pop()
+            if self.cube_stack:
+                self.cube_stack.pop()
             self.next_state("idle")
 
     @state
@@ -171,7 +171,7 @@ class ScoringController(StateMachine):
             self.movement.set_goal(*move_goal)
 
         self.intake.retract()
-        if self.movement.time_to_goal < self.SCORE_PRE_TIME:
+        if self.movement.time_to_goal < self.SCORE_PRE_TIME and self.arm.at_goal():
             self.gripper.open()
             self.is_holding = GamePiece.NONE
             if self.gripper.get_full_open():
@@ -196,7 +196,9 @@ class ScoringController(StateMachine):
 
     def get_current_piece(self) -> GamePiece:
         """What piece the gripper is currently holding in the gripper"""
-        return self.is_holding
+        if self.gripper.get_full_closed():
+            return self.is_holding
+        return GamePiece.NONE
 
     @feedback
     def get_current_piece_str(self) -> str:
