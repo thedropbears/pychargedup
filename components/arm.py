@@ -196,8 +196,8 @@ class Arm:
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
-        self.voltage_movement = False
-        self.arm_velocity = 0
+        self.voltage_movement : bool = False
+        self.arm_velocity : float = 0
 
     def setup(self) -> None:
         self.set_length(self.get_extension())
