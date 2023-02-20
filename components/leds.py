@@ -200,24 +200,6 @@ class StatusLights:
         )
         self.set_display_pattern(DisplayType.FLASH)
 
-    def want_cone_left(self) -> None:
-        self.set_color(
-            [
-                *([LedColors.YELLOW] * (self.led_length // 2)),
-                *([LedColors.RED] * (self.led_length // 2)),
-            ]
-        )
-        self.set_display_pattern(DisplayType.FLASH)
-
-    def want_cone_right(self) -> None:
-        self.set_color(
-            [
-                *([LedColors.GREEN] * (self.led_length // 2)),
-                *([LedColors.YELLOW] * (self.led_length // 2)),
-            ]
-        )
-        self.set_display_pattern(DisplayType.FLASH)
-
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
         self.set_color([LedColors.VIOLET] * self.led_length)
