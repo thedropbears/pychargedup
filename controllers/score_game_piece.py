@@ -5,6 +5,7 @@ from controllers.movement import Movement
 
 from magicbot import state, StateMachine
 
+
 class ScoreGamePieceController(StateMachine):
     gripper: Gripper
     intake: Intake
