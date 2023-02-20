@@ -8,7 +8,6 @@ from ids import PwmChannels
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
 
-
 class LedColors(Enum):
     # Use HSV to get nicer fading, hues are 0-180 so half usual hue
     RED = (0, 255, MAX_BRIGHTNESS)
