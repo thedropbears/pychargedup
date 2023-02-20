@@ -171,7 +171,7 @@ class StatusLights:
 
     def set_color(self, color: list[LedColors]):
         # colors = (color * (self.led_length // len(color)))[:self.led_length]
-        repeated_colors = []
+        repeated_colors: list[LedColors] = []
         while len(repeated_colors) < self.led_length:
             repeated_colors = [*repeated_colors, *color]
         new_colors = []
