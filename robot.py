@@ -10,7 +10,7 @@ from components.chassis import Chassis
 from components.vision import Vision
 from components.arm import Arm, Setpoints
 from components.gripper import Gripper
-from components.leds import StatusLights
+from components.leds import StatusLights, DisplayType, LedColors
 from utilities.scalers import rescale_js
 
 
@@ -125,6 +125,26 @@ class MyRobot(magicbot.MagicRobot):
             self.gripper.set_solenoid = True
             self.gripper.open()
 
+        # LEDs
+        if self.gamepad.getAButton():
+            if dpad_angle == 0:
+                self.status_lights.set_display_pattern(DisplayType.SOLID)
+                self.status_lights.set_color([LedColors.OFF])
+            if dpad_angle == 90 or dpad_angle == 270:
+                self.status_lights.want_cube()
+            if dpad_angle == 180:
+                self.status_lights.cube_onboard()
+        if self.gamepad.getBButton():
+            if dpad_angle == 90:
+                self.status_lights.want_cone_right()
+            if dpad_angle == 270:
+                self.status_lights.want_cone_left()
+            if dpad_angle == 0:
+                self.status_lights.set_display_pattern(DisplayType.SOLID)
+                self.status_lights.set_color([LedColors.OFF])
+            if dpad_angle == 180:
+                self.status_lights.cone_onboard()
+
         if self.gamepad.getRightBumperPressed():
             self.intake.deploy()
         if self.gamepad.getLeftBumperPressed():
@@ -135,6 +155,7 @@ class MyRobot(magicbot.MagicRobot):
         self.intake.execute()
         self.gripper.execute()
         self.vision.execute()
+        self.status_lights.execute()
 
         # self.scoring.engage()
 
