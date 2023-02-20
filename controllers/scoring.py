@@ -301,7 +301,9 @@ class ScoringController(StateMachine):
                 field_flip_translation2d(w) if self.is_red() else w for w in waypoints
             )
         elif self.snap_to_closest_node:
-            node = self.get_nearest_node(Rows.HIGH if self.driver_requests_right else Rows.MID)
+            node = self.get_nearest_node(
+                Rows.HIGH if self.driver_requests_right else Rows.MID
+            )
             waypoints = ()
         else:
             node = Node(Rows(self.desired_row), self.desired_column)
