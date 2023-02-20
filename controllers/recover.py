@@ -1,4 +1,4 @@
-from components.arm import Arm
+from components.arm import Arm, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
 
@@ -10,6 +10,8 @@ class RecoverController(StateMachine):
     intake: Intake
     arm: Arm
 
+    ARM_FOULING_ANGLE = 0.5
+
     def __init__(self) -> None:
         pass
 
@@ -20,7 +22,13 @@ class RecoverController(StateMachine):
         mechanism. If there is an interception, the intake will be deployed
         and the arm will rotate above the intake
         """
-        self.next_state("retracting_intake")
+
+        self.gripper.close()
+        if self.arm.get_angle() > self.ARM_FOULING_ANGLE:
+            self.intake.deploy_without_running()
+            self.arm.go_to_setpoint(Setpoints.STOW)
+        else:
+            self.next_state("retracting_intake")
 
     @state(must_finish=True)
     def retracting_intake(self) -> None:
@@ -29,6 +37,7 @@ class RecoverController(StateMachine):
         is explicitly to clean up the intake mechanism if it was deployed while
         in the clearing state
         """
+        self.intake.retract()
         self.next_state("stowing")
 
     @state(must_finish=True)
@@ -36,4 +45,8 @@ class RecoverController(StateMachine):
         """
         This will bring the arm to the stow position
         """
-        self.done()
+        self.arm.go_to_setpoint(Setpoints.STOW)
+        if self.arm.at_goal():
+            self.done()
+
+        
