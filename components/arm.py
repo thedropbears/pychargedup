@@ -196,6 +196,9 @@ class Arm:
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
+        self.voltage_movement = False
+        self.arm_velocity = 0
+
     def setup(self) -> None:
         self.set_length(self.get_extension())
 
@@ -218,6 +221,8 @@ class Arm:
             self.extension_motor.set(-0.2)
             self.rotation_motor.set(0)
             return
+        elif self.voltage_movement:
+            self.extension_motor.set(self.arm_velocity)
         else:
             extension_goal = self.get_max_extension()
             # Calculate extension motor output
@@ -280,6 +285,14 @@ class Arm:
         extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(self.get_angle())
         return extend_ff_G + extend_ff_simple
 
+    def extend(self, velocity: float):
+        self.arm_velocity = velocity
+        self.voltage_movement = True
+
+    def retract(self, velocity: float):
+        self.arm_velocity = -velocity
+        self.voltage_movement = True
+
     @feedback
     def get_angle(self) -> float:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
@@ -324,6 +337,7 @@ class Arm:
     def set_length(self, value: float) -> None:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
+        self.voltage_movement = False
 
     def go_to_setpoint(self, value: Setpoint) -> None:
         self.set_length(value.extension)
@@ -366,6 +380,7 @@ class Arm:
     def stop(self) -> None:
         self.rotation_motor.set(0)
         self.extension_motor.set(0)
+        self.voltage_movement = False
 
     def reset_controllers(self) -> None:
         self.extension_controller.reset(self.get_extension())
