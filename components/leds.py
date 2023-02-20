@@ -29,7 +29,6 @@ class DisplayType(Enum):
     PULSE = auto()
     FLASH = auto()
     ALTERNATING = auto()
-    HALF_HALF = auto()
     MORSE = auto()
     WOLFRAM_AUTOMATA = auto()
 
@@ -248,17 +247,6 @@ class StatusLights:
 
     def cube_onboard(self) -> None:
         self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
-
-    def calc_half(self) -> None:
-        led_data: list[wpilib.AddressableLED.LEDData] = []
-        for i in range(self.led_length):
-            if i < round(self.led_length / 2):
-                led_data.append(wpilib.AddressableLED.LEDData(0, 0, 0))
-                led_data[-1].setHSV(*self.color)
-            else:
-                led_data.append(wpilib.AddressableLED.LEDData(0, 0, 0))
-                led_data[-1].setHSV(*LedColors(self.side.value).value)
-        self.leds.setData(led_data[: self.led_length])
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
         return self.color
@@ -507,10 +495,7 @@ class StatusLights:
             color = self.calc_rainbow()
         elif self.pattern == DisplayType.MORSE:
             color = self.calc_morse()
-        # Those set data directly
-        elif self.pattern == DisplayType.HALF_HALF:
-            self.calc_half()
-            return
+        # These set data directly
         elif self.pattern == DisplayType.PACMAN:
             self.calc_pacman()
             return
