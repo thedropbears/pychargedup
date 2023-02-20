@@ -33,6 +33,7 @@ class DisplayType(Enum):
     MORSE = auto()
     WOLFRAM_AUTOMATA = auto()
 
+
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
     data: list[tuple[LedColors, int]]
@@ -180,39 +181,33 @@ class StatusLights:
 
     def want_cone_left(self) -> None:
         self.set_color(
-                        [
-                            *([LedColors.YELLOW] * (self.led_length // 2)),
-                            *([LedColors.RED] * (self.led_length // 2)),
-                        ]
-                      )
+            [
+                *([LedColors.YELLOW] * (self.led_length // 2)),
+                *([LedColors.RED] * (self.led_length // 2)),
+            ]
+        )
         self.set_display_pattern(DisplayType.FLASH)
 
     def want_cone_right(self) -> None:
         self.set_color(
-                        [
-                            *([LedColors.GREEN] * (self.led_length // 2)),
-                            *([LedColors.YELLOW] * (self.led_length // 2)),
-                        ]
-                      )
+            [
+                *([LedColors.GREEN] * (self.led_length // 2)),
+                *([LedColors.YELLOW] * (self.led_length // 2)),
+            ]
+        )
         self.set_display_pattern(DisplayType.FLASH)
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
-        self.set_color(
-                        [LedColors.VIOLET] * self.led_length
-                      )
+        self.set_color([LedColors.VIOLET] * self.led_length)
         self.set_display_pattern(DisplayType.FLASH)
 
     def cone_onboard(self) -> None:
-        self.set_color(
-                        [LedColors.YELLOW] * self.led_length
-                      )
+        self.set_color([LedColors.YELLOW] * self.led_length)
         self.set_display_pattern(DisplayType.SOLID)
 
     def cube_onboard(self) -> None:
-        self.set_color(
-                        [LedColors.VIOLET] * self.led_length
-                      )
+        self.set_color([LedColors.VIOLET] * self.led_length)
         self.set_display_pattern(DisplayType.SOLID)
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
