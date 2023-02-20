@@ -5,6 +5,7 @@ from controllers.movement import Movement
 
 from magicbot import state, StateMachine
 
+
 class AcquireConeController(StateMachine):
     gripper: Gripper
     intake: Intake

@@ -21,7 +21,7 @@ class RecoverController(StateMachine):
         and the arm will rotate above the intake
         """
         self.next_state("retracting_intake")
-        
+
     @state(must_finish=True)
     def retracting_intake(self) -> None:
         """
@@ -33,11 +33,7 @@ class RecoverController(StateMachine):
 
     @state(must_finish=True)
     def stowing(self) -> None:
-        """ 
+        """
         This will bring the arm to the stow position
         """
         self.done()
-
-
-
-
