@@ -55,14 +55,15 @@ class Setpoint:
 
 
 class Setpoints:
-    PICKUP_CONE = Setpoint(-math.pi, MIN_EXTENSION + 0.05)
-    HANDOFF = Setpoint(0.9, MIN_EXTENSION + 0.02)
-    STOW = Setpoint(0.45, MIN_EXTENSION)
-    START = Setpoint(math.radians(20), MIN_EXTENSION)
-    SCORE_CONE_MID = Setpoint.fromCartesian(-0.80, 0.12)
-    SCORE_CUBE_MID = Setpoint.fromCartesian(-0.80, -0.20)
-    SCORE_CONE_HIGH = Setpoint.fromCartesian(-1.22, 0.3)
-    SCORE_CUBE_HIGH = Setpoint.fromCartesian(-1.22, 0.10)
+    PICKUP_CONE = Setpoint(-3.05, 1.0)
+    HANDOFF = Setpoint(0.8, MIN_EXTENSION)
+    STOW = Setpoint(0.35, MIN_EXTENSION)
+    START = Setpoint(-math.radians(30), MIN_EXTENSION)
+    SCORE_CONE_MID = Setpoint(-2.8, 0.89)
+    SCORE_CUBE_MID = Setpoint(-3.2, 0.89)
+    SCORE_CONE_HIGH = Setpoint(-2.89, 1.17)
+    SCORE_CUBE_HIGH = Setpoint(-3, 1.17)
+
     UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
     FORWARDS = Setpoint(0, MIN_EXTENSION)
     BACKWARDS = Setpoint(-math.pi, MIN_EXTENSION)
@@ -126,7 +127,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            15, 0, 0.1, rotation_constraints
+            10, 0, 0.1, rotation_constraints
         )
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -214,7 +215,7 @@ class Arm:
         #     self.extension_encoder.setPosition(MIN_EXTENSION)
 
         if self.homing:
-            self.extension_motor.set(-0.1)
+            self.extension_motor.set(-0.2)
             self.rotation_motor.set(0)
             return
         else:
@@ -359,9 +360,13 @@ class Arm:
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
-        self.extension_controller.reset(self.get_extension())
-        self.rotation_controller.reset(self.get_angle())
+        self.reset_controllers()
+        self.unbrake()
 
     def stop(self) -> None:
         self.rotation_motor.set(0)
         self.extension_motor.set(0)
+
+    def reset_controllers(self) -> None:
+        self.extension_controller.reset(self.get_extension())
+        self.rotation_controller.reset(self.get_angle())
