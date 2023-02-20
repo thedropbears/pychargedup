@@ -161,7 +161,7 @@ class StatusLights:
     ALTERNATING_PERIOD = 1
     WOLFRAM_PERIOD = 0.1
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.leds = wpilib.AddressableLED(PwmChannels.leds)
 
         self.led_length = 200
@@ -493,7 +493,7 @@ class StatusLights:
             self.wolfram.set_leds_data()
             self.leds.setData(self.wolfram.leds_data)
 
-    def execute(self):
+    def execute(self) -> None:
         # use the current color as a fallback if (for whatever reason) there is no pattern set.
         color = self.color
         if self.pattern == DisplayType.SOLID:
