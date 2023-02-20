@@ -127,19 +127,23 @@ class MyRobot(magicbot.MagicRobot):
 
         # LEDs
         if self.gamepad.getAButton():
-            if dpad_angle == 0 or dpad_angle == 180:
+            if dpad_angle == 0:
                 self.status_lights.set_display_pattern(DisplayType.SOLID)
                 self.status_lights.set_color([LedColors.OFF])
             if dpad_angle == 90 or dpad_angle == 270:
                 self.status_lights.want_cube()
+            if dpad_angle == 180:
+                self.status_lights.cube_onboard()
         if self.gamepad.getBButton():
             if dpad_angle == 90:
                 self.status_lights.want_cone_right()
             if dpad_angle == 270:
                 self.status_lights.want_cone_left()
-            if dpad_angle == 0 or dpad_angle == 180:
+            if dpad_angle == 0:
                 self.status_lights.set_display_pattern(DisplayType.SOLID)
                 self.status_lights.set_color([LedColors.OFF])
+            if dpad_angle == 180:
+                self.status_lights.cone_onboard()
 
         if self.gamepad.getRightBumperPressed():
             self.intake.deploy()

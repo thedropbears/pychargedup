@@ -168,9 +168,12 @@ class StatusLights:
         self.leds.start()
 
     def set_color(self, color: list[LedColors]):
-        colors = color * (self.led_length // len(color))
+        # colors = (color * (self.led_length // len(color)))[:self.led_length]
+        repeated_colors = []
+        while len(repeated_colors) < self.led_length:
+            repeated_colors = [*repeated_colors, *color]
         new_colors = []
-        for i in colors:
+        for i in repeated_colors:
             new_colors.append((i.value[0], i.value[1], i.value[2]))
         self.color = new_colors
 
