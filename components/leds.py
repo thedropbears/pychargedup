@@ -6,9 +6,7 @@ from utilities.scalers import scale_value
 import random
 from ids import PwmChannels
 
-
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
-
 
 class LedColors(Enum):
     # Use HSV to get nicer fading, hues are 0-180 so half usual hue
@@ -49,9 +47,9 @@ class PieceColour(Enum):
 
 
 class PickupFromSide(Enum):
-    LEFT = LedColors.GREEN
-    RIGHT = LedColors.RED
-    NONE = LedColors.OFF
+    LEFT = LedColors.RED
+    RIGHT = LedColors.GREEN
+    NONE = LedColors.VIOLET
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
@@ -156,7 +154,7 @@ class WolframAutomata:
 
 
 class StatusLights:
-    FLASH_FREQUENCY = 10
+    FLASH_FREQUENCY = 5
     PULSE_PERIOD = 1
     PACMAN_PERIOD = 60
     RAINBOW_PERIOD = 15
@@ -166,13 +164,13 @@ class StatusLights:
     def __init__(self):
         self.leds = wpilib.AddressableLED(PwmChannels.leds)
 
-        self.led_length = 275
+        self.led_length = 200
 
         self.start_time = time.monotonic()
 
-        self.color = LedColors.CYAN.value
+        self.color: list[tuple[int, int, int]] = [LedColors.CYAN.value]
 
-        self.pattern = DisplayType.RAINBOW
+        self.pattern = DisplayType.SOLID
 
         self.side = PickupFromSide.RIGHT
 
@@ -186,24 +184,28 @@ class StatusLights:
         self.choose_morse_message()
         self.leds.setLength(self.led_length)
         self.single_led_data = wpilib.AddressableLED.LEDData()
-        self.single_led_data.setHSV(*self.color)
+        self.single_led_data.setHSV(*self.color[0])
         self.leds_data = [self.single_led_data] * self.led_length
         self.leds.setData(self.leds_data)
         self.leds.start()
 
-    def set_color(self, color: LedColors):
-        self.color = color.value
+    def set_color(self, color: list[LedColors]):
+        colors = color * (self.led_length // len(color))
+        new_colors = []
+        for i in colors:
+            new_colors.append((i.value[0], i.value[1], i.value[2]))
+        self.color = new_colors
 
     def set_piece(self, piece: PieceColour):
-        self.set_color(piece.value)
+        self.set_color([piece.value])
 
     def set_state(self, state: RobotState):
         if state == RobotState.PICKED_UP_PIECE:
             self.pattern = DisplayType.SOLID
         elif state == RobotState.LOOKING_FOR_PIECE:
-            self.pattern = DisplayType.HALF_HALF
+            self.pattern = DisplayType.FLASH
         elif RobotState.OTHER:
-            self.set_color(LedColors.OFF)
+            self.set_color([LedColors.OFF])
 
     def set_intake_side(self, side: PickupFromSide):
         self.side = side
@@ -217,27 +219,35 @@ class StatusLights:
         state: RobotState,
         side: PickupFromSide,
     ):
-        self.set_piece(piece)
+        # self.set_piece(piece)
+        if piece == PieceColour.CUBE or side == PickupFromSide.RIGHT:
+            self.set_color([*([piece.value] * (self.led_length // 2)), *([side.value] * (self.led_length // 2))])
+        else:
+            self.set_color([*([side.value] * (self.led_length // 2)), *([piece.value] * (self.led_length // 2))])
         self.set_state(state)
         self.set_intake_side(side)
 
     def want_cone_left(self) -> None:
         self.set(PieceColour.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
 
-    def want_cube_left(self) -> None:
-        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
+    # def want_cube_left(self) -> None:
+    #     self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.LEFT)
 
     def want_cone_right(self) -> None:
         self.set(PieceColour.CONE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
 
-    def want_cube_right(self) -> None:
-        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+    # def want_cube_right(self) -> None:
+    #     self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.RIGHT)
+
+    def want_cube(self) -> None:
+        """A side-ambiguous request for a cube"""
+        self.set(PieceColour.CUBE, RobotState.LOOKING_FOR_PIECE, PickupFromSide.NONE)
 
     def cone_onboard(self) -> None:
         self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
 
     def cube_onboard(self) -> None:
-        self.set(PieceColour.CONE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
+        self.set(PieceColour.CUBE, RobotState.PICKED_UP_PIECE, PickupFromSide.NONE)
 
     def calc_half(self) -> None:
         led_data: list[wpilib.AddressableLED.LEDData] = []
@@ -250,23 +260,22 @@ class StatusLights:
                 led_data[-1].setHSV(*LedColors(self.side.value).value)
         self.leds.setData(led_data[: self.led_length])
 
-    def calc_solid(self) -> tuple[int, int, int]:
+    def calc_solid(self) -> list[tuple[int, int, int]]:
         return self.color
 
-    def calc_flash(self) -> tuple[int, int, int]:
+    def calc_flash(self) -> list[tuple[int, int, int]]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(self.FLASH_FREQUENCY * elapsed_time * math.tau) / 2 + 0.5
-        return (self.color[0], self.color[1], int(self.color[2] * round(brightness)))
+        new_color = []
+        for i in self.color:
+            new_color.append((i[0], i[1], int(i[2] * round(brightness))))
+        return new_color
 
-        # elapsed_time = time.monotonic() - self.pattern_start_time
-        # brightness = math.cos(self.FLASH_PERIOD * elapsed_time / math.pi) / 2 + 1
-        # return (self.colour[0], self.colour[1], self.colour[2] * round(brightness))
-
-    def calc_rainbow(self) -> tuple[int, int, int]:
+    def calc_rainbow(self) -> list[tuple[int, int, int]]:
         elapsed_time = time.monotonic() - self.start_time
         loop_time = self.RAINBOW_PERIOD / 3
         hue = round(180 * (elapsed_time / loop_time % 1))
-        return (hue, 255, MAX_BRIGHTNESS)
+        return [(hue, 255, MAX_BRIGHTNESS)] * self.led_length
 
     def calc_pacman(self):
         elapsed_time = time.monotonic() - self.start_time
@@ -328,10 +337,13 @@ class StatusLights:
             led_data.extend([wpilib.AddressableLED.LEDData(0, 0, 0)] * leds_left)
         self.leds.setData(led_data[: self.led_length])
 
-    def calc_pulse(self) -> tuple[int, int, int]:
+    def calc_pulse(self) -> list[tuple[int, int, int]]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
-        return (self.color[0], self.color[1], round(self.color[2] * brightness))
+        new_color = []
+        for i in self.color:
+            new_color.append((i[0], i[1], round(i[2] * brightness)))
+        return new_color
 
     def calc_alternating(self):
         elapsed_time = time.monotonic() - self.start_time
@@ -393,7 +405,7 @@ class StatusLights:
             + 3 * self._morse_message.count(" ")
         )
 
-    def calc_morse(self) -> tuple[int, int, int]:
+    def calc_morse(self) -> list[tuple[int, int, int]]:
         # Work out how far through the message we are
         DOT_LENGTH = 0.15  # seconds
         total_time = self._morse_length * DOT_LENGTH
@@ -409,11 +421,11 @@ class StatusLights:
             if running_total > elapsed_time:
                 # This is the current character
                 if token == " ":
-                    return LedColors.OFF.value
+                    return [LedColors.OFF.value] * self.led_length
                 else:
-                    return LedColors.BLUE.value
+                    return [LedColors.BLUE.value] * self.led_length
         # Default - should never be hit
-        return LedColors.OFF.value
+        return [LedColors.OFF.value] * self.led_length
 
     def choose_morse_message(self, _message=None) -> None:
         # Choose a morse message at random, unless specific message requested
@@ -506,5 +518,8 @@ class StatusLights:
             self.calc_wolfram()
             return
 
-        self.single_led_data.setHSV(color[0], color[1], color[2])
-        self.leds.setData(self.leds_data)
+        new_color: list[wpilib.AddressableLED.LEDData] = []
+        for i in color:
+            new_color.append(wpilib.AddressableLED.LEDData())
+            new_color[-1].setHSV(*i)
+        self.leds.setData(new_color)
