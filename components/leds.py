@@ -8,6 +8,7 @@ from ids import PwmChannels
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
 
+
 class LedColors(Enum):
     # Use HSV to get nicer fading, hues are 0-180 so half usual hue
     RED = (0, 255, MAX_BRIGHTNESS)
@@ -220,9 +221,19 @@ class StatusLights:
     ):
         # self.set_piece(piece)
         if piece == PieceColour.CUBE or side == PickupFromSide.RIGHT:
-            self.set_color([*([piece.value] * (self.led_length // 2)), *([side.value] * (self.led_length // 2))])
+            self.set_color(
+                [
+                    *([piece.value] * (self.led_length // 2)),
+                    *([side.value] * (self.led_length // 2)),
+                ]
+            )
         else:
-            self.set_color([*([side.value] * (self.led_length // 2)), *([piece.value] * (self.led_length // 2))])
+            self.set_color(
+                [
+                    *([side.value] * (self.led_length // 2)),
+                    *([piece.value] * (self.led_length // 2)),
+                ]
+            )
         self.set_state(state)
         self.set_intake_side(side)
 
