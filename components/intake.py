@@ -25,7 +25,7 @@ class Intake:
     @feedback
     def is_game_piece_present(self) -> bool:
         return not self.break_beam.get()
-    
+
     @feedback
     def is_deployed(self) -> bool:
         return self.deployed
