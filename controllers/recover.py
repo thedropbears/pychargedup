@@ -48,5 +48,3 @@ class RecoverController(StateMachine):
         self.arm.go_to_setpoint(Setpoints.STOW)
         if self.arm.at_goal():
             self.done()
-
-        
