@@ -197,7 +197,7 @@ class Arm:
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
         self.voltage_movement: bool = False
-        self.arm_velocity: float = 0
+        self.extension_voltage: float = 0
 
     def setup(self) -> None:
         self.set_length(self.get_extension())
@@ -222,7 +222,7 @@ class Arm:
             self.rotation_motor.set(0)
             return
         elif self.voltage_movement:
-            self.extension_motor.set(self.arm_velocity)
+            self.extension_motor.set(self.extension_voltage)
         else:
             extension_goal = self.get_max_extension()
             # Calculate extension motor output
@@ -285,12 +285,12 @@ class Arm:
         extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(self.get_angle())
         return extend_ff_G + extend_ff_simple
 
-    def extend(self, velocity: float):
-        self.arm_velocity = velocity
+    def extend(self, voltage: float) -> None:
+        self.extension_voltage = voltage
         self.voltage_movement = True
 
-    def retract(self, velocity: float):
-        self.arm_velocity = -velocity
+    def retract(self, voltage: float) -> None:
+        self.extension_voltage = -voltage
         self.voltage_movement = True
 
     @feedback
