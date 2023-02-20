@@ -8,6 +8,7 @@ from ids import PwmChannels
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
 
+
 class LedColors(Enum):
     # Use HSV to get nicer fading, hues are 0-180 so half usual hue
     RED = (0, 255, MAX_BRIGHTNESS)
@@ -31,6 +32,7 @@ class DisplayType(Enum):
     ALTERNATING = auto()
     MORSE = auto()
     WOLFRAM_AUTOMATA = auto()
+
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
 def make_pattern(
@@ -197,41 +199,36 @@ class StatusLights:
             ]
         )
         self.set_display_pattern(DisplayType.FLASH)
+
     def want_cone_left(self) -> None:
         self.set_color(
-                        [
-                            *([LedColors.YELLOW] * (self.led_length // 2)),
-                            *([LedColors.RED] * (self.led_length // 2)),
-                        ]
-                      )
+            [
+                *([LedColors.YELLOW] * (self.led_length // 2)),
+                *([LedColors.RED] * (self.led_length // 2)),
+            ]
+        )
         self.set_display_pattern(DisplayType.FLASH)
 
     def want_cone_right(self) -> None:
         self.set_color(
-                        [
-                            *([LedColors.GREEN] * (self.led_length // 2)),
-                            *([LedColors.YELLOW] * (self.led_length // 2)),
-                        ]
-                      )
+            [
+                *([LedColors.GREEN] * (self.led_length // 2)),
+                *([LedColors.YELLOW] * (self.led_length // 2)),
+            ]
+        )
         self.set_display_pattern(DisplayType.FLASH)
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
-        self.set_color(
-                        [LedColors.VIOLET] * self.led_length
-                      )
+        self.set_color([LedColors.VIOLET] * self.led_length)
         self.set_display_pattern(DisplayType.FLASH)
 
     def cone_onboard(self) -> None:
-        self.set_color(
-                        [LedColors.YELLOW] * self.led_length
-                      )
+        self.set_color([LedColors.YELLOW] * self.led_length)
         self.set_display_pattern(DisplayType.SOLID)
 
     def cube_onboard(self) -> None:
-        self.set_color(
-                        [LedColors.VIOLET] * self.led_length
-                      )
+        self.set_color([LedColors.VIOLET] * self.led_length)
         self.set_display_pattern(DisplayType.SOLID)
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
