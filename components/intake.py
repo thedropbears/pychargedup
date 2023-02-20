@@ -2,11 +2,9 @@ from rev import CANSparkMax
 from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
 from magicbot import tunable, feedback
 import ids
-from components.arm import Arm
 
 
 class Intake:
-    arm: Arm
     intake_speed = tunable(0.5)
 
     def __init__(self) -> None:
@@ -27,6 +25,10 @@ class Intake:
     @feedback
     def is_game_piece_present(self) -> bool:
         return not self.break_beam.get()
+    
+    @feedback
+    def is_deployed(self) -> bool:
+        return self.deployed
 
     def deploy(self) -> None:
         self.deployed = True
@@ -46,7 +48,7 @@ class Intake:
         else:
             self.motor.set(0.0)
 
-        if self.deployed or self.arm.get_near_intake():
+        if self.deployed:
             self.piston.set(DoubleSolenoid.Value.kForward)
         else:
             self.piston.set(DoubleSolenoid.Value.kReverse)
