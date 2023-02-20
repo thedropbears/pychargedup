@@ -296,9 +296,9 @@ class ScoringController(StateMachine):
         """Returns ((Goal, approach dir, waypoints), arm setpoint)"""
         if self.score_stack:  # is auto
             node = self.score_stack[-1].node
-            waypoints = self.score_stack[-1].waypoints
+            _waypoints = self.score_stack[-1].waypoints
             waypoints = tuple(
-                field_flip_translation2d(w) if self.is_red() else w for w in waypoints
+                field_flip_translation2d(w) if self.is_red() else w for w in _waypoints
             )
         elif self.snap_to_closest_node:
             node = self.get_nearest_node(
