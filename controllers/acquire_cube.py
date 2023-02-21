@@ -10,7 +10,7 @@ class AcquireCubeController(StateMachine):
     intake: Intake
     arm: Arm
 
-    @state(start=True, must_finish=True)
+    @state(first=True, must_finish=True)
     def intaking(self) -> None:
         """
         Deploy the intake.
