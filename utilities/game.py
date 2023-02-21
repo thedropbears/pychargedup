@@ -3,7 +3,7 @@ from enum import Enum, auto
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
-from magicbot import feedback, tunable
+from magicbot import tunable
 from components.arm import Setpoints
 
 apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
@@ -153,7 +153,6 @@ def get_staged_pieces(alliance: wpilib.DriverStation.Alliance) -> list[Translati
         return STAGED_PIECES_RED
 
 
-@feedback
 def is_red() -> bool:
     return get_team() == wpilib.DriverStation.Alliance.kRed
 
