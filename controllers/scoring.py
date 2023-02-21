@@ -15,6 +15,7 @@ from utilities.game import (
     BLUE_NODES,
     Rows,
     Node,
+    is_red,
 )
 
 
@@ -207,7 +208,7 @@ class ScoringController(StateMachine):
     def get_single_substation_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         goal_trans = get_single_substation(wpilib.DriverStation.Alliance.kBlue)
         goal_rotation = (
-            field_flip_rotation2d(Rotation2d(0)) if self.is_red() else Rotation2d(0)
+            field_flip_rotation2d(Rotation2d(0)) if is_red() else Rotation2d(0)
         )
         return Pose2d(goal_trans, goal_rotation), goal_rotation
 
@@ -228,7 +229,7 @@ class ScoringController(StateMachine):
                 if self.get_current_piece() == GamePiece.CONE:
                     score_locations = [
                         self.score_location_from_node(
-                            Node(desired_rows, i), self.is_red()
+                            Node(desired_rows, i), is_red()
                         )
                         for i in range(9)
                         if i % 3 != 1
@@ -236,7 +237,7 @@ class ScoringController(StateMachine):
                 elif self.get_current_piece == GamePiece.CUBE:
                     score_locations = [
                         self.score_location_from_node(
-                            Node(desired_rows, i), self.is_red()
+                            Node(desired_rows, i), is_red()
                         )
                         for i in range(1, 9, 3)
                     ]
@@ -247,7 +248,7 @@ class ScoringController(StateMachine):
                 return next(loc for loc in score_locations if loc[0][0] == nearest)
             else:
                 node = Node(Rows(self.desired_row), self.desired_column)
-        return self.score_location_from_node(node, self.is_red())
+        return self.score_location_from_node(node, is_red())
 
     def score_location_from_node(
         self, node: Node, is_red: bool

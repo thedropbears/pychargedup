@@ -8,6 +8,7 @@ from utilities.game import (
     get_staged_pieces,
     field_flip_pose2d,
     field_flip_rotation2d,
+    is_red,
 )
 import wpilib
 
@@ -28,7 +29,7 @@ class CubeAutoBase:
 
     def on_enable(self) -> None:
         (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
-        if self.scoring.is_red():
+        if is_red():
             start_pose = field_flip_pose2d(start_pose)
         else:
             start_pose = start_pose
@@ -42,7 +43,7 @@ class CubeAutoBase:
             position = all_pieces[idx]
             # flip angle, position is already correctly flipped
             angle = (
-                field_flip_rotation2d(rotation) if self.scoring.is_red() else rotation
+                field_flip_rotation2d(rotation) if is_red() else rotation
             )
             # approach angle is the same as chassis heading
             pose = Pose2d(position, angle)
