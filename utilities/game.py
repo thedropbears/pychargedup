@@ -3,7 +3,7 @@ from enum import Enum, auto
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
-from magicbot import feedback,tunable
+from magicbot import feedback, tunable
 from components.arm import Setpoints
 
 apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
@@ -152,19 +152,20 @@ def get_staged_pieces(alliance: wpilib.DriverStation.Alliance) -> list[Translati
     else:
         return STAGED_PIECES_RED
 
+
 @feedback
 def is_red() -> bool:
     return get_team() == wpilib.DriverStation.Alliance.kRed
 
+
 def get_team() -> wpilib.DriverStation.Alliance:
     return wpilib.DriverStation.getAlliance()
+
 
 def get_cone_pickup(self, targeting_left: bool) -> tuple[Pose2d, Rotation2d]:
     # if we want the substation to be as if we are on the red alliance
     is_red = self.is_red() != swap_substation
-    cone_trans = get_double_substation(
-        is_red, targeting_left
-    ).toTranslation2d()
+    cone_trans = get_double_substation(is_red, targeting_left).toTranslation2d()
 
     # as if we're blue
     goal_rotation = Rotation2d.fromDegrees(180)
