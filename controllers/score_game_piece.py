@@ -12,7 +12,7 @@ class ScoreGamePieceController(StateMachine):
     arm: Arm
     movement: Movement
 
-    @state(start=True, must_finish=True)
+    @state(first=True, must_finish=True)
     def driving_to_position(self):
         self.next_state("deploying_arm")
 
