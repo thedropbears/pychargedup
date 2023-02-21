@@ -18,7 +18,7 @@ class AcquireConeController(StateMachine):
     APPROACH_SPEED = tunable(0.2)
 
     def __init__(self) -> None:
-        self.targeting_left = False
+        self.targeting_left: bool = False
 
     @state(first=True, must_finish=True)
     def driving_to_position(self) -> None:
@@ -39,7 +39,6 @@ class AcquireConeController(StateMachine):
         """
 
         # TODO Test if gripper opening interfere with the arm moving from HANDOFF
-        self.arm.set_angle()
         self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
         if self.arm.at_goal():
             self.gripper.open()
