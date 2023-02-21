@@ -70,4 +70,3 @@ class AcquireConeController(StateMachine):
 
     def target_right(self) -> None:
         self.targeting_left = False
-    
