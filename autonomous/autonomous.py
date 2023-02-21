@@ -29,10 +29,7 @@ class CubeAutoBase:
 
     def on_enable(self) -> None:
         (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
-        if is_red():
-            start_pose = field_flip_pose2d(start_pose)
-        else:
-            start_pose = start_pose
+        start_pose = field_flip_pose2d(start_pose) if is_red() else start_pose
         self.chassis.set_pose(start_pose)
 
         self.scoring.wants_piece = GamePiece.CUBE
@@ -42,9 +39,7 @@ class CubeAutoBase:
         for idx, rotation in self.cubes[::-1]:
             position = all_pieces[idx]
             # flip angle, position is already correctly flipped
-            angle = (
-                field_flip_rotation2d(rotation) if is_red() else rotation
-            )
+            angle = field_flip_rotation2d(rotation) if is_red() else rotation
             # approach angle is the same as chassis heading
             pose = Pose2d(position, angle)
             self.scoring.cube_stack.append((pose, angle))
