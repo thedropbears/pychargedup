@@ -17,12 +17,12 @@ class AcquireConeController(StateMachine):
     arm: Arm
     movement: Movement
 
-    APPROACH_SPEED: float = tunable(0.2)
+    APPROACH_SPEED = tunable(0.2)
 
     def __init__(self) -> None:
         self.targeting_left = False
 
-    @state(start=True, must_finish=True)
+    @state(first=True, must_finish=True)
     def driving_to_position(self) -> None:
         """
         Get the chassis to the correct position to start moving towards cone.
