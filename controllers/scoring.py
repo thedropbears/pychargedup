@@ -10,7 +10,6 @@ from controllers.movement import Movement
 from utilities.game import (
     GamePiece,
     field_flip_pose2d,
-    get_double_substation,
     get_single_substation,
     field_flip_rotation2d,
     BLUE_NODES,
@@ -39,9 +38,6 @@ class ScoringController(StateMachine):
 
     desired_row = tunable(0)
     desired_column = tunable(0)
-
-    # swap the the side of the substation to test on a half field
-    swap_substation = tunable(False)
 
     snap_to_closest_node = tunable(True)
 
@@ -187,13 +183,6 @@ class ScoringController(StateMachine):
             self.arm.go_to_setpoint(Setpoints.STOW)
         self.movement.do_autodrive()
 
-    @feedback
-    def is_red(self) -> bool:
-        return self.get_team() == wpilib.DriverStation.Alliance.kRed
-
-    def get_team(self) -> wpilib.DriverStation.Alliance:
-        return wpilib.DriverStation.getAlliance()
-
     def get_current_piece(self) -> GamePiece:
         """What piece the gripper is currently holding in the gripper"""
         if self.gripper.get_full_closed():
@@ -224,31 +213,6 @@ class ScoringController(StateMachine):
 
     def get_auto_cube_pickup(self) -> tuple[Pose2d, Rotation2d]:
         return self.cube_stack[-1]
-
-    def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        # use the shelf closest to the wall, furthest from the nodes
-        is_wall_side = self.driver_requests_right == self.is_red()
-        # if we want the substation to be as if we are on the red alliance
-        is_red = self.is_red() != self.swap_substation
-        cone_trans = get_double_substation(is_red, is_wall_side).toTranslation2d()
-
-        # as if we're blue
-        goal_rotation = Rotation2d.fromDegrees(180)
-        goal_approach = Rotation2d(0)
-        offset_x, _ = Setpoints.PICKUP_CONE.toCartesian()
-        if is_red:
-            offset_x *= -1
-            goal_rotation = field_flip_rotation2d(goal_rotation)
-            goal_approach = field_flip_rotation2d(goal_approach)
-        goal_trans = cone_trans + Translation2d(offset_x, 0)
-
-        return (
-            Pose2d(
-                goal_trans,
-                goal_rotation,
-            ),
-            goal_approach,
-        )
 
     def set_direction_to_find_place(self, driver_requests_right: bool) -> None:
         """setting the side of the robot wants to get a cone or cube, also setting what side it wants to score"""

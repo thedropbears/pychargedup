@@ -1,13 +1,11 @@
 from magicbot import state, StateMachine, tunable
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 
 from components.gripper import Gripper
 from components.intake import Intake
 from components.arm import Arm, Setpoints
 from controllers.movement import Movement
 from utilities.game import (
-    get_double_substation,
-    field_flip_rotation2d,
+    get_cone_pickup,
 )
 
 
@@ -29,7 +27,7 @@ class AcquireConeController(StateMachine):
         Requires that the state has had the goal position injected into it.
         """
 
-        self.movement.set_goal(*self.get_cone_pickup())
+        self.movement.set_goal(*get_cone_pickup(self.targeting_left))
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
 
@@ -72,28 +70,4 @@ class AcquireConeController(StateMachine):
 
     def target_right(self) -> None:
         self.targeting_left = False
-
-    def get_cone_pickup(self) -> tuple[Pose2d, Rotation2d]:
-        # if we want the substation to be as if we are on the red alliance
-        is_red = self.is_red() != self.swap_substation
-        cone_trans = get_double_substation(
-            is_red, self.targeting_left
-        ).toTranslation2d()
-
-        # as if we're blue
-        goal_rotation = Rotation2d.fromDegrees(180)
-        goal_approach = Rotation2d(0)
-        offset_x = Setpoints.PICKUP_CONE.toCartesian()
-        if is_red:
-            offset_x *= -1
-            goal_rotation = field_flip_rotation2d(goal_rotation)
-            goal_approach = field_flip_rotation2d(goal_approach)
-        goal_trans = cone_trans + Translation2d(offset_x, 0)
-
-        return (
-            Pose2d(
-                goal_trans,
-                goal_rotation,
-            ),
-            goal_approach,
-        )
+    
