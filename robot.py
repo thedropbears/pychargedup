@@ -6,6 +6,12 @@ from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 
 from controllers.movement import Movement
 from controllers.scoring import ScoringController
+
+from controllers.acquire_cone import AcquireConeController
+from controllers.acquire_cube import AcquireCubeController
+from controllers.recover import RecoverController
+from controllers.score_game_piece import ScoreGamePieceController
+
 from components.intake import Intake
 from components.chassis import Chassis
 from components.vision import VisualLocalizer
@@ -19,6 +25,11 @@ class MyRobot(magicbot.MagicRobot):
     # Controllers
     scoring: ScoringController
     movement: Movement
+
+    acquire_cone: AcquireConeController
+    acquire_cube: AcquireCubeController
+    recover: RecoverController
+    score_game_piece: ScoreGamePieceController
 
     # Components
     chassis: Chassis
@@ -174,6 +185,10 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getLeftBumperPressed():
             self.intake.retract()
 
+        # Cancel any running controllers
+        if self.gamepad.getBackButtonPressed():
+            self.cancel_controllers()
+
         # self.scoring.execute()
         self.arm.execute()
         self.intake.execute()
@@ -182,7 +197,18 @@ class MyRobot(magicbot.MagicRobot):
         self.starboard_localizer.execute()
         self.status_lights.execute()
 
-        # self.scoring.engage()
+        # Tick the controllers
+        # These will only do anything if engage() has been called on them
+        self.acquire_cone.execute()
+        self.acquire_cube.execute()
+        self.score_game_piece.execute()
+        self.recover.execute()
+
+    def cancel_controllers(self):
+        self.acquire_cone.done()
+        self.acquire_cube.done()
+        self.score_game_piece.done()
+        self.recover.engage()
 
     def disabledInit(self) -> None:
         pass
