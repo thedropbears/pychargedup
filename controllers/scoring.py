@@ -228,17 +228,13 @@ class ScoringController(StateMachine):
                 score_locations = []
                 if self.get_current_piece() == GamePiece.CONE:
                     score_locations = [
-                        self.score_location_from_node(
-                            Node(desired_rows, i), is_red()
-                        )
+                        self.score_location_from_node(Node(desired_rows, i), is_red())
                         for i in range(9)
                         if i % 3 != 1
                     ]
                 elif self.get_current_piece == GamePiece.CUBE:
                     score_locations = [
-                        self.score_location_from_node(
-                            Node(desired_rows, i), is_red()
-                        )
+                        self.score_location_from_node(Node(desired_rows, i), is_red())
                         for i in range(1, 9, 3)
                     ]
                 score_poses = [t[0][0] for t in score_locations]
