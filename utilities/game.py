@@ -3,6 +3,8 @@ from enum import Enum, auto
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
+from magicbot import feedback,tunable
+from components.arm import Setpoints
 
 apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
     robotpy_apriltag.AprilTagField.k2023ChargedUp
@@ -14,6 +16,9 @@ tag_1 = apriltag_layout.getTagPose(1)
 # for type chcker
 assert tag_8 is not None and tag_1 is not None
 FIELD_LENGTH = tag_1.x + tag_8.x
+
+# swap the the side of the substation to test on a half field
+swap_substation = tunable(False)
 
 
 class GamePiece(Enum):
@@ -146,3 +151,35 @@ def get_staged_pieces(alliance: wpilib.DriverStation.Alliance) -> list[Translati
         return STAGED_PIECES_BLUE
     else:
         return STAGED_PIECES_RED
+
+@feedback
+def is_red() -> bool:
+    return get_team() == wpilib.DriverStation.Alliance.kRed
+
+def get_team() -> wpilib.DriverStation.Alliance:
+    return wpilib.DriverStation.getAlliance()
+
+def get_cone_pickup(self, targeting_left: bool) -> tuple[Pose2d, Rotation2d]:
+    # if we want the substation to be as if we are on the red alliance
+    is_red = self.is_red() != swap_substation
+    cone_trans = get_double_substation(
+        is_red, targeting_left
+    ).toTranslation2d()
+
+    # as if we're blue
+    goal_rotation = Rotation2d.fromDegrees(180)
+    goal_approach = Rotation2d(0)
+    offset_x = Setpoints.PICKUP_CONE.toCartesian()
+    if is_red:
+        offset_x *= -1
+        goal_rotation = field_flip_rotation2d(goal_rotation)
+        goal_approach = field_flip_rotation2d(goal_approach)
+    goal_trans = cone_trans + Translation2d(offset_x, 0)
+
+    return (
+        Pose2d(
+            goal_trans,
+            goal_rotation,
+        ),
+        goal_approach,
+    )
