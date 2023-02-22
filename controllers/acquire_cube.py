@@ -2,6 +2,8 @@ from components.arm import Arm, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
 
+from controllers.recover import RecoverController
+
 from magicbot import state, StateMachine
 
 
@@ -9,6 +11,8 @@ class AcquireCubeController(StateMachine):
     gripper: Gripper
     intake: Intake
     arm: Arm
+
+    recover: RecoverController
 
     @state(first=True, must_finish=True)
     def intaking(self) -> None:
@@ -48,3 +52,7 @@ class AcquireCubeController(StateMachine):
         self.gripper.close()
         if self.gripper.get_full_closed():
             self.done()
+
+    def done(self) -> None:
+        super().done()
+        self.recover.engage()
