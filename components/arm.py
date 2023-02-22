@@ -71,7 +71,8 @@ class Setpoints:
 
 class Arm:
     # height of the center of rotation off the ground
-    HEIGHT = 1
+    PIVOT_HEIGHT = 0.990924
+    PIVOT_X = -0.283562
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
     SPOOL_CIRCUMFERENCE = 42 * 0.005  # 42t x 5mm
@@ -158,8 +159,8 @@ class Arm:
 
         # Create arm display
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)
-        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, self.HEIGHT)
-        arm_pivot.appendLigament("ArmTower", self.HEIGHT - 0.05, -90)
+        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, self.PIVOT_HEIGHT)
+        arm_pivot.appendLigament("ArmTower", self.PIVOT_HEIGHT - 0.05, -90)
         self.arm_ligament = arm_pivot.appendLigament("Arm", MIN_EXTENSION, 0)
         self.arm_goal_ligament = arm_pivot.appendLigament(
             "Arm_goal",
