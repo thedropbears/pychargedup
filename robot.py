@@ -7,6 +7,8 @@ from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 from controllers.movement import Movement
 from controllers.scoring import ScoringController
 
+from controllers.arm import ArmController
+
 from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
 from controllers.recover import RecoverController
@@ -30,6 +32,8 @@ class MyRobot(magicbot.MagicRobot):
     acquire_cube: AcquireCubeController
     recover: RecoverController
     score_game_piece: ScoreGamePieceController
+
+    arm_controller: ArmController
 
     # Components
     chassis: Chassis
