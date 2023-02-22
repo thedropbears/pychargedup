@@ -7,6 +7,7 @@ import robotpy_apriltag
 from magicbot import tunable
 from components.arm import Setpoints
 from components.chassis import Chassis
+from components.arm import Arm
 
 apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
     robotpy_apriltag.AprilTagField.k2023ChargedUp
@@ -140,14 +141,15 @@ DOUBLE_SUBSTATION_RED_DRIVER = Translation3d(0.15, 6.007, 0.948)
 DOUBLE_SUBSTATION_BLUE_DRIVER = field_flip_translation3d(DOUBLE_SUBSTATION_RED_DRIVER)
 
 
-def get_double_substation(is_red: bool, wall_side: bool):
-    if is_red:
-        if wall_side:
-            return DOUBLE_SUBSTATION_RED_WALL
-        else:
+def get_double_substation(red_side: bool, left_side: bool):
+    """Left/Right sides from perspective of current drivers"""
+    if red_side:
+        if left_side:
             return DOUBLE_SUBSTATION_RED_DRIVER
+        else:
+            return DOUBLE_SUBSTATION_RED_WALL
     else:
-        if wall_side:
+        if left_side:
             return DOUBLE_SUBSTATION_BLUE_WALL
         else:
             return DOUBLE_SUBSTATION_BLUE_DRIVER
@@ -197,21 +199,21 @@ def get_cone_pickup(targeting_left: bool) -> tuple[Pose2d, Rotation2d]:
     # if we want the substation to be as if we are on the red alliance
     red_side = is_red() != swap_substation
     cone_trans = get_double_substation(red_side, targeting_left).toTranslation2d()
+    # how far away from the gripper grabbing the cone to stop
+    stop_distance = 0.1
 
     # as if we're blue
     goal_rotation = Rotation2d.fromDegrees(180)
     goal_approach = Rotation2d(0)
-    offset_x = Setpoints.PICKUP_CONE.toCartesian()
-    if is_red:
-        offset_x *= -1
-        goal_rotation = field_flip_rotation2d(goal_rotation)
-        goal_approach = field_flip_rotation2d(goal_approach)
+    offset_x = Setpoints.PICKUP_CONE.toCartesian()[0] + Arm.PIVOT_X + stop_distance
     goal_trans = cone_trans + Translation2d(offset_x, 0)
+    goal = Pose2d(goal_trans, goal_rotation)
+
+    if red_side:
+        goal = field_flip_pose2d(goal)
+        goal_approach = field_flip_rotation2d(goal_approach)
 
     return (
-        Pose2d(
-            goal_trans,
-            goal_rotation,
-        ),
+        goal,
         goal_approach,
     )
