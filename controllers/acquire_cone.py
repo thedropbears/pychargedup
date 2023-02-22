@@ -3,7 +3,10 @@ from magicbot import state, StateMachine, tunable
 from components.gripper import Gripper
 from components.intake import Intake
 from components.arm import Arm, Setpoints
+
 from controllers.movement import Movement
+from controllers.recover import RecoverController
+
 from utilities.game import (
     get_cone_pickup,
 )
@@ -13,7 +16,9 @@ class AcquireConeController(StateMachine):
     gripper: Gripper
     intake: Intake
     arm: Arm
+
     movement: Movement
+    recover: RecoverController
 
     APPROACH_SPEED = tunable(0.2)
 
@@ -63,6 +68,10 @@ class AcquireConeController(StateMachine):
         self.gripper.close()
         if self.gripper.get_full_closed():
             self.done()
+
+    def done(self) -> None:
+        super().done()
+        self.recover.engage()
 
     def target_left(self) -> None:
         self.targeting_left = True
