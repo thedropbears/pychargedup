@@ -6,8 +6,7 @@ import magicbot
 from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 
 from controllers.movement import Movement
-from controllers.scoring import ScoringController
-
+from controllers.arm import ArmController, Setpoints
 
 from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
@@ -17,7 +16,7 @@ from controllers.score_game_piece import ScoreGamePieceController
 from components.intake import Intake
 from components.chassis import Chassis
 from components.vision import VisualLocalizer
-from components.arm import Arm, Setpoints
+from components.arm import Arm
 from components.gripper import Gripper
 from components.leds import StatusLights
 from utilities.scalers import rescale_js
@@ -25,8 +24,8 @@ from utilities.scalers import rescale_js
 
 class MyRobot(magicbot.MagicRobot):
     # Controllers
-    scoring: ScoringController
     movement: Movement
+    arm: ArmController
 
     acquire_cone: AcquireConeController
     acquire_cube: AcquireCubeController
@@ -37,7 +36,7 @@ class MyRobot(magicbot.MagicRobot):
 
     # Components
     chassis: Chassis
-    arm: Arm
+    arm_component: Arm
     intake: Intake
     status_lights: StatusLights
     gripper: Gripper
@@ -155,8 +154,10 @@ class MyRobot(magicbot.MagicRobot):
         self.arm.on_enable()
         self.arm.stop()
         self.arm.homing = False
+        self.recover.engage()
 
     def testPeriodic(self) -> None:
+        self.recover.engage()
         dpad_angle = self.gamepad.getPOV()
 
         # Intake
@@ -197,13 +198,7 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getBackButtonPressed():
             self.cancel_controllers()
 
-        # self.scoring.execute()
         self.arm.execute()
-        self.intake.execute()
-        self.gripper.execute()
-        self.port_localizer.execute()
-        self.starboard_localizer.execute()
-        self.status_lights.execute()
 
         # Tick the controllers
         # These will only do anything if engage() has been called on them
@@ -211,6 +206,14 @@ class MyRobot(magicbot.MagicRobot):
         self.acquire_cube.execute()
         self.score_game_piece.execute()
         self.recover.execute()
+
+        # self.scoring.execute()
+        self.arm_component.execute()
+        self.intake.execute()
+        self.gripper.execute()
+        self.port_localizer.execute()
+        self.starboard_localizer.execute()
+        self.status_lights.execute()
 
     def cancel_controllers(self):
         self.acquire_cone.done()

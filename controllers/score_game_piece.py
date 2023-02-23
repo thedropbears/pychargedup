@@ -1,4 +1,4 @@
-from components.arm import Arm, get_setpoint_from_node
+from controllers.arm import ArmController, get_setpoint_from_node
 from components.intake import Intake
 from components.gripper import Gripper
 
@@ -19,7 +19,7 @@ class NodePickStratergy(Enum):
 class ScoreGamePieceController(StateMachine):
     gripper: Gripper
     intake: Intake
-    arm: Arm
+    arm: ArmController
 
     movement: Movement
     recover: RecoverController

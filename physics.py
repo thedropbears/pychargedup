@@ -113,7 +113,7 @@ class PhysicsEngine:
         self.extension_sim.setState(np.array([[arm.MIN_EXTENSION], [0]]))
 
         # Get arm objects
-        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
+        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm_component.absolute_encoder)
         self.arm_brake = SolenoidSim(
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake
         )
