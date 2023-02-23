@@ -2,7 +2,7 @@ from magicbot import state, StateMachine, tunable
 
 from components.gripper import Gripper
 from components.intake import Intake
-from components.arm import Arm, Setpoints
+from controllers.arm import ArmController, Setpoints
 from components.leds import StatusLights
 
 from controllers.movement import Movement
@@ -18,7 +18,7 @@ from utilities.game import (
 class AcquireConeController(StateMachine):
     gripper: Gripper
     intake: Intake
-    arm: Arm
+    arm: ArmController
     status_lights: StatusLights
 
     movement: Movement
@@ -41,7 +41,11 @@ class AcquireConeController(StateMachine):
         # if we want the substation to be as if we are on the red alliance
         red_side = is_red() != self.swap_substation
         stop_distance = 0.1
-        x_offset = Setpoints.PICKUP_CONE.toCartesian()[0] + Arm.PIVOT_X + stop_distance
+        x_offset = (
+            Setpoints.PREPARE_PICKUP_CONE.toCartesian()[0]
+            + self.arm.arm_component.PIVOT_X
+            + stop_distance
+        )
         self.movement.set_goal(
             *get_cone_pickup(self.targeting_left, red_side, x_offset)
         )
@@ -57,7 +61,7 @@ class AcquireConeController(StateMachine):
         """
 
         # TODO Test if gripper opening interfere with the arm moving from HANDOFF
-        self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
+        self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
         if self.arm.at_goal():
             self.gripper.open()
         if self.gripper.get_full_open():
@@ -69,7 +73,7 @@ class AcquireConeController(StateMachine):
         Move forward until the limit switch is triggered on the wall.
         """
 
-        self.arm.extend(self.EXTEND_VOLTAGE)
+        self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
         if self.arm.is_at_forward_limit():
             self.next_state("grabbing")
 
