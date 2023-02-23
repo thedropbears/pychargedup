@@ -57,12 +57,12 @@ class Setpoint:
 
 
 class Setpoints:
-    PICKUP_CONE = Setpoint(-3.05, 1.0)
+    PICKUP_CONE = Setpoint(-3.05, MIN_EXTENSION)
     HANDOFF = Setpoint(0.8, MIN_EXTENSION)
     STOW = Setpoint(0.35, MIN_EXTENSION)
     START = Setpoint(-math.radians(30), MIN_EXTENSION)
-    SCORE_CONE_MID = Setpoint(-2.8, 0.89)
-    SCORE_CUBE_MID = Setpoint(-3.2, 0.89)
+    SCORE_CONE_MID = Setpoint(-2.8, MIN_EXTENSION)
+    SCORE_CUBE_MID = Setpoint(-3.2, MIN_EXTENSION)
     SCORE_CONE_HIGH = Setpoint(-2.89, 1.17)
     SCORE_CUBE_HIGH = Setpoint(-3, 1.17)
 
@@ -145,7 +145,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            10, 0, 0.1, rotation_constraints
+            15, 0, 0.1, rotation_constraints
         )
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -228,13 +228,14 @@ class Arm:
         self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
         self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
-        if self.is_retracted():
-            self.extension_encoder.setPosition(MIN_EXTENSION)
+        # if self.is_retracted():
+        #     self.extension_encoder.setPosition(MIN_EXTENSION)
 
         if self.voltage_movement:
             self.extension_motor.setVoltage(self.extension_voltage)
         else:
             extension_goal = self.get_max_extension()
+
             # Calculate extension motor output
             pid_output = self.extension_controller.calculate(
                 self.get_extension(), extension_goal
@@ -346,8 +347,10 @@ class Arm:
 
     def set_length(self, value: float) -> None:
         """Sets a goal length to go to in meters"""
-        self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
+        if self.voltage_movement:
+            self.extension_controller.reset(self.get_extension())
         self.voltage_movement = False
+        self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
 
     def go_to_setpoint(self, value: Setpoint) -> None:
         self.set_length(value.extension)

@@ -127,7 +127,7 @@ def get_score_location(
     return goal, approach
 
 
-def get_closest_node(pos: Translation2d, piece: GamePiece) -> Node:
+def get_closest_node(pos: Translation2d, piece: GamePiece, row: Rows) -> Node:
     def get_node_dist(node: Node) -> float:
         return get_score_location(node)[0].translation().distance(pos)
 
@@ -209,9 +209,7 @@ def get_cone_pickup(
     targeting_left: bool, red_side: bool, offset_x: float
 ) -> tuple[Pose2d, Rotation2d]:
     """Returns the goal and approach direction for the given side"""
-    cone_trans = get_double_substation(red_side, targeting_left).toTranslation2d()
-    # how far away from the gripper grabbing the cone to stop
-
+    cone_trans = get_double_substation(False, targeting_left).toTranslation2d()
     # as if we're blue
     goal_rotation = Rotation2d.fromDegrees(180)
     goal_approach = Rotation2d(0)
