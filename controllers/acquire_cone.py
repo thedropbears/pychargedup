@@ -22,7 +22,7 @@ class AcquireConeController(StateMachine):
     movement: Movement
     recover: RecoverController
 
-    APPROACH_SPEED = tunable(0.2)
+    EXTEND_VOLTAGE = tunable(3)
 
     # swap the the side of the substation to test on a half field
     swap_substation = tunable(False)
@@ -38,7 +38,11 @@ class AcquireConeController(StateMachine):
         """
         # if we want the substation to be as if we are on the red alliance
         red_side = is_red() != self.swap_substation
-        self.movement.set_goal(*get_cone_pickup(self.targeting_left, red_side))
+        stop_distance = 0.1
+        x_offset = Setpoints.PICKUP_CONE.toCartesian()[0] + Arm.PIVOT_X + stop_distance
+        self.movement.set_goal(
+            *get_cone_pickup(self.targeting_left, red_side, x_offset)
+        )
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
 
@@ -62,7 +66,7 @@ class AcquireConeController(StateMachine):
         Move forward until the limit switch is triggered on the wall.
         """
 
-        self.arm.extend(0.2)
+        self.arm.extend(self.EXTEND_VOLTAGE)
         if self.arm.is_at_forward_limit():
             self.next_state("grabbing")
 
