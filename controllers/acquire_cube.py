@@ -25,6 +25,7 @@ class AcquireCubeController(StateMachine):
         Open the gripper.
         """
         self.intake.deploy()
+        self.status_lights.want_cube()
         self.gripper.open()
         if self.gripper.get_full_open():
             self.next_state("moving_arm")
