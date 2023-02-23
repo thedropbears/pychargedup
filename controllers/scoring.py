@@ -69,7 +69,6 @@ class ScoringController(StateMachine):
     def initialize(self, initial_call: bool, state_tm: float) -> None:
         if initial_call:
             self.arm.homing = True
-        self.gripper.set_solenoid = False
         if self.arm.get_angle() > 0.5:
             self.intake.deploy_without_running()
         if self.arm.is_retracted():
@@ -80,7 +79,6 @@ class ScoringController(StateMachine):
 
         if self.arm.get_angle() < 0.5 and not self.arm.homing:
             self.next_state("idle")
-            self.gripper.set_solenoid = True
 
     @state
     def idle(self, initial_call: bool):

@@ -20,15 +20,12 @@ class Gripper:
             ids.PhChannels.gripper_solenoid_reverse,
         )
 
-        self.set_solenoid = False
         self.holding = GamePiece.NONE
 
     def open(self) -> None:
-        self.set_solenoid = True
         self.opened = True
 
     def close(self, on: GamePiece = GamePiece.BOTH) -> None:
-        self.set_solenoid = True
         self.opened = False
         self.holding = on
 
@@ -56,11 +53,10 @@ class Gripper:
             self.change_time = time.monotonic()
         self.last_opened = self.opened
 
-        if self.set_solenoid:
-            if self.opened:
-                self.solenoid.set(DoubleSolenoid.Value.kReverse)
-            else:
-                self.solenoid.set(DoubleSolenoid.Value.kForward)
+        if self.opened:
+            self.solenoid.set(DoubleSolenoid.Value.kReverse)
+        else:
+            self.solenoid.set(DoubleSolenoid.Value.kForward)
 
     def get_current_piece(self) -> GamePiece:
         if self.opened:

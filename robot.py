@@ -169,10 +169,8 @@ class MyRobot(magicbot.MagicRobot):
         # Claw
         if self.gamepad.getBButton():
             if dpad_angle == 0:
-                self.gripper.set_solenoid = True
                 self.gripper.close()
             if dpad_angle == 180:
-                self.gripper.set_solenoid = True
                 self.gripper.open()
 
         # Arm
