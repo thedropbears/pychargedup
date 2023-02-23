@@ -23,7 +23,6 @@ class RecoverController(StateMachine):
         and the arm will rotate above the intake
         """
 
-        self.gripper.close()
         if self.arm.get_angle() > self.ARM_FOULING_ANGLE:
             self.intake.deploy_without_running()
             self.arm.go_to_setpoint(Setpoints.STOW)
