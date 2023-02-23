@@ -1,6 +1,7 @@
 from components.arm import Arm, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
+from components.leds import StatusLights
 
 from controllers.recover import RecoverController
 
@@ -13,6 +14,7 @@ class AcquireCubeController(StateMachine):
     gripper: Gripper
     intake: Intake
     arm: Arm
+    status_lights: StatusLights
 
     recover: RecoverController
 
@@ -53,6 +55,7 @@ class AcquireCubeController(StateMachine):
         """
         self.gripper.close(GamePiece.CUBE)
         if self.gripper.get_full_closed():
+            self.status_lights.cube_onboard()
             self.done()
 
     def done(self) -> None:
