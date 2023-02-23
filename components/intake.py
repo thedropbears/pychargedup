@@ -2,7 +2,6 @@ from rev import CANSparkMax
 from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
 from magicbot import tunable, feedback
 import ids
-from components.arm import Arm
 
 
 class Intake:
