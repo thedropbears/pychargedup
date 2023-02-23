@@ -1,4 +1,4 @@
-from components.arm import Arm, Setpoints
+from components.arm import Arm, Setpoints, MIN_EXTENSION
 from components.intake import Intake
 from components.gripper import Gripper
 
@@ -16,9 +16,18 @@ class RecoverController(StateMachine):
         pass
 
     @state(first=True, must_finish=True)
+    def retracting_arm(self) -> None:
+        """
+        Retract the arm to the minimum extension
+        """
+        self.arm.set_length(MIN_EXTENSION)
+        if self.arm.at_goal_extension():
+            self.next_state("clearing_intake")
+
+    @state(must_finish=True)
     def clearing_intake(self) -> None:
         """
-        Initial state should check if the arm will foul on the intake
+        Should check if the arm will foul on the intake
         mechanism. If there is an interception, the intake will be deployed
         and the arm will rotate above the intake
         """
