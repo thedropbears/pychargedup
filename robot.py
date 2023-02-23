@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import wpilib
+import wpilib.event
 import magicbot
 from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 
 from controllers.movement import Movement
 from controllers.scoring import ScoringController
 
-from controllers.arm import ArmController
 
 from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
@@ -33,7 +33,7 @@ class MyRobot(magicbot.MagicRobot):
     recover: RecoverController
     score_game_piece: ScoreGamePieceController
 
-    arm_controller: ArmController
+    # arm_controller: ArmController
 
     # Components
     chassis: Chassis
@@ -53,6 +53,15 @@ class MyRobot(magicbot.MagicRobot):
         self.gamepad = wpilib.XboxController(0)
         self.joystick = wpilib.Joystick(1)
 
+        self.event_loop = wpilib.event.EventLoop()
+        self.right_trigger_down = self.gamepad.rightTrigger(
+            0.3, self.event_loop
+        ).rising()
+        self.right_trigger_up = self.gamepad.rightTrigger(
+            0.3, self.event_loop
+        ).falling()
+        self.left_trigger_down = self.gamepad.leftTrigger(0.3, self.event_loop).rising()
+        self.left_trigger_up = self.gamepad.leftTrigger(0.3, self.event_loop).falling()
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
@@ -82,6 +91,7 @@ class MyRobot(magicbot.MagicRobot):
         pass
 
     def teleopPeriodic(self) -> None:
+        self.event_loop.poll()
         # Driving
         spin_rate = 4
         drive_x = -rescale_js(self.gamepad.getLeftY(), 0.1) * self.max_speed
@@ -90,22 +100,33 @@ class MyRobot(magicbot.MagicRobot):
         local_driving = self.gamepad.getBButton()
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
-        # Automation
-        left_trigger = self.gamepad.getLeftTriggerAxis() > 0.3
-        right_trigger = self.gamepad.getRightTriggerAxis() > 0.3
-        if right_trigger:
-            self.scoring.set_direction_to_find_place(True)
-        if left_trigger:
-            self.scoring.set_direction_to_find_place(False)
-        self.scoring.autodrive = right_trigger or left_trigger
+        # Cone Pickup
+        if self.right_trigger_down.getAsBoolean():
+            self.acquire_cone.target_right()
+            self.acquire_cone.engage("deploying_arm")
+        if self.left_trigger_down.getAsBoolean():
+            self.acquire_cone.target_left()
+            self.acquire_cone.engage("deploying_arm")
+
+        if self.left_trigger_up.getAsBoolean() or self.right_trigger_up.getAsBoolean():
+            self.acquire_cone.done()
 
         # Intake
         if self.gamepad.getRightBumperPressed():
-            self.scoring.wants_to_intake = True
+            self.acquire_cube.engage()
         if self.gamepad.getLeftBumperPressed():
-            self.scoring.wants_to_intake = False
+            self.acquire_cube.done()
 
-        self.scoring.engage()
+        # Scoring
+        if self.gamepad.getAButtonPressed():
+            self.score_game_piece.prefer_high()
+            self.score_game_piece.engage("deploying_arm")
+        if self.gamepad.getBButtonPressed():
+            self.score_game_piece.prefer_mid()
+            self.score_game_piece.engage("deploying_arm")
+
+        if self.gamepad.getAButtonReleased() or self.gamepad.getBButtonReleased():
+            self.score_game_piece.done()
 
         # Manual overrides
         # Claw
@@ -139,20 +160,6 @@ class MyRobot(magicbot.MagicRobot):
         self.gamepad.getRightTriggerAxis()
         self.gamepad.getLeftTriggerAxis()
         self.arm.unbrake()
-        dpad_angle = self.gamepad.getPOV()
-        # up
-        if dpad_angle == 0:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
-        # right
-        elif dpad_angle == 90:
-            self.arm.go_to_setpoint(Setpoints.FORWARDS)
-        # down
-        elif dpad_angle == 180:
-            self.gripper.open()
-            self.arm.go_to_setpoint(Setpoints.STOW)
-        # left
-        elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
         # Claw
         if self.gamepad.getYButton():
@@ -163,6 +170,7 @@ class MyRobot(magicbot.MagicRobot):
             self.gripper.open()
 
         # LEDs
+        dpad_angle = self.gamepad.getPOV()
         if self.gamepad.getAButton():
             if dpad_angle == 0:
                 self.status_lights.set_display_pattern(DisplayType.SOLID)

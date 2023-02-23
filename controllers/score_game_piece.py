@@ -27,6 +27,7 @@ class ScoreGamePieceController(StateMachine):
     def __init__(self) -> None:
         self.node_stratergy = NodePickStratergy.CLOSEST
         self.override_node = Node(Rows.HIGH, 0)
+        self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
 
     @state(first=True, must_finish=True)
@@ -34,6 +35,7 @@ class ScoreGamePieceController(StateMachine):
         if initial_call:
             self.target_node = self.pick_node()
         self.movement.set_goal(*get_score_location(self.target_node))
+        self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
 
@@ -56,8 +58,18 @@ class ScoreGamePieceController(StateMachine):
     def pick_node(self) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
         if self.node_stratergy is NodePickStratergy.CLOSEST:
-            return get_closest_node(cur_pos, self.gripper.get_current_piece())
+            return get_closest_node(
+                cur_pos, self.gripper.get_current_piece(), self.prefered_row
+            )
         elif self.node_stratergy is NodePickStratergy.OVERRIDE:
             return self.override_node
         elif self.node_stratergy is NodePickStratergy.BEST:
-            return get_closest_node(cur_pos, self.gripper.get_current_piece())
+            return get_closest_node(
+                cur_pos, self.gripper.get_current_piece(), self.prefered_row
+            )
+
+    def prefer_high(self) -> None:
+        self.prefered_row = Rows.HIGH
+
+    def prefer_mid(self) -> None:
+        self.prefered_row = Rows.MID
