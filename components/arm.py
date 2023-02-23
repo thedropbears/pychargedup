@@ -1,6 +1,6 @@
 from magicbot import feedback, tunable
 import wpilib
-from ids import SparkMaxIds, PcmChannels, DioChannels
+from ids import SparkMaxIds, PhChannels, DioChannels
 import math
 from wpilib import (
     Solenoid,
@@ -154,9 +154,7 @@ class Arm:
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
 
-        self.brake_solenoid = Solenoid(
-            PneumaticsModuleType.CTREPCM, PcmChannels.arm_brake
-        )
+        self.brake_solenoid = Solenoid(PneumaticsModuleType.REVPH, PhChannels.arm_brake)
 
         # Create arm display
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)

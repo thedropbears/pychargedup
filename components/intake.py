@@ -19,9 +19,9 @@ class Intake:
         self.motor.restoreFactoryDefaults()
         self.motor.setInverted(True)
         self.piston = DoubleSolenoid(
-            PneumaticsModuleType.CTREPCM,
-            ids.PcmChannels.intake_piston_forward,
-            ids.PcmChannels.intake_piston_reverse,
+            PneumaticsModuleType.REVPH,
+            ids.PhChannels.intake_piston_forward,
+            ids.PhChannels.intake_piston_reverse,
         )
 
     @feedback
