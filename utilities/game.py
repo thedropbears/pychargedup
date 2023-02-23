@@ -4,9 +4,7 @@ from typing import Optional
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
-from components.arm import Setpoints
 from components.chassis import Chassis
-from components.arm import Arm
 
 apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
     robotpy_apriltag.AprilTagField.k2023ChargedUp
@@ -207,16 +205,16 @@ def get_team() -> wpilib.DriverStation.Alliance:
     return wpilib.DriverStation.getAlliance()
 
 
-def get_cone_pickup(targeting_left: bool, red_side: bool) -> tuple[Pose2d, Rotation2d]:
+def get_cone_pickup(
+    targeting_left: bool, red_side: bool, offset_x: float
+) -> tuple[Pose2d, Rotation2d]:
     """Returns the goal and approach direction for the given side"""
     cone_trans = get_double_substation(red_side, targeting_left).toTranslation2d()
     # how far away from the gripper grabbing the cone to stop
-    stop_distance = 0.1
 
     # as if we're blue
     goal_rotation = Rotation2d.fromDegrees(180)
     goal_approach = Rotation2d(0)
-    offset_x = Setpoints.PICKUP_CONE.toCartesian()[0] + Arm.PIVOT_X + stop_distance
     goal_trans = cone_trans + Translation2d(offset_x, 0)
     goal = Pose2d(goal_trans, goal_rotation)
 
