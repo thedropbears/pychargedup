@@ -30,8 +30,8 @@ class MyRobot(magicbot.MagicRobot):
 
     acquire_cone: AcquireConeController
     acquire_cube: AcquireCubeController
-    recover: RecoverController
     score_game_piece: ScoreGamePieceController
+    recover: RecoverController
 
     # arm_controller: ArmController
 

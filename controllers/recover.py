@@ -10,7 +10,7 @@ class RecoverController(StateMachine):
     intake: Intake
     arm: Arm
 
-    ARM_FOULING_ANGLE = 0.5
+    ARM_FOULING_ANGLE = 0.52
 
     def __init__(self) -> None:
         pass
