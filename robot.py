@@ -19,7 +19,7 @@ from components.chassis import Chassis
 from components.vision import VisualLocalizer
 from components.arm import Arm, Setpoints
 from components.gripper import Gripper
-from components.leds import StatusLights, DisplayType, LedColors
+from components.leds import StatusLights
 from utilities.scalers import rescale_js
 
 
@@ -157,43 +157,43 @@ class MyRobot(magicbot.MagicRobot):
         self.arm.homing = False
 
     def testPeriodic(self) -> None:
-        self.gamepad.getRightTriggerAxis()
-        self.gamepad.getLeftTriggerAxis()
-        self.arm.unbrake()
+        dpad_angle = self.gamepad.getPOV()
+
+        # Intake
+        if self.gamepad.getYButton():
+            if dpad_angle == 0:
+                self.intake.deploy()
+            if dpad_angle == 180:
+                self.intake.retract()
 
         # Claw
-        if self.gamepad.getYButton():
-            self.gripper.set_solenoid = True
-            self.gripper.close()
-        if self.gamepad.getXButton():
-            self.gripper.set_solenoid = True
-            self.gripper.open()
-
-        # LEDs
-        dpad_angle = self.gamepad.getPOV()
-        if self.gamepad.getAButton():
-            if dpad_angle == 0:
-                self.status_lights.set_display_pattern(DisplayType.SOLID)
-                self.status_lights.set_color([LedColors.OFF])
-            if dpad_angle == 90 or dpad_angle == 270:
-                self.status_lights.want_cube()
-            if dpad_angle == 180:
-                self.status_lights.cube_onboard()
         if self.gamepad.getBButton():
-            if dpad_angle == 90:
-                self.status_lights.want_cone_right()
-            if dpad_angle == 270:
-                self.status_lights.want_cone_left()
             if dpad_angle == 0:
-                self.status_lights.set_display_pattern(DisplayType.SOLID)
-                self.status_lights.set_color([LedColors.OFF])
+                self.gripper.set_solenoid = True
+                self.gripper.close()
             if dpad_angle == 180:
-                self.status_lights.cone_onboard()
+                self.gripper.set_solenoid = True
+                self.gripper.open()
 
-        if self.gamepad.getRightBumperPressed():
-            self.intake.deploy()
-        if self.gamepad.getLeftBumperPressed():
-            self.intake.retract()
+        # Arm
+        if self.gamepad.getAButton():
+            # TODO add functionality here if required
+            pass
+
+        # State machines
+        if self.gamepad.getXButton():
+            if self.gamepad.getLeftBumperPressed():
+                self.acquire_cone.target_left()
+            if self.gamepad.getRightBumperPressed():
+                self.acquire_cone.target_right()
+            if dpad_angle == 180:
+                self.acquire_cone.engage()
+            if dpad_angle == 0:
+                self.acquire_cube.engage()
+            if dpad_angle == 90 or dpad_angle == 270:
+                self.recover.engage()
+            if self.gamepad.getLeftStickButtonPressed():
+                self.score_game_piece.engage()
 
         # Cancel any running controllers
         if self.gamepad.getBackButtonPressed():

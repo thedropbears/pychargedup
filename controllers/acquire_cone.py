@@ -3,6 +3,7 @@ from magicbot import state, StateMachine, tunable
 from components.gripper import Gripper
 from components.intake import Intake
 from components.arm import Arm, Setpoints
+from components.leds import StatusLights
 
 from controllers.movement import Movement
 from controllers.recover import RecoverController
@@ -18,6 +19,7 @@ class AcquireConeController(StateMachine):
     gripper: Gripper
     intake: Intake
     arm: Arm
+    status_lights: StatusLights
 
     movement: Movement
     recover: RecoverController
@@ -78,6 +80,7 @@ class AcquireConeController(StateMachine):
         """
         self.gripper.close(GamePiece.CONE)
         if self.gripper.get_full_closed():
+            self.status_lights.cone_onboard()
             self.done()
 
     def done(self) -> None:
@@ -86,6 +89,8 @@ class AcquireConeController(StateMachine):
 
     def target_left(self) -> None:
         self.targeting_left = True
+        self.status_lights.want_cone_left()
 
     def target_right(self) -> None:
         self.targeting_left = False
+        self.status_lights.want_cone_right()
