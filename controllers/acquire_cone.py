@@ -8,7 +8,9 @@ from controllers.movement import Movement
 from controllers.recover import RecoverController
 
 from utilities.game import (
+    GamePiece,
     get_cone_pickup,
+    is_red,
 )
 
 
@@ -22,6 +24,9 @@ class AcquireConeController(StateMachine):
 
     APPROACH_SPEED = tunable(0.2)
 
+    # swap the the side of the substation to test on a half field
+    swap_substation = tunable(False)
+
     def __init__(self) -> None:
         self.targeting_left: bool = False
 
@@ -31,8 +36,9 @@ class AcquireConeController(StateMachine):
         Get the chassis to the correct position to start moving towards cone.
         Requires that the state has had the goal position injected into it.
         """
-
-        self.movement.set_goal(*get_cone_pickup(self.targeting_left))
+        # if we want the substation to be as if we are on the red alliance
+        red_side = is_red() != self.swap_substation
+        self.movement.set_goal(*get_cone_pickup(self.targeting_left, red_side))
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
 
@@ -57,7 +63,7 @@ class AcquireConeController(StateMachine):
         """
 
         self.arm.extend(0.2)
-        if self.gripper.game_piece_in_reach():
+        if self.arm.is_at_forward_limit():
             self.next_state("grabbing")
 
     @state(must_finish=True)
@@ -65,7 +71,7 @@ class AcquireConeController(StateMachine):
         """
         Close the gripper on the cone.
         """
-        self.gripper.close()
+        self.gripper.close(GamePiece.CONE)
         if self.gripper.get_full_closed():
             self.done()
 

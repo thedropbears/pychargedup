@@ -1,7 +1,7 @@
 from wpilib import DoubleSolenoid, PneumaticsModuleType
 from magicbot import feedback
 import time
-
+from utilities.game import GamePiece
 import ids
 
 
@@ -21,12 +21,16 @@ class Gripper:
         )
 
         self.set_solenoid = False
+        self.holding = GamePiece.NONE
 
     def open(self) -> None:
+        self.set_solenoid = True
         self.opened = True
 
-    def close(self) -> None:
+    def close(self, on: GamePiece = GamePiece.BOTH) -> None:
+        self.set_solenoid = True
         self.opened = False
+        self.holding = on
 
     @feedback
     def get_full_closed(self) -> bool:
@@ -57,3 +61,8 @@ class Gripper:
                 self.solenoid.set(DoubleSolenoid.Value.kReverse)
             else:
                 self.solenoid.set(DoubleSolenoid.Value.kForward)
+
+    def get_current_piece(self) -> GamePiece:
+        if self.opened:
+            return GamePiece.NONE
+        return self.holding

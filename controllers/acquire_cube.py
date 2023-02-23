@@ -6,6 +6,8 @@ from controllers.recover import RecoverController
 
 from magicbot import state, StateMachine
 
+from utilities.game import GamePiece
+
 
 class AcquireCubeController(StateMachine):
     gripper: Gripper
@@ -49,7 +51,7 @@ class AcquireCubeController(StateMachine):
         Close the gripper on the cube.
         Recovery controller will take care of moving the arm to stow, and retracting the intake.
         """
-        self.gripper.close()
+        self.gripper.close(GamePiece.CUBE)
         if self.gripper.get_full_closed():
             self.done()
 
