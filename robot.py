@@ -109,8 +109,6 @@ class MyRobot(magicbot.MagicRobot):
 
         # Manual overrides
         # Claw
-        if self.gamepad.getAButtonPressed():
-            self.gripper.wants_to_close = not self.gripper.wants_to_close
         if self.gamepad.getStartButtonPressed():
             self.gripper.close()
         if self.gamepad.getBackButtonPressed():
