@@ -228,17 +228,11 @@ class Arm:
         self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
         self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
-        # if self.is_extended():
-        #     self.extension_encoder.setPosition(MAX_EXTENSION)
-        # if self.is_retracted():
-        #     self.extension_encoder.setPosition(MIN_EXTENSION)
+        if self.is_retracted():
+            self.extension_encoder.setPosition(MIN_EXTENSION)
 
-        if self.homing:
-            self.extension_motor.set(-0.2)
-            self.rotation_motor.set(0)
-            return
-        elif self.voltage_movement:
-            self.extension_motor.set(self.extension_voltage)
+        if self.voltage_movement:
+            self.extension_motor.setVoltage(self.extension_voltage)
         else:
             extension_goal = self.get_max_extension()
             # Calculate extension motor output
