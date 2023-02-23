@@ -16,6 +16,8 @@ from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
 import rev
 
+from utilities.game import Node, GamePiece, Rows
+
 MIN_EXTENSION = 0.9  # meters
 MAX_EXTENSION = 1.3
 
@@ -67,6 +69,21 @@ class Setpoints:
     UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
     FORWARDS = Setpoint(0, MIN_EXTENSION)
     BACKWARDS = Setpoint(-math.pi, MIN_EXTENSION)
+
+
+def get_setpoint_from_node(node: Node) -> Setpoint:
+    if node.row is Rows.LOW:
+        return Setpoints.STOW
+    elif node.row is Rows.MID:
+        if node.get_valid_piece() is GamePiece.CONE:
+            return Setpoints.SCORE_CONE_MID
+        else:
+            return Setpoints.SCORE_CONE_MID
+    else:  # high
+        if node.get_valid_piece() is GamePiece.CONE:
+            return Setpoints.SCORE_CONE_HIGH
+        else:
+            return Setpoints.SCORE_CUBE_HIGH
 
 
 class Arm:
@@ -318,7 +335,7 @@ class Arm:
         return self.extension_encoder.getVelocity()
 
     @feedback
-    def is_extended(self) -> bool:
+    def is_at_forward_limit(self) -> bool:
         return self.hall_effector_forward_arm.get()
 
     def set_at_min_extension(self) -> None:
