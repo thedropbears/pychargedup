@@ -1,4 +1,4 @@
-from components.arm import Arm, Setpoints
+from controllers.arm import ArmController, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
 from components.leds import StatusLights
@@ -13,7 +13,7 @@ from utilities.game import GamePiece
 class AcquireCubeController(StateMachine):
     gripper: Gripper
     intake: Intake
-    arm: Arm
+    arm: ArmController
     status_lights: StatusLights
 
     recover: RecoverController

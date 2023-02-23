@@ -89,7 +89,7 @@ class PhysicsEngine:
         )
         self.arm_sim = SingleJointedArmSim(
             arm_motors_sim,
-            robot.arm.ROTATE_GEAR_RATIO,
+            robot.arm_component.ROTATE_GEAR_RATIO,
             arm_moi,
             arm_len,
             -arm.MAX_ANGLE - math.radians(10),
@@ -102,9 +102,9 @@ class PhysicsEngine:
         ELEVATOR_CARRIAGE_MASS = 0.655
         self.extension_sim = ElevatorSim(
             extension_motors_sim,
-            robot.arm.EXTEND_GEAR_RATIO,
+            robot.arm_component.EXTEND_GEAR_RATIO,
             ELEVATOR_CARRIAGE_MASS + END_EFFECTOR_MASS,
-            robot.arm.SPOOL_CIRCUMFERENCE / math.tau,
+            robot.arm_component.SPOOL_CIRCUMFERENCE / math.tau,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
             simulateGravity=False,
@@ -113,7 +113,7 @@ class PhysicsEngine:
         self.extension_sim.setState(np.array([[arm.MIN_EXTENSION], [0]]))
 
         # Get arm objects
-        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
+        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm_component.absolute_encoder)
         self.arm_brake = SolenoidSim(
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake
         )
