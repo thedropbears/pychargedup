@@ -168,13 +168,10 @@ class Arm:
         self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
         self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
-        extension_goal = self.get_max_extension()
-
         # Calculate extension motor output
         pid_output = self.extension_controller.calculate(
-            self.get_extension(), extension_goal
+            self.get_extension(), self.goal_extension
         )
-        self.calculate_extension_feedforward()
         self.extension_motor.setVoltage(pid_output)
 
         if self.at_goal_angle() and self.is_angle_still():
@@ -191,10 +188,6 @@ class Arm:
         )
         self.calculate_rotation_feedforwards()
         self.rotation_motor.setVoltage(pid_output)
-
-    def get_max_extension(self) -> float:
-        """Gets the max extension to not exceed the height limit for the current angle and goal"""
-        return MIN_EXTENSION
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
