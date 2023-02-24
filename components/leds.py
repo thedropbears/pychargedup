@@ -205,6 +205,10 @@ class StatusLights:
         self.set_color([LedColors.VIOLET] * self.led_length)
         self.set_display_pattern(DisplayType.FLASH)
 
+    def off(self) -> None:
+        self.set_color([LedColors.OFF] * self.led_length)
+        self.set_display_pattern(DisplayType.SOLID)
+
     def cone_onboard(self) -> None:
         self.set_color([LedColors.YELLOW] * self.led_length)
         self.set_display_pattern(DisplayType.SOLID)
