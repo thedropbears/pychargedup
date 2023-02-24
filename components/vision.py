@@ -1,213 +1,161 @@
 import math
-from components.chassis import Chassis
+import typing
+from typing import Optional
+
 import wpilib
 import wpiutil.log
-import robotpy_apriltag
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d, Quaternion
-from typing import Optional
-from magicbot import tunable, feedback
+from magicbot import tunable
+from photonvision import PhotonCamera, PhotonTrackedTarget
+from wpimath.geometry import Pose2d, Rotation3d, Transform3d, Translation3d
 
-from photonvision import (
-    PhotonCamera,
-    PhotonTrackedTarget,
-)
+from components.chassis import Chassis
+from utilities.game import apriltag_layout
 
 
-class Vision:
-    chassis: Chassis
+class VisualLocalizer:
+    """
+    This localizes the robot from AprilTags on the field,
+    using information from a single PhotonVision camera.
+    """
 
-    FIELD_LAYOUT = robotpy_apriltag.loadAprilTagLayoutField(
-        robotpy_apriltag.AprilTagField.k2023ChargedUp
-    )
+    add_to_estimator = tunable(False)
+    should_log = tunable(False)
 
-    # TBD
-    X_STD_DEV_CONSTANT = Y_STD_DEV_CONSTANT = 3.0
-    ANGULAR_STD_DEV_CONSTANT = 1.0
+    rejected_in_row = tunable(0)
+    last_pose_z = tunable(0.0, writeDefault=False)
 
-    field: wpilib.Field2d
+    def __init__(
+        self,
+        # The name of the camera in PhotonVision.
+        name: str,
+        # Position of the camera relative to the center of the robot
+        pos: Translation3d,
+        # The camera rotation.
+        rot: Rotation3d,
+        field: wpilib.Field2d,
+        data_log: wpiutil.log.DataLog,
+        chassis: Chassis,
+    ) -> None:
+        self.camera = PhotonCamera(name)
+        self.camera_to_robot = Transform3d(pos, rot).inverse()
+        self.last_timestamp = -1
 
-    data_log: wpiutil.log.DataLog
-
-    add_to_estimator = tunable(True)
-
-    def __init__(self) -> None:
-        left_rot = Rotation3d(
-            Quaternion(
-                -0.2156163454055786,
-                0.0850898027420044,
-                0.018863987177610397,
-                0.9725808501243591,
-            )
+        self.field_pos_obj = field.getObject("vision_pose_" + name)
+        self.pose_log_entry = wpiutil.log.DoubleArrayLogEntry(
+            data_log, "vision_pose_" + name
         )
-        right_rot = Rotation3d(
-            Quaternion(
-                0.21561579406261444,
-                0.08508981764316559,
-                -0.018863940611481667,
-                0.9725809693336487,
-            )
-        )
-        self.cameras = [  # (Camera object, camera-to-robot transform)
-            (
-                PhotonCamera(n),
-                Transform3d(Translation3d(x, y, z), rot).inverse(),
-            )
-            for (n, x, y, z, rot) in [
-                ("cam_port", -0.35001, 0.06583, 0.25, left_rot),
-                ("cam_starboard", -0.35001, -0.06583, 0.247, right_rot),
-            ]
-        ]
-        self.last_timestamps = [0] * len(self.cameras)
-        self.should_log = False
-        # amount of tags that have produced unreasonable estimates in a row
-        self.rejected_in_row = 0.0
-        self.last_z_1 = 0.0
-        self.last_z_2 = 0.0
 
-    def setup(self) -> None:
-        self.field_pos_obj_left = self.field.getObject("vision_pose_left_cam")
-        self.field_pos_obj_right = self.field.getObject("vision_pose_right_cam")
-        self.pose_log_entry = wpiutil.log.FloatArrayLogEntry(
-            self.data_log, "vision_pose"
-        )
+        self.chassis = chassis
+
+    def on_disable(self) -> None:
+        self.add_to_estimator = False
+
+    def on_enable(self) -> None:
+        self.add_to_estimator = True
 
     def execute(self) -> None:
-        for cam_idx, (camera, trans) in enumerate(self.cameras):
-            # if results didnt see any targets
-            if not (results := camera.getLatestResult()).hasTargets():
+        # if results didn't see any targets
+        if not (results := self.camera.getLatestResult()).hasTargets():
+            return
+
+        # if we have already processed these results
+        timestamp = results.getTimestamp()
+        if timestamp == self.last_timestamp and wpilib.RobotBase.isReal():
+            return
+        self.last_timestamp = timestamp
+
+        # old results cause pose estimator to crash and aren't very useful anyway
+        if abs(wpilib.Timer.getFPGATimestamp() - timestamp) > 0.5:
+            return
+
+        for target in results.getTargets():
+            poses = estimate_poses_from_apriltag(self.camera_to_robot, target)
+            if poses is None:
+                # tag doesn't exist
+                continue
+            best_pose, alt_pose, self.last_pose_z = poses
+            pose = choose_pose(
+                best_pose,
+                alt_pose,
+                self.chassis.get_pose(),
+                target.getPoseAmbiguity(),
+            )
+
+            # filter out likely bad targets
+            if target.getPoseAmbiguity() > 0.25 or target.getYaw() > 20:
                 continue
 
-            # if we have already processed these results
-            timestamp = results.getTimestamp()
-            if timestamp == self.last_timestamps[cam_idx] and wpilib.RobotBase.isReal():
-                continue
-            self.last_timestamps[cam_idx] = timestamp
-
-            # old results cause pose estimator to crash and arent very useful anyway
-            if abs(wpilib.Timer.getFPGATimestamp() - timestamp) > 0.5:
-                continue
-
-            for target in results.getTargets():
-                _poses = estimate_poses_from_apriltag(trans, target)
-                # tag dosent exist
-                if _poses is None:
+            change = self.chassis.get_pose().translation().distance(pose.translation())
+            if change > 1.0:
+                self.rejected_in_row += 1
+                if self.rejected_in_row < 20:
                     continue
-                *poses, z1 = _poses
-                if cam_idx:
-                    self.last_z_1 = z1
-                else:
-                    self.last_z_2 = z1
-                pose = choose_pose(
-                    poses[0],
-                    poses[1],
-                    self.chassis.get_pose(),
-                    target.getPoseAmbiguity(),
+            else:
+                self.rejected_in_row //= 2
+
+            if self.add_to_estimator:
+                self.chassis.estimator.addVisionMeasurement(
+                    pose,
+                    timestamp,
+                    (3.0, 3.0, 1.0),
                 )
 
-                # filter out likely bad targets
-                if target.getPoseAmbiguity() > 0.25 or target.getYaw() > 20:
-                    continue
-
-                change = (
-                    self.chassis.get_pose().translation().distance(pose.translation())
+            if self.should_log:
+                ground_truth_pose = self.chassis.get_pose()
+                trans_error1: float = ground_truth_pose.translation().distance(
+                    best_pose.translation()
                 )
-                if change > 1.0:
-                    self.rejected_in_row += 1
-                    if self.rejected_in_row < 20:
-                        continue
-                else:
-                    self.rejected_in_row /= 2
+                trans_error2: float = ground_truth_pose.translation().distance(
+                    alt_pose.translation()
+                )
+                rot_error1: float = (  # type: ignore
+                    ground_truth_pose.rotation() - best_pose.rotation()
+                ).radians()
+                rot_error2: float = (  # type: ignore
+                    ground_truth_pose.rotation() - alt_pose.rotation()
+                ).radians()
+                skew = get_target_skew(target)
 
-                if self.add_to_estimator:
-                    self.chassis.estimator.addVisionMeasurement(
-                        pose,
-                        timestamp,
-                        (
-                            Vision.X_STD_DEV_CONSTANT,
-                            Vision.Y_STD_DEV_CONSTANT,
-                            Vision.ANGULAR_STD_DEV_CONSTANT,
-                        ),
-                    )
-                if self.should_log:
-                    ground_truth_pose = self.chassis.get_pose()
-                    trans_error1 = ground_truth_pose.translation().distance(
-                        poses[0].translation()
-                    )
-                    trans_error2 = ground_truth_pose.translation().distance(
-                        poses[1].translation()
-                    )
-                    rot_error1 = (
-                        ground_truth_pose.rotation() - poses[0].rotation()
-                    ).radians()
-                    rot_error2 = (
-                        ground_truth_pose.rotation() - poses[1].rotation()
-                    ).radians()
-                    skew = get_target_skew(target)
-
-                    self.pose_log_entry.append(
-                        [
-                            poses[0].X(),
-                            poses[0].Y(),
-                            poses[0].rotation().radians(),
-                            trans_error1,  # error of main pose
-                            rot_error1,
-                            poses[1].X(),
-                            poses[1].Y(),
-                            poses[1].rotation().radians(),
-                            trans_error2,
-                            rot_error2,
-                            ground_truth_pose.x,
-                            ground_truth_pose.y,
-                            target.getYaw(),
-                            skew,
-                            target.getPoseAmbiguity(),
-                            target.getArea(),
-                            target.getFiducialId(),
-                            cam_idx,  # camera num
-                        ]
-                    )
-                if cam_idx == 0:
-                    self.field_pos_obj_left.setPose(pose)
-                else:
-                    self.field_pos_obj_right.setPose(pose)
-
-    @feedback
-    def get_last_z_1(self):
-        return self.last_z_1
-
-    @feedback
-    def get_last_z_2(self):
-        return self.last_z_2
-
-    @feedback
-    def get_rejected_in_row(self):
-        return self.rejected_in_row
+                self.pose_log_entry.append(
+                    [
+                        best_pose.x,
+                        best_pose.y,
+                        typing.cast(float, best_pose.rotation().radians()),
+                        trans_error1,  # error of main pose
+                        rot_error1,
+                        alt_pose.x,
+                        alt_pose.y,
+                        typing.cast(float, alt_pose.rotation().radians()),
+                        trans_error2,
+                        rot_error2,
+                        ground_truth_pose.x,
+                        ground_truth_pose.y,
+                        target.getYaw(),
+                        skew,
+                        target.getPoseAmbiguity(),
+                        target.getArea(),
+                        target.getFiducialId(),
+                    ]
+                )
 
 
 def estimate_poses_from_apriltag(
     cam_to_robot: Transform3d, target: PhotonTrackedTarget
 ) -> Optional[tuple[Pose2d, Pose2d, float]]:
     tag_id = target.getFiducialId()
-    tag_pose = Vision.FIELD_LAYOUT.getTagPose(tag_id)
+    tag_pose = apriltag_layout.getTagPose(tag_id)
     if tag_pose is None:
         return None
 
-    best_pose = (
-        tag_pose.transformBy(target.getBestCameraToTarget().inverse())
-        .transformBy(cam_to_robot)
-        .toPose2d()
-    )
+    best_pose = tag_pose.transformBy(
+        target.getBestCameraToTarget().inverse()
+    ).transformBy(cam_to_robot)
     alternate_pose = (
         tag_pose.transformBy(target.getAlternateCameraToTarget().inverse())
         .transformBy(cam_to_robot)
         .toPose2d()
     )
-    z = (
-        tag_pose.transformBy(target.getBestCameraToTarget().inverse())
-        .transformBy(cam_to_robot)
-        .z
-    )
-    return best_pose, alternate_pose, z
+    return best_pose.toPose2d(), alternate_pose, best_pose.z
 
 
 def get_target_skew(target: PhotonTrackedTarget):
