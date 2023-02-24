@@ -10,12 +10,27 @@ class RecoverController(StateMachine):
     intake: Intake
     arm: ArmController
 
-    ARM_FOULING_ANGLE = 0.52
+    ARM_FOULING_ANGLE = 0.55
 
     def __init__(self) -> None:
-        pass
+        self.has_initialized_arm = False
 
-    @timed_state(first=True, duration=0.2, next_state="stowing_arm", must_finish=True)
+    @state(first=True, must_finish=True)
+    def retracting_arm(self, state_tm: float):
+        """
+        Retract the arm to the minimum extension
+        """
+        if self.has_initialized_arm:
+            self.arm.arm_component.set_use_voltage(False)
+            self.next_state("clearing_intake")
+            return
+        if self.arm.is_at_retraction_limit() or state_tm > 1.6:
+            self.has_initialized_arm = True
+            self.arm.arm_component.set_at_min_extension()
+        self.arm.arm_component.set_voltage(-2.)
+        self.arm.arm_component.set_use_voltage(True)
+
+    @timed_state(duration=0.4, next_state="stowing_arm", must_finish=True)
     def clearing_intake(self) -> None:
         """
         Should check if the arm will foul on the intake
@@ -23,7 +38,7 @@ class RecoverController(StateMachine):
         and the arm will rotate above the intake
         """
 
-        if self.arm.get_angle() > self.ARM_FOULING_ANGLE:
+        if self.arm.get_angle() > self.ARM_FOULING_ANGLE and not self.intake.deployed:
             self.intake.deploy_without_running()
         else:
             self.next_state("stowing_arm")
