@@ -135,8 +135,8 @@ class PhysicsEngine:
     def update_sim(self, now: float, tm_diff: float) -> None:
         # Update rotation sim
         self.arm_sim.setInputVoltage(-self.arm_motor_output.get())
-        # if self.arm_brake.getOutput():
-        self.arm_sim.update(tm_diff)
+        if self.arm_brake.getOutput():
+            self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
         self.arm_motor_vel.set(-self.arm_sim.getVelocity())
         # Update extension sim
