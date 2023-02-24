@@ -15,7 +15,7 @@ class RecoverController(StateMachine):
     def __init__(self) -> None:
         pass
 
-    @timed_state(first=True, duration=3.0, next_state="stowing_arm", must_finish=True)
+    @timed_state(first=True, duration=0.2, next_state="stowing_arm", must_finish=True)
     def clearing_intake(self) -> None:
         """
         Should check if the arm will foul on the intake
