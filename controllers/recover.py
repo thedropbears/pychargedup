@@ -2,7 +2,7 @@ from controllers.arm import ArmController, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
 
-from magicbot import StateMachine, state
+from magicbot import StateMachine, state, timed_state
 
 
 class RecoverController(StateMachine):
@@ -15,7 +15,7 @@ class RecoverController(StateMachine):
     def __init__(self) -> None:
         pass
 
-    @state(first=True, must_finish=True)
+    @timed_state(first=True, duration=3.0, next_state="stowing_arm", must_finish=True)
     def clearing_intake(self) -> None:
         """
         Should check if the arm will foul on the intake
@@ -25,13 +25,13 @@ class RecoverController(StateMachine):
 
         if self.arm.get_angle() > self.ARM_FOULING_ANGLE:
             self.intake.deploy_without_running()
-
-        self.next_state("stowing_arm")
+        else:
+            self.next_state("stowing_arm")
 
     @state(must_finish=True)
     def stowing_arm(self) -> None:
         self.arm.go_to_setpoint(Setpoints.STOW)
-        if not self.arm.is_executing:
+        if self.arm.at_goal():
             self.next_state("retracting_intake")
 
     @state(must_finish=True)
