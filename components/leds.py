@@ -146,7 +146,7 @@ class StatusLights:
     def __init__(self) -> None:
         self.leds = wpilib.AddressableLED(PwmChannels.leds)
 
-        self.led_length = 200
+        self.led_length = 288
 
         self.start_time = time.monotonic()
 
