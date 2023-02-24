@@ -4,7 +4,7 @@ import math
 
 from utilities.game import Node, GamePiece, Rows
 
-from magicbot import StateMachine, state
+from magicbot import StateMachine, state, feedback
 
 from utilities.functions import clamp
 
@@ -22,10 +22,11 @@ class Setpoint:
             return self.angle == other.angle and self.extension == other.extension
         return False
 
+    def __str__(self):
+        return f"({self.angle}, {self.extension})"
+
     def __init__(self, angle: float, extension: float) -> None:
         self.extension = clamp(extension, MIN_EXTENSION, MAX_EXTENSION)
-        if angle > MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
-            angle -= math.tau
         self.angle = clamp(angle, MIN_ANGLE, MAX_ANGLE)
 
         if self.angle != angle or self.extension != extension:
@@ -45,15 +46,15 @@ class Setpoint:
 
 
 class Setpoints:
-    PREPARE_PICKUP_CONE = Setpoint(-3.05, MIN_EXTENSION)
-    PICKUP_CONE = Setpoint(-3.05, MAX_EXTENSION)
-    HANDOFF = Setpoint(0.8, MIN_EXTENSION)
-    STOW = Setpoint(math.radians(50), MIN_EXTENSION)
-    START = Setpoint(-math.radians(30), MIN_EXTENSION)
-    SCORE_CONE_MID = Setpoint(-2.8, MIN_EXTENSION)
-    SCORE_CUBE_MID = Setpoint(-3.2, MIN_EXTENSION)
-    SCORE_CONE_HIGH = Setpoint(-2.89, 1.17)
-    SCORE_CUBE_HIGH = Setpoint(-3, 1.17)
+    PREPARE_PICKUP_CONE = Setpoint(math.radians(-170), MIN_EXTENSION)
+    PICKUP_CONE = Setpoint(math.radians(-170), MIN_EXTENSION + 0.15)
+    HANDOFF = Setpoint(math.radians(45), MIN_EXTENSION)
+    STOW = Setpoint(math.radians(-10), MIN_EXTENSION)
+    START = Setpoint(math.radians(20), MIN_EXTENSION)
+    SCORE_CONE_MID = Setpoint(math.radians(-160), MIN_EXTENSION)
+    SCORE_CUBE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
+    SCORE_CONE_HIGH = Setpoint(math.radians(-165), 1.17)
+    SCORE_CUBE_HIGH = Setpoint(math.radians(-170), 1.17)
 
     UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
     FORWARDS = Setpoint(0, MIN_EXTENSION)
@@ -79,7 +80,7 @@ class ArmController(StateMachine):
     arm_component: Arm
 
     def __init__(self) -> None:
-        self._target_setpoint: Setpoint = Setpoints.STOW
+        self._target_setpoint: Setpoint = Setpoints.START
         self._about_to_run: bool = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
@@ -88,6 +89,10 @@ class ArmController(StateMachine):
             self._target_setpoint = setpoint
             self._about_to_run = True
             self.engage()
+
+    @feedback
+    def get_target(self) -> str:
+        return str(self._target_setpoint)
 
     def get_angle(self) -> float:
         return self.arm_component.get_angle()
