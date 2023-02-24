@@ -153,12 +153,15 @@ class Arm:
         )
         self.homing = False
 
+        self.use_voltage = False
+        self.voltage = 0.
+
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
         self.set_length(self.get_extension())
 
-    def execute(self) -> None:
+    def update_display(self) -> None:
         extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
         rotate_state = self.rotation_controller.getSetpoint()
 
@@ -168,19 +171,26 @@ class Arm:
         self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
         self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
+    def execute(self) -> None:
+        self.update_display()
         # Calculate extension motor output
-        pid_output = self.extension_controller.calculate(
-            self.get_extension(), self.goal_extension
-        )
-        self.extension_motor.setVoltage(pid_output)
+        if not self.use_voltage:
+            pid_output = self.extension_controller.calculate(
+                self.get_extension(), self.goal_extension
+            )
+            self.extension_motor.setVoltage(pid_output)
+        else:
+            self.extension_motor.setVoltage(self.voltage)
 
         if self.at_goal_angle() and self.is_angle_still():
             self.brake()
         else:
             self.unbrake()
         if self.is_braking():
-            self.rotation_motor.set(0)
+            self.rotation_motor.setVoltage(0)
             return
+
+        if self.use_voltage: return 
 
         # Calculate rotation motor output
         pid_output = self.rotation_controller.calculate(
@@ -246,9 +256,29 @@ class Arm:
     def is_retracted(self) -> bool:
         return self.hall_effector_inner_arm.get()
 
+    @feedback
+    def get_voltage(self) -> float:
+        """Get the current voltage for the extension motor"""
+        return self.voltage
+
+    @feedback
+    def get_use_voltage(self) -> bool:
+        """Should use the `self.voltage` value for the extension motor"""
+        return self.use_voltage
+
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""
         self.goal_angle = clamp(value, MIN_ANGLE, MAX_ANGLE)
+
+    def set_voltage(self, value: float) -> None:
+        """Sets a voltage for the extension motor, will only activate if use_voltage is True"""
+        self.voltage = value
+
+    def set_use_voltage(self, value: bool) -> None:
+        """Should override calculations for voltage"""
+        if self.use_voltage and not value:
+            self.extension_controller.reset(self.get_extension())
+        self.use_voltage = value
 
     def set_length(self, value: float) -> None:
         """Sets a goal length to go to in meters"""
@@ -285,6 +315,8 @@ class Arm:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
         self.reset_controllers()
+        self.set_length(self.get_extension())
+        self.set_angle(self.get_angle())
 
     def stop(self) -> None:
         self.rotation_motor.set(0)
