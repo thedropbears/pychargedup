@@ -151,10 +151,7 @@ class MyRobot(magicbot.MagicRobot):
             self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
     def testInit(self) -> None:
-        self.arm.on_enable()
-        self.arm.stop()
-        self.arm.homing = False
-        self.recover.engage()
+        self.arm_component.on_enable()
 
     def testPeriodic(self) -> None:
         dpad_angle = self.gamepad.getPOV()
@@ -200,10 +197,10 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getBackButtonPressed():
             self.cancel_controllers()
 
-        self.arm.execute()
 
         # Tick the controllers
         # These will only do anything if engage() has been called on them
+        self.arm.execute()
         self.acquire_cone.execute()
         self.acquire_cube.execute()
         self.score_game_piece.execute()
@@ -230,6 +227,7 @@ class MyRobot(magicbot.MagicRobot):
     def disabledPeriodic(self):
         self.port_localizer.execute()
         self.starboard_localizer.execute()
+        self.arm_component.update_display()
 
 
 if __name__ == "__main__":
