@@ -99,6 +99,9 @@ class ArmController(StateMachine):
 
     def at_goal(self) -> bool:
         return not (self.is_executing or self._about_to_run)
+    
+    def is_at_forward_limit(self) -> bool:
+        return self.arm_component.is_at_forward_limit()
 
     @state(first=True, must_finish=True)
     def retracting_arm(self) -> None:
