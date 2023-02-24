@@ -17,6 +17,11 @@ class Setpoint:
     # extension in meters, length from center of rotation to center of where pieces are held in the end effector
     extension: float
 
+    def __eq__(self, other):
+        if isinstance(other, Setpoint):
+            return self.angle == other.angle and self.extension == other.extension
+        return False
+
     def __init__(self, angle: float, extension: float) -> None:
         self.extension = clamp(extension, MIN_EXTENSION, MAX_EXTENSION)
         if angle > MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
@@ -75,22 +80,24 @@ class ArmController(StateMachine):
 
     def __init__(self) -> None:
         self._target_setpoint: Setpoint = Setpoints.STOW
+        self._about_to_run: bool = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
         # Only restart the state machine if the setpoint is different
-        if setpoint != self._target_setpoint:
-            self.done()
+        if setpoint != self._target_setpoint and self.at_goal():
             self._target_setpoint = setpoint
+            self._about_to_run = True
             self.engage()
 
     def get_angle(self) -> float:
         return self.arm_component.get_angle()
 
     def at_goal(self) -> bool:
-        return not self.is_executing
+        return not (self.is_executing or self._about_to_run)
 
     @state(first=True, must_finish=True)
     def retracting_arm(self) -> None:
+        self._about_to_run = False
         self.arm_component.set_length(MIN_EXTENSION)
         if self.arm_component.at_goal_extension():
             self.next_state("rotating_arm")

@@ -157,7 +157,6 @@ class MyRobot(magicbot.MagicRobot):
         self.recover.engage()
 
     def testPeriodic(self) -> None:
-        self.recover.engage()
         dpad_angle = self.gamepad.getPOV()
 
         # Intake
@@ -190,7 +189,10 @@ class MyRobot(magicbot.MagicRobot):
             if dpad_angle == 0:
                 self.acquire_cube.engage()
             if dpad_angle == 90 or dpad_angle == 270:
-                self.recover.engage()
+                # self.recover.engage()
+                # Better to call cancel() so that all other SMs
+                # are cancelled before recover runs
+                self.cancel_controllers()
             if self.gamepad.getLeftStickButtonPressed():
                 self.score_game_piece.engage()
 
@@ -219,6 +221,7 @@ class MyRobot(magicbot.MagicRobot):
         self.acquire_cone.done()
         self.acquire_cube.done()
         self.score_game_piece.done()
+        self.status_lights.off()
         self.recover.engage()
 
     def disabledInit(self) -> None:

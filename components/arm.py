@@ -292,7 +292,6 @@ class Arm:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
         self.reset_controllers()
-        self.unbrake()
 
     def stop(self) -> None:
         self.rotation_motor.set(0)
