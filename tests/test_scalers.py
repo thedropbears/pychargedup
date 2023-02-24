@@ -7,7 +7,7 @@ from pytest import approx
 from utilities.scalers import apply_deadzone, map_exponential, scale_value
 
 
-@given(value=floats(0, 1), threshold=floats(0, 1, exclude_max=True))
+@given(value=floats(0, 1), threshold=floats(0, 1, exclude_min=True, exclude_max=True))
 def test_deadzone(value, threshold):
     result = apply_deadzone(value, threshold)
     neg_result = apply_deadzone(-value, threshold)
@@ -15,11 +15,17 @@ def test_deadzone(value, threshold):
         assert result == value
     elif math.isclose(value, 0, abs_tol=threshold):
         assert result == 0
-    elif threshold == 0:
-        assert result == value
     else:
         assert 0 <= result <= value
     assert neg_result == -result
+
+
+@given(value=floats(0, 1))
+def test_deadzone_zero_threshold(value):
+    result = apply_deadzone(value, 0)
+    neg_result = apply_deadzone(-value, 0)
+    assert result == value
+    assert neg_result == -value
 
 
 @given(
