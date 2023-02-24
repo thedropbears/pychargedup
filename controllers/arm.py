@@ -85,7 +85,7 @@ class ArmController(StateMachine):
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
         # Only restart the state machine if the setpoint is different
-        if setpoint != self._target_setpoint and self.at_goal():
+        if setpoint != self._target_setpoint:# and self.at_goal():
             self._target_setpoint = setpoint
             self._about_to_run = True
             self.engage()
@@ -102,6 +102,9 @@ class ArmController(StateMachine):
 
     def is_at_forward_limit(self) -> bool:
         return self.arm_component.is_at_forward_limit()
+
+    def is_at_retraction_limit(self) -> bool:
+        return self.arm_component.is_retracted()
 
     @state(first=True, must_finish=True)
     def retracting_arm(self) -> None:
@@ -125,3 +128,6 @@ class ArmController(StateMachine):
     def stop(self):
         self.arm_component.stop()
         super().done()
+
+    def on_enable(self) -> None:
+        self.stop()
