@@ -21,8 +21,8 @@ MIN_EXTENSION = 0.9  # meters
 MAX_EXTENSION = 1.3
 
 # Angle soft limits
-MIN_ANGLE = math.radians(-230)
-MAX_ANGLE = 1
+MIN_ANGLE = math.radians(-180)
+MAX_ANGLE = math.radians(60)
 
 
 class Arm:
