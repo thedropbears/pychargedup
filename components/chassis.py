@@ -93,7 +93,7 @@ class SwerveModule:
         self.drive.enableVoltageCompensation(True)
         self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.18877, kV=2.7713, kA=0.18824)
         self.drive.configVelocityMeasurementPeriod(
-            ctre.SensorVelocityMeasPeriod.Period_5Ms
+            ctre.sensors.SensorVelocityMeasPeriod.Period_5Ms
         )
         self.drive.configVelocityMeasurementWindow(8)
         self.drive.config_kP(0, 0.011489, 10)
