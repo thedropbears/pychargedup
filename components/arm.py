@@ -31,7 +31,7 @@ class Arm:
     PIVOT_X = -0.283562
 
     MAX_ANGLE_ERROR_TOLERANCE = math.radians(5)
-    MAX_EXTENSION_ERROR_TOLERANCE = 0.1
+    MAX_EXTENSION_ERROR_TOLERANCE = 0.025
     STILL_ROTATION_SPEED_TOLERANCE = 0.1
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
@@ -186,7 +186,7 @@ class Arm:
             self.extension_motor.setVoltage(self.voltage)
             self.unbrake_extension()
             self.rotation_motor.setVoltage(0)
-            self.brake()
+            self.brake_rotation()
             return
 
         # Extension
@@ -202,10 +202,10 @@ class Arm:
 
         # Rotation
         if self.at_goal_angle() and self.is_angle_still():
-            self.brake()
+            self.brake_rotation()
             self.rotation_motor.setVoltage(0)
         else:
-            self.unbrake()
+            self.unbrake_rotation()
             # Calculate rotation motor output
             pid_output = self.rotation_controller.calculate(
                 self.get_angle(), self.goal_angle
@@ -321,10 +321,10 @@ class Arm:
             self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
         )
 
-    def brake(self) -> None:
+    def brake_rotation(self) -> None:
         self.rotation_brake_solenoid.set(False)
 
-    def unbrake(self) -> None:
+    def unbrake_rotation(self) -> None:
         self.rotation_brake_solenoid.set(True)
 
     def brake_extension(self) -> None:
