@@ -87,7 +87,8 @@ class MyRobot(magicbot.MagicRobot):
         )
 
     def teleopInit(self) -> None:
-        pass
+        self.starboard_localizer.add_to_estimator = True
+        self.port_localizer.add_to_estimator = True
 
     def teleopPeriodic(self) -> None:
         self.event_loop.poll()
@@ -152,6 +153,8 @@ class MyRobot(magicbot.MagicRobot):
             self.gripper.open()
 
     def testInit(self) -> None:
+        self.starboard_localizer.add_to_estimator = True
+        self.port_localizer.add_to_estimator = True
         self.arm_component.on_enable()
 
     def testPeriodic(self) -> None:
@@ -223,6 +226,8 @@ class MyRobot(magicbot.MagicRobot):
 
     def disabledInit(self) -> None:
         self.status_lights.set_display_pattern(DisplayType.WOLFRAM_AUTOMATA)
+        self.starboard_localizer.add_to_estimator = False
+        self.port_localizer.add_to_estimator = False
 
     def disabledPeriodic(self):
         self.status_lights.execute()
