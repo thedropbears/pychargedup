@@ -85,7 +85,7 @@ class ArmController(StateMachine):
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
         # Only restart the state machine if the setpoint is different
-        if setpoint != self._target_setpoint:# and self.at_goal():
+        if setpoint != self._target_setpoint:  # and self.at_goal():
             self._target_setpoint = setpoint
             self._about_to_run = True
             self.engage()
