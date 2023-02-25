@@ -1,7 +1,5 @@
 from logging import Logger
 import math
-import time
-from typing import Optional
 
 import ctre
 import ctre.sensors
@@ -16,7 +14,6 @@ from wpimath.kinematics import (
 )
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.estimator import SwerveDrive4PoseEstimator
-from wpimath.interpolation import TimeInterpolatablePose2dBuffer
 from wpimath.controller import SimpleMotorFeedforwardMeters
 
 from utilities.functions import constrain_angle, rate_limit_module
@@ -187,13 +184,6 @@ class Chassis:
     do_fudge = magicbot.tunable(True)
     do_smooth = magicbot.tunable(True)
 
-    def __init__(self) -> None:
-        self.pose_history = TimeInterpolatablePose2dBuffer(2)
-        self.last_pose = Pose2d()
-        self.translation_velocity = Translation2d()
-        self.rotation_velocity = Rotation2d()
-        self.last_time = time.monotonic()
-
     def setup(self) -> None:
         self.imu = navx.AHRS.create_spi()
 
@@ -293,8 +283,10 @@ class Chassis:
             module.set(state)
 
         self.update_odometry()
-        self.update_pose_history()
-        self.last_time = time.monotonic()
+
+    def on_enable(self) -> None:
+        # update the odometry so the pose estimator dosent have an empty buffer
+        self.update_odometry()
 
     @magicbot.feedback
     def get_imu_speed(self) -> float:
@@ -326,21 +318,14 @@ class Chassis:
                 )
                 self.module_objs[idx].setPose(Pose2d(module_location, module_rotation))
 
-    def update_pose_history(self) -> None:
-        pose = self.get_pose()
-        self.pose_history.addSample(wpilib.Timer.getFPGATimestamp(), pose)
-        self.last_pose = pose
-
     def sync_all(self) -> None:
         for m in self.modules:
             m.sync_steer_encoders()
 
     def set_pose(self, pose: Pose2d) -> None:
-        self.pose_history.clear()
         self.estimator.resetPosition(
             self.imu.getRotation2d(), self.get_module_positions(), pose
         )
-        self.update_pose_history()
         self.field.setRobotPose(pose)
         self.field_obj.setPose(pose)
 
@@ -372,35 +357,6 @@ class Chassis:
         """Get the current location of the robot relative to ???"""
         return self.estimator.getEstimatedPosition()
 
-    def get_gyro_pose(self) -> Pose2d:
-        return Pose2d(
-            self.imu.getDisplacementX(),
-            self.imu.getDisplacementY(),
-            self.imu.getRotation2d(),
-        )
-
     def get_rotation(self) -> Rotation2d:
         """Get the current heading of the robot."""
         return self.get_pose().rotation()
-
-    def get_pose_at(self, t: float) -> Pose2d:
-        """Gets where the robot was at t seconds in the past"""
-        pose = self.pose_history.sample(t)
-        # sample returns None if there is nothing in the history
-        if pose is None:
-            return self.get_pose()
-        return pose
-
-    def robot_to_world(
-        self, offset: Translation2d, robot: Optional[Pose2d] = None
-    ) -> Pose2d:
-        """Transforms a translation from robot space to world space (e.g. turret position)"""
-        if robot is None:
-            robot = self.estimator.getEstimatedPosition()
-        return Pose2d(
-            robot.translation() + offset.rotateBy(robot.rotation()), robot.rotation()
-        )
-
-    def on_enable(self) -> None:
-        # update the odometry so the pose estimator dosent have an empty buffer
-        self.update_odometry()
