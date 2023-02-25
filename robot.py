@@ -18,7 +18,7 @@ from components.chassis import Chassis
 from components.vision import VisualLocalizer
 from components.arm import Arm
 from components.gripper import Gripper
-from components.leds import StatusLights
+from components.leds import DisplayType, StatusLights
 from utilities.scalers import rescale_js
 
 
@@ -100,15 +100,16 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Cone Pickup
-        if self.right_trigger_down.getAsBoolean():
-            self.acquire_cone.target_right()
-            self.acquire_cone.engage("deploying_arm")
         if self.left_trigger_down.getAsBoolean():
-            self.acquire_cone.target_left()
-            self.acquire_cone.engage("deploying_arm")
-
-        if self.left_trigger_up.getAsBoolean() or self.right_trigger_up.getAsBoolean():
+            self.acquire_cone.engage()
+        if self.left_trigger_up.getAsBoolean():
             self.acquire_cone.done()
+
+        # Score
+        if self.right_trigger_down.getAsBoolean():
+            self.score_game_piece.engage()
+        if self.right_trigger_up.getAsBoolean():
+            self.score_game_piece.done()
 
         # Intake
         if self.gamepad.getRightBumperPressed():
@@ -116,16 +117,15 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getLeftBumperPressed():
             self.acquire_cube.done()
 
-        # Scoring
-        if self.gamepad.getAButtonPressed():
-            self.score_game_piece.prefer_high()
-            self.score_game_piece.engage("deploying_arm")
-        if self.gamepad.getBButtonPressed():
-            self.score_game_piece.prefer_mid()
-            self.score_game_piece.engage("deploying_arm")
+        # Request / Set to score cube
+        if self.gamepad.getXButtonPressed():
+            if self.gripper.opened:
+                self.status_lights.want_cube()
+            self.score_game_piece.set_to_score_cube()
 
-        if self.gamepad.getAButtonReleased() or self.gamepad.getBButtonReleased():
-            self.score_game_piece.done()
+        # Request / Set to score cone
+        if self.gamepad.getYButtonPressed():
+            self.score_game_piece.set_to_score_cone()
 
         # Manual overrides
         # Claw
@@ -197,7 +197,6 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getBackButtonPressed():
             self.cancel_controllers()
 
-
         # Tick the controllers
         # These will only do anything if engage() has been called on them
         self.arm.execute()
@@ -222,9 +221,10 @@ class MyRobot(magicbot.MagicRobot):
         self.recover.engage()
 
     def disabledInit(self) -> None:
-        pass
+        self.status_lights.set_display_pattern(DisplayType.WOLFRAM_AUTOMATA)
 
     def disabledPeriodic(self):
+        self.status_lights.execute()
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.arm_component.update_display()

@@ -154,7 +154,7 @@ class Arm:
         self.homing = False
 
         self.use_voltage = False
-        self.voltage = 0.
+        self.voltage = 0.0
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
@@ -190,7 +190,8 @@ class Arm:
             self.rotation_motor.setVoltage(0)
             return
 
-        if self.use_voltage: return 
+        if self.use_voltage:
+            return
 
         # Calculate rotation motor output
         pid_output = self.rotation_controller.calculate(
