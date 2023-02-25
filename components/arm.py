@@ -30,8 +30,8 @@ class Arm:
     PIVOT_HEIGHT = 0.990924
     PIVOT_X = -0.283562
 
-    MAX_ANGLE_ERROR_TOLERANCE = math.radians(5)
-    MAX_EXTENSION_ERROR_TOLERANCE = 0.025
+    MAX_ANGLE_ERROR_TOLERANCE = math.radians(2)
+    MAX_EXTENSION_ERROR_TOLERANCE = 0.02
     STILL_ROTATION_SPEED_TOLERANCE = 0.1
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
@@ -44,14 +44,9 @@ class Arm:
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
-    # how far either side of vertical will the arm retract if it is in
-    # too avoid exceeding the max hieght
-    UPRIGHT_ANGLE = math.radians(20)
 
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
-    # automatically retract the extension when rotating overhead
-    do_auto_retract = tunable(True)
 
     control_loop_wait_time: float
 
@@ -63,14 +58,6 @@ class Arm:
         self.rotation_motor.restoreFactoryDefaults()
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setInverted(True)
-        # setup second motor to follow first
-        self._rotation_motor_follower = rev.CANSparkMax(
-            SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
-        )
-        self._rotation_motor_follower.restoreFactoryDefaults()
-        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
-        self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self._rotation_motor_follower.setInverted(True)
         self.relative_encoder = self.rotation_motor.getEncoder()
         self.relative_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
         self.relative_encoder.setVelocityConversionFactor(
@@ -89,8 +76,9 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            10, 0, 0.1, rotation_constraints
+            20, 0, 0.1, rotation_constraints
         )
+        wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
         )
@@ -113,6 +101,7 @@ class Arm:
         self.extension_controller = ProfiledPIDController(
             30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
+        wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
 
@@ -245,7 +234,6 @@ class Arm:
     def get_raw_angle(self) -> float:
         return self.absolute_encoder.get()
 
-    @feedback
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
@@ -256,7 +244,6 @@ class Arm:
         """Gets the extension length in meters from axle"""
         return self.extension_encoder.getPosition()
 
-    @feedback
     def get_extension_speed(self) -> float:
         """Gets the extension speed in m/s"""
         return self.extension_encoder.getVelocity()
@@ -280,7 +267,6 @@ class Arm:
         """Get the current voltage for the extension motor"""
         return self.voltage
 
-    @feedback
     def get_use_voltage(self) -> bool:
         """Should use the `self.voltage` value for the extension motor"""
         return self.use_voltage
@@ -303,9 +289,11 @@ class Arm:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
 
+    @feedback
     def at_goal_angle(self) -> bool:
         return abs(self.get_angle() - self.goal_angle) < self.MAX_ANGLE_ERROR_TOLERANCE
 
+    @feedback
     def at_goal_extension(self) -> bool:
         return (
             abs(self.get_extension() - self.goal_extension)
@@ -350,3 +338,7 @@ class Arm:
     def reset_controllers(self) -> None:
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
+
+    @feedback
+    def angle_error(self) -> float:
+        return self.rotation_controller.getPositionError()
