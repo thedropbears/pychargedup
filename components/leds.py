@@ -7,6 +7,7 @@ import random
 from ids import PwmChannels
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
+DISABLED_MULTIPLIER = 0.2
 
 
 class LedColors(Enum):
@@ -129,7 +130,7 @@ class WolframAutomata:
         return (
             (self.gen + int(a * self.genspan * self.age_hue_mul)) % 180,
             255,
-            MAX_BRIGHTNESS,
+            int(MAX_BRIGHTNESS * DISABLED_MULTIPLIER),
         )
 
     def set_leds_data(self) -> None:

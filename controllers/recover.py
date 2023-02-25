@@ -27,7 +27,7 @@ class RecoverController(StateMachine):
         if self.arm.is_at_retraction_limit() or state_tm > 1.6:
             self.has_initialized_arm = True
             self.arm.arm_component.set_at_min_extension()
-        self.arm.arm_component.set_voltage(-2.)
+        self.arm.arm_component.set_voltage(-2.0)
         self.arm.arm_component.set_use_voltage(True)
 
     @timed_state(duration=0.4, next_state="stowing_arm", must_finish=True)
