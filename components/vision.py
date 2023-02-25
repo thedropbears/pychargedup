@@ -21,7 +21,7 @@ class VisualLocalizer:
     add_to_estimator = tunable(False)
     should_log = tunable(False)
 
-    rejected_in_row = tunable(0)
+    rejected_in_row = tunable(0.0)
     last_pose_z = tunable(0.0, writeDefault=False)
 
     def __init__(
