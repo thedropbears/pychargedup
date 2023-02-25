@@ -32,7 +32,8 @@ class Arm:
 
     MAX_ANGLE_ERROR_TOLERANCE = math.radians(5)
     MAX_EXTENSION_ERROR_TOLERANCE = 0.1
-    STILL_SPEED_TOLERANCE = 0.1
+    STILL_ROTATION_SPEED_TOLERANCE = 0.1
+    STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
     SPOOL_CIRCUMFERENCE = 42 * 0.005  # 42t x 5mm
@@ -110,12 +111,17 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=2.0, maxAcceleration=4.0)
+            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
 
-        self.brake_solenoid = Solenoid(PneumaticsModuleType.REVPH, PhChannels.arm_brake)
+        self.rotation_brake_solenoid = Solenoid(
+            PneumaticsModuleType.REVPH, PhChannels.arm_brake
+        )
+        self.extension_brake_solenoid = Solenoid(
+            PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
+        )
 
         # Create arm display
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)
@@ -145,13 +151,15 @@ class Arm:
         )
 
         # Hall effector
-        self.hall_effector_forward_arm = self.extension_motor.getForwardLimitSwitch(
-            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+        self.extension_wall_switch_forward = wpilib.DigitalInput(
+            DioChannels.arm_wall_pickup_switch
         )
-        self.hall_effector_inner_arm = self.extension_motor.getReverseLimitSwitch(
-            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+        self.extension_limit_switch_reverse = (
+            self.extension_motor.getReverseLimitSwitch(
+                rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+            )
         )
-        self.homing = False
+        self.extension_limit_switch_reverse.enableLimitSwitch(True)
 
         self.use_voltage = False
         self.voltage = 0.0
@@ -173,32 +181,36 @@ class Arm:
 
     def execute(self) -> None:
         self.update_display()
-        # Calculate extension motor output
-        if not self.use_voltage:
+
+        if self.use_voltage:
+            self.extension_motor.setVoltage(self.voltage)
+            self.unbrake_extension()
+            self.rotation_motor.setVoltage(0)
+            self.brake()
+            return
+
+        # Extension
+        if self.at_goal_extension() and self.is_extension_still():
+            self.brake_extension()
+            self.extension_motor.setVoltage(0)
+        else:
+            self.unbrake_extension()
             pid_output = self.extension_controller.calculate(
                 self.get_extension(), self.goal_extension
             )
             self.extension_motor.setVoltage(pid_output)
-        else:
-            self.extension_motor.setVoltage(self.voltage)
 
+        # Rotation
         if self.at_goal_angle() and self.is_angle_still():
             self.brake()
+            self.rotation_motor.setVoltage(0)
         else:
             self.unbrake()
-        if self.is_braking():
-            self.rotation_motor.setVoltage(0)
-            return
-
-        if self.use_voltage:
-            return
-
-        # Calculate rotation motor output
-        pid_output = self.rotation_controller.calculate(
-            self.get_angle(), self.goal_angle
-        )
-        self.calculate_rotation_feedforwards()
-        self.rotation_motor.setVoltage(pid_output)
+            # Calculate rotation motor output
+            pid_output = self.rotation_controller.calculate(
+                self.get_angle(), self.goal_angle
+            )
+            self.rotation_motor.setVoltage(pid_output)
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -245,9 +257,12 @@ class Arm:
         """Gets the extension speed in m/s"""
         return self.extension_encoder.getVelocity()
 
+    def is_extension_still(self) -> bool:
+        return abs(self.get_extension_speed()) < 0.1
+
     @feedback
-    def is_at_forward_limit(self) -> bool:
-        return self.hall_effector_forward_arm.get()
+    def get_wall_switch(self) -> bool:
+        return not self.extension_wall_switch_forward.get()
 
     def set_at_min_extension(self) -> None:
         """Sets the extension position to the min extension"""
@@ -255,9 +270,8 @@ class Arm:
 
     @feedback
     def is_retracted(self) -> bool:
-        return self.hall_effector_inner_arm.get()
+        return self.extension_limit_switch_reverse.get()
 
-    @feedback
     def get_voltage(self) -> float:
         """Get the current voltage for the extension motor"""
         return self.voltage
@@ -296,7 +310,7 @@ class Arm:
 
     def is_angle_still(self) -> bool:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
-        return abs(self.get_arm_speed()) < self.STILL_SPEED_TOLERANCE
+        return abs(self.get_arm_speed()) < self.STILL_ROTATION_SPEED_TOLERANCE
 
     def at_goal(self) -> bool:
         return (
@@ -304,13 +318,19 @@ class Arm:
         )
 
     def brake(self) -> None:
-        self.brake_solenoid.set(False)
+        self.rotation_brake_solenoid.set(False)
 
     def unbrake(self) -> None:
-        self.brake_solenoid.set(True)
+        self.rotation_brake_solenoid.set(True)
+
+    def brake_extension(self) -> None:
+        self.extension_brake_solenoid.set(False)
+
+    def unbrake_extension(self) -> None:
+        self.extension_brake_solenoid.set(True)
 
     def is_braking(self) -> bool:
-        return not self.brake_solenoid.get()
+        return not self.rotation_brake_solenoid.get()
 
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:

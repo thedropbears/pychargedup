@@ -36,6 +36,7 @@ class SparkMaxIds(enum.IntEnum):
 @enum.unique
 class PhChannels(enum.IntEnum):
     arm_brake = 7
+    arm_extension_brake = 8
 
     intake_piston_forward = 4
     intake_piston_reverse = 5
@@ -54,7 +55,7 @@ class PwmChannels(enum.IntEnum):
 
 @enum.unique
 class DioChannels(enum.IntEnum):
-    gripper_game_piece_switch = 0
+    arm_wall_pickup_switch = 0
 
     intake_break_beam_sensor = 2
 
