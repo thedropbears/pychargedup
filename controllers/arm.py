@@ -96,6 +96,7 @@ class ArmController(StateMachine):
     def get_angle(self) -> float:
         return self.arm_component.get_angle()
 
+    @feedback
     def at_goal(self) -> bool:
         return not (self.is_executing or self._about_to_run)
 
@@ -114,12 +115,14 @@ class ArmController(StateMachine):
 
     @state(must_finish=True)
     def rotating_arm(self) -> None:
+        self._about_to_run = False
         self.arm_component.set_angle(self._target_setpoint.angle)
         if self.arm_component.at_goal_angle():
             self.next_state("extending_arm")
 
     @state(must_finish=True)
     def extending_arm(self) -> None:
+        self._about_to_run = False
         self.arm_component.set_length(self._target_setpoint.extension)
         if self.arm_component.at_goal():
             self.done()

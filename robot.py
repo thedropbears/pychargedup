@@ -18,7 +18,7 @@ from components.chassis import Chassis
 from components.vision import VisualLocalizer
 from components.arm import Arm
 from components.gripper import Gripper
-from components.leds import DisplayType, StatusLights
+from components.leds import StatusLights
 from utilities.scalers import rescale_js
 
 
@@ -102,19 +102,19 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Cone Pickup
-        if self.left_trigger_down.getAsBoolean():
+        if self.left_trigger_down.getAsBoolean() and not self.recover.is_executing:
             self.acquire_cone.engage()
         if self.left_trigger_up.getAsBoolean():
             self.acquire_cone.done()
 
         # Score
-        if self.right_trigger_down.getAsBoolean():
+        if self.right_trigger_down.getAsBoolean() and not self.recover.is_executing:
             self.score_game_piece.engage()
         if self.right_trigger_up.getAsBoolean():
             self.score_game_piece.done()
 
         # Intake
-        if self.gamepad.getRightBumperPressed():
+        if self.gamepad.getRightBumperPressed() and not self.recover.is_executing:
             self.acquire_cube.engage()
             self.status_lights.want_cube()
         if self.gamepad.getLeftBumperPressed():
@@ -230,7 +230,7 @@ class MyRobot(magicbot.MagicRobot):
         self.recover.engage()
 
     def disabledInit(self) -> None:
-        self.status_lights.set_display_pattern(DisplayType.WOLFRAM_AUTOMATA)
+        # self.status_lights.set_display_pattern(DisplayType.WOLFRAM_AUTOMATA)
         self.starboard_localizer.add_to_estimator = False
         self.port_localizer.add_to_estimator = False
 
