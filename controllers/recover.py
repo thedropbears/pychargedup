@@ -16,7 +16,7 @@ class RecoverController(StateMachine):
         self.has_initialized_arm = False
 
     @state(first=True, must_finish=True)
-    def retracting_arm(self, state_tm: float):
+    def retracting_arm(self):
         """
         Retract the arm to the minimum extension
         """
@@ -24,7 +24,7 @@ class RecoverController(StateMachine):
             self.arm.arm_component.set_use_voltage(False)
             self.next_state("clearing_intake")
             return
-        if self.arm.is_at_retraction_limit() or state_tm > 1.6:
+        if self.arm.is_at_retraction_limit():
             self.has_initialized_arm = True
             self.arm.arm_component.set_at_min_extension()
         self.arm.arm_component.set_voltage(-2.0)
