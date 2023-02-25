@@ -40,7 +40,7 @@ class AcquireConeController(StateMachine):
         """
         # if we want the substation to be as if we are on the red alliance
         red_side = is_red() != self.swap_substation
-        stop_distance = 0.1
+        stop_distance = -0.15
         x_offset = (
             Setpoints.PREPARE_PICKUP_CONE.toCartesian()[0]
             + self.arm.arm_component.PIVOT_X
