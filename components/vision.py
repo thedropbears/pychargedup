@@ -85,6 +85,7 @@ class VisualLocalizer:
             if target.getPoseAmbiguity() > 0.25 or target.getYaw() > 20:
                 continue
 
+            self.field_pos_obj.setPose(pose)
             change = self.chassis.get_pose().translation().distance(pose.translation())
             if change > 1.0:
                 self.rejected_in_row += 1

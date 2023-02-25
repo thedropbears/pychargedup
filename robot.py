@@ -89,6 +89,7 @@ class MyRobot(magicbot.MagicRobot):
     def teleopInit(self) -> None:
         self.starboard_localizer.add_to_estimator = True
         self.port_localizer.add_to_estimator = True
+        self.recover.engage()
 
     def teleopPeriodic(self) -> None:
         self.event_loop.poll()
@@ -115,6 +116,7 @@ class MyRobot(magicbot.MagicRobot):
         # Intake
         if self.gamepad.getRightBumperPressed():
             self.acquire_cube.engage()
+            self.status_lights.want_cube()
         if self.gamepad.getLeftBumperPressed():
             self.acquire_cube.done()
 
@@ -124,7 +126,10 @@ class MyRobot(magicbot.MagicRobot):
 
         # Request / Set to score cone
         if self.gamepad.getYButtonPressed():
-            self.status_lights.want_cone_left()
+            if self.acquire_cone.targeting_left:
+                self.status_lights.want_cone_left()
+            else:
+                self.status_lights.want_cone_left()
 
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
@@ -230,7 +235,7 @@ class MyRobot(magicbot.MagicRobot):
         self.port_localizer.add_to_estimator = False
 
     def disabledPeriodic(self):
-        self.status_lights.execute()
+        # self.status_lights.execute()
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.arm_component.update_display()
