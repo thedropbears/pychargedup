@@ -6,7 +6,7 @@ import magicbot
 from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 
 from controllers.movement import Movement
-from controllers.arm import ArmController, Setpoints
+from controllers.arm import ArmController
 
 from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
@@ -119,13 +119,30 @@ class MyRobot(magicbot.MagicRobot):
 
         # Request / Set to score cube
         if self.gamepad.getXButtonPressed():
-            if self.gripper.opened:
-                self.status_lights.want_cube()
-            self.score_game_piece.set_to_score_cube()
+            self.status_lights.want_cube()
 
         # Request / Set to score cone
         if self.gamepad.getYButtonPressed():
-            self.score_game_piece.set_to_score_cone()
+            self.status_lights.want_cone_left()
+
+        if self.gamepad.getBButtonPressed():
+            self.status_lights.off()
+
+        dpad_angle = self.gamepad.getPOV()
+        # up
+        if dpad_angle == 0:
+            self.score_game_piece.prefer_high()
+        # down
+        elif dpad_angle == 180:
+            self.score_game_piece.prefer_mid()
+        # right
+        elif dpad_angle == 90:
+            self.acquire_cone.target_right()
+            self.status_lights.want_cone_right()
+        # left
+        elif dpad_angle == 270:
+            self.acquire_cone.target_left()
+            self.status_lights.want_cone_right()
 
         # Manual overrides
         # Claw
@@ -133,22 +150,6 @@ class MyRobot(magicbot.MagicRobot):
             self.gripper.close()
         if self.gamepad.getBackButtonPressed():
             self.gripper.open()
-
-        # Arm
-        dpad_angle = self.gamepad.getPOV()
-        # up
-        if dpad_angle == 0:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
-        # right
-        elif dpad_angle == 90:
-            self.arm.go_to_setpoint(Setpoints.FORWARDS)
-        # down
-        elif dpad_angle == 180:
-            self.gripper.open()
-            self.arm.go_to_setpoint(Setpoints.HANDOFF)
-        # left
-        elif dpad_angle == 270:
-            self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
 
     def testInit(self) -> None:
         self.arm_component.on_enable()
@@ -182,7 +183,7 @@ class MyRobot(magicbot.MagicRobot):
             if self.gamepad.getRightBumperPressed():
                 self.acquire_cone.target_right()
             if dpad_angle == 180:
-                self.acquire_cone.engage()
+                self.acquire_cone.engage("deploying_arm")
             if dpad_angle == 0:
                 self.acquire_cube.engage()
             if dpad_angle == 90 or dpad_angle == 270:

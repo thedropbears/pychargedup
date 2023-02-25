@@ -46,11 +46,10 @@ class Setpoint:
 
 
 class Setpoints:
-    PREPARE_PICKUP_CONE = Setpoint(math.radians(-170), MIN_EXTENSION)
-    PICKUP_CONE = Setpoint(math.radians(-170), MIN_EXTENSION + 0.15)
+    PREPARE_PICKUP_CONE = Setpoint(math.radians(-180), MIN_EXTENSION)
+    PICKUP_CONE = Setpoint(math.radians(-180), MIN_EXTENSION + 0.2)
     HANDOFF = Setpoint(math.radians(45), MIN_EXTENSION)
-    STOW = Setpoint(math.radians(-10), MIN_EXTENSION)
-    START = Setpoint(math.radians(20), MIN_EXTENSION)
+    STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-160), MIN_EXTENSION)
     SCORE_CUBE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
     SCORE_CONE_HIGH = Setpoint(math.radians(-165), 1.17)
@@ -80,7 +79,7 @@ class ArmController(StateMachine):
     arm_component: Arm
 
     def __init__(self) -> None:
-        self._target_setpoint: Setpoint = Setpoints.START
+        self._target_setpoint: Setpoint = Setpoints.STOW
         self._about_to_run: bool = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
@@ -101,7 +100,7 @@ class ArmController(StateMachine):
         return not (self.is_executing or self._about_to_run)
 
     def is_at_forward_limit(self) -> bool:
-        return self.arm_component.is_at_forward_limit()
+        return self.arm_component.get_wall_switch()
 
     def is_at_retraction_limit(self) -> bool:
         return self.arm_component.is_retracted()
