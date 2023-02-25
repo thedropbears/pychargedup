@@ -78,6 +78,7 @@ class Arm:
         self.rotation_controller = ProfiledPIDController(
             20, 0, 0.1, rotation_constraints
         )
+        self.rotation_controller.setTolerance(self.MAX_ANGLE_ERROR_TOLERANCE)
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -101,6 +102,7 @@ class Arm:
         self.extension_controller = ProfiledPIDController(
             30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
+        self.extension_controller.setTolerance(self.MAX_EXTENSION_ERROR_TOLERANCE)
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
@@ -291,14 +293,11 @@ class Arm:
 
     @feedback
     def at_goal_angle(self) -> bool:
-        return abs(self.get_angle() - self.goal_angle) < self.MAX_ANGLE_ERROR_TOLERANCE
+        return self.rotation_controller.atGoal()
 
     @feedback
     def at_goal_extension(self) -> bool:
-        return (
-            abs(self.get_extension() - self.goal_extension)
-            < self.MAX_EXTENSION_ERROR_TOLERANCE
-        )
+        return self.extension_controller.atGoal()
 
     def is_angle_still(self) -> bool:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
