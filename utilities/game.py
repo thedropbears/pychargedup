@@ -122,7 +122,7 @@ def get_score_location(
     x = GRIDS_EDGE_X + Chassis.LENGTH / 2
     blue_pose = Pose2d(x, node_location.y, Rotation2d(0))
     goal = field_flip_pose2d(blue_pose) if red_side else blue_pose
-    approach_blue = Rotation2d.fromDegrees(0)
+    approach_blue = Rotation2d.fromDegrees(180)
     approach = approach_blue if red_side else approach_blue
     return goal, approach
 
