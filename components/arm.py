@@ -1,7 +1,6 @@
 from magicbot import feedback, tunable
 import wpilib
 from ids import SparkMaxIds, PhChannels, DioChannels
-import math
 from wpilib import (
     Solenoid,
     PneumaticsModuleType,
@@ -15,63 +14,26 @@ from wpimath.controller import (
 from wpimath.trajectory import TrapezoidProfile
 from utilities.functions import clamp
 import rev
+import math
+
 
 MIN_EXTENSION = 0.9  # meters
 MAX_EXTENSION = 1.3
 
 # Angle soft limits
-MIN_ANGLE = math.radians(-230)
-MAX_ANGLE = 1
-
-
-class Setpoint:
-    # arm angle in radians
-    # angle of 0 points towards positive X, at the intake
-    # positive counterclockwise when looking at the left side of the robot
-    angle: float
-    # extension in meters, length from center of rotation to center of where pieces are held in the end effector
-    extension: float
-
-    def __init__(self, angle: float, extension: float) -> None:
-        self.extension = clamp(extension, MIN_EXTENSION, MAX_EXTENSION)
-        if angle > MAX_ANGLE:  # and (self.angle - math.tau) < Arm.MIN_ANGLE:
-            angle -= math.tau
-        self.angle = clamp(angle, MIN_ANGLE, MAX_ANGLE)
-
-        if self.angle != angle or self.extension != extension:
-            print(
-                "SETPOINT WAS CLAMPED", (angle, extension), (self.angle, self.extension)
-            )
-
-    @classmethod
-    def fromCartesian(cls, x: float, z: float) -> "Setpoint":
-        """Sets a cartesian goal reletive to the arms axle"""
-        return cls(math.atan2(-z, x), math.hypot(x, z))
-
-    def toCartesian(self) -> tuple[float, float]:
-        return self.extension * math.cos(self.angle), self.extension * math.sin(
-            self.angle
-        )
-
-
-class Setpoints:
-    PICKUP_CONE = Setpoint(-3.05, 1.0)
-    HANDOFF = Setpoint(0.8, MIN_EXTENSION)
-    STOW = Setpoint(0.35, MIN_EXTENSION)
-    START = Setpoint(-math.radians(30), MIN_EXTENSION)
-    SCORE_CONE_MID = Setpoint(-2.8, 0.89)
-    SCORE_CUBE_MID = Setpoint(-3.2, 0.89)
-    SCORE_CONE_HIGH = Setpoint(-2.89, 1.17)
-    SCORE_CUBE_HIGH = Setpoint(-3, 1.17)
-
-    UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
-    FORWARDS = Setpoint(0, MIN_EXTENSION)
-    BACKWARDS = Setpoint(-math.pi, MIN_EXTENSION)
+MIN_ANGLE = math.radians(-180)
+MAX_ANGLE = math.radians(60)
 
 
 class Arm:
     # height of the center of rotation off the ground
-    HEIGHT = 1
+    PIVOT_HEIGHT = 0.990924
+    PIVOT_X = -0.283562
+
+    MAX_ANGLE_ERROR_TOLERANCE = math.radians(2)
+    MAX_EXTENSION_ERROR_TOLERANCE = 0.02
+    STILL_ROTATION_SPEED_TOLERANCE = 0.1
+    STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
     SPOOL_CIRCUMFERENCE = 42 * 0.005  # 42t x 5mm
@@ -82,14 +44,9 @@ class Arm:
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
-    # how far either side of vertical will the arm retract if it is in
-    # too avoid exceeding the max hieght
-    UPRIGHT_ANGLE = math.radians(20)
 
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
-    # automatically retract the extension when rotating overhead
-    do_auto_retract = tunable(True)
 
     control_loop_wait_time: float
 
@@ -101,14 +58,6 @@ class Arm:
         self.rotation_motor.restoreFactoryDefaults()
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setInverted(True)
-        # setup second motor to follow first
-        self._rotation_motor_follower = rev.CANSparkMax(
-            SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
-        )
-        self._rotation_motor_follower.restoreFactoryDefaults()
-        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
-        self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self._rotation_motor_follower.setInverted(True)
         self.relative_encoder = self.rotation_motor.getEncoder()
         self.relative_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
         self.relative_encoder.setVelocityConversionFactor(
@@ -127,8 +76,10 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(
-            10, 0, 0.1, rotation_constraints
+            20, 0, 0.1, rotation_constraints
         )
+        self.rotation_controller.setTolerance(self.MAX_ANGLE_ERROR_TOLERANCE)
+        wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
         )
@@ -149,17 +100,24 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=2.0, maxAcceleration=4.0)
+            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
+        self.extension_controller.setTolerance(self.MAX_EXTENSION_ERROR_TOLERANCE)
+        wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
 
-        self.brake_solenoid = Solenoid(PneumaticsModuleType.REVPH, PhChannels.arm_brake)
+        self.rotation_brake_solenoid = Solenoid(
+            PneumaticsModuleType.REVPH, PhChannels.arm_brake
+        )
+        self.extension_brake_solenoid = Solenoid(
+            PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
+        )
 
         # Create arm display
         self.arm_mech2d = wpilib.Mechanism2d(5, 3)
-        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, self.HEIGHT)
-        arm_pivot.appendLigament("ArmTower", self.HEIGHT - 0.05, -90)
+        arm_pivot = self.arm_mech2d.getRoot("ArmPivot", 2.5, self.PIVOT_HEIGHT)
+        arm_pivot.appendLigament("ArmTower", self.PIVOT_HEIGHT - 0.05, -90)
         self.arm_ligament = arm_pivot.appendLigament("Arm", MIN_EXTENSION, 0)
         self.arm_goal_ligament = arm_pivot.appendLigament(
             "Arm_goal",
@@ -184,23 +142,25 @@ class Arm:
         )
 
         # Hall effector
-        self.hall_effector_forward_arm = self.extension_motor.getForwardLimitSwitch(
-            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+        self.extension_wall_switch_forward = wpilib.DigitalInput(
+            DioChannels.arm_wall_pickup_switch
         )
-        self.hall_effector_inner_arm = self.extension_motor.getReverseLimitSwitch(
-            rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+        self.extension_limit_switch_reverse = (
+            self.extension_motor.getReverseLimitSwitch(
+                rev.SparkMaxLimitSwitch.Type.kNormallyOpen
+            )
         )
-        self.homing = False
+        self.extension_limit_switch_reverse.enableLimitSwitch(True)
+
+        self.use_voltage = False
+        self.voltage = 0.0
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
-
-        self.voltage_movement: bool = False
-        self.extension_voltage: float = 0
 
     def setup(self) -> None:
         self.set_length(self.get_extension())
 
-    def execute(self) -> None:
+    def update_display(self) -> None:
         extend_state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
         rotate_state = self.rotation_controller.getSetpoint()
 
@@ -210,58 +170,38 @@ class Arm:
         self.arm_extend_ligament.setLength(self.get_extension() - MIN_EXTENSION)
         self.arm_extend_goal_ligament.setLength(extend_state.position - MIN_EXTENSION)
 
-        # if self.is_extended():
-        #     self.extension_encoder.setPosition(MAX_EXTENSION)
-        # if self.is_retracted():
-        #     self.extension_encoder.setPosition(MIN_EXTENSION)
+    def execute(self) -> None:
+        self.update_display()
 
-        if self.homing:
-            self.extension_motor.set(-0.2)
-            self.rotation_motor.set(0)
+        if self.use_voltage:
+            self.extension_motor.setVoltage(self.voltage)
+            self.unbrake_extension()
+            self.rotation_motor.setVoltage(0)
+            self.brake_rotation()
             return
-        elif self.voltage_movement:
-            self.extension_motor.set(self.extension_voltage)
+
+        # Extension
+        if self.at_goal_extension() and self.is_extension_still():
+            self.brake_extension()
+            self.extension_motor.setVoltage(0)
         else:
-            extension_goal = self.get_max_extension()
-            # Calculate extension motor output
+            self.unbrake_extension()
             pid_output = self.extension_controller.calculate(
-                self.get_extension(), extension_goal
+                self.get_extension(), self.goal_extension
             )
-            self.calculate_extension_feedforward()
             self.extension_motor.setVoltage(pid_output)
 
-        if self.at_goal_angle(math.radians(3)) and self.is_angle_still():
-            self.brake()
-        if not self.at_goal_angle(math.radians(5)):
-            self.unbrake()
-        if self.is_braking():
-            self.rotation_motor.set(0)
-            return
-
-        # Calculate rotation motor output
-        pid_output = self.rotation_controller.calculate(
-            self.get_angle(), self.goal_angle
-        )
-        self.calculate_rotation_feedforwards()
-        self.rotation_motor.setVoltage(pid_output)
-
-    def get_max_extension(self) -> float:
-        """Gets the max extension to not exceed the height limit for the current angle and goal"""
-        is_angle_forwards = math.copysign(1, self.get_angle() + (math.pi / 2))
-        is_goal_forwards = math.copysign(1, self.goal_angle + (math.pi / 2))
-        # if we plan on rotating overhead
-        is_going_over = is_angle_forwards != is_goal_forwards
-        # if we are currently overhead
-        is_currently_up = (
-            self.UPRIGHT_ANGLE > (self.get_angle() + math.pi / 2) > -self.UPRIGHT_ANGLE
-        )
-        should_retract = (is_going_over or is_currently_up) and self.do_auto_retract
-        return MIN_EXTENSION if should_retract else self.goal_extension
-
-    def get_near_intake(self) -> bool:
-        """Gets if the arm may hit the intake currently"""
-        # Assume all setpoints are good
-        return not self.at_goal() and self.get_angle() > math.radians(20)
+        # Rotation
+        if self.at_goal_angle() and self.is_angle_still():
+            self.brake_rotation()
+            self.rotation_motor.setVoltage(0)
+        else:
+            self.unbrake_rotation()
+            # Calculate rotation motor output
+            pid_output = self.rotation_controller.calculate(
+                self.get_angle(), self.goal_angle
+            )
+            self.rotation_motor.setVoltage(pid_output)
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -283,24 +223,19 @@ class Arm:
         extend_ff_G = self.EXTEND_GRAVITY_FEEDFORWARD * math.sin(self.get_angle())
         return extend_ff_G + extend_ff_simple
 
-    def extend(self, voltage: float) -> None:
-        self.extension_voltage = voltage
-        self.voltage_movement = True
-
-    def retract(self, voltage: float) -> None:
-        self.extension_voltage = -voltage
-        self.voltage_movement = True
-
     @feedback
     def get_angle(self) -> float:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
         return self.absolute_encoder.getDistance() + self.runtime_offset
 
     @feedback
+    def get_angle_deg(self) -> float:
+        return math.degrees(self.get_angle())
+
+    @feedback
     def get_raw_angle(self) -> float:
         return self.absolute_encoder.get()
 
-    @feedback
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
@@ -311,14 +246,16 @@ class Arm:
         """Gets the extension length in meters from axle"""
         return self.extension_encoder.getPosition()
 
-    @feedback
     def get_extension_speed(self) -> float:
         """Gets the extension speed in m/s"""
         return self.extension_encoder.getVelocity()
 
+    def is_extension_still(self) -> bool:
+        return abs(self.get_extension_speed()) < 0.1
+
     @feedback
-    def is_extended(self) -> bool:
-        return self.hall_effector_forward_arm.get()
+    def get_wall_switch(self) -> bool:
+        return not self.extension_wall_switch_forward.get()
 
     def set_at_min_extension(self) -> None:
         """Sets the extension position to the min extension"""
@@ -326,60 +263,81 @@ class Arm:
 
     @feedback
     def is_retracted(self) -> bool:
-        return self.hall_effector_inner_arm.get()
+        return self.extension_limit_switch_reverse.get()
+
+    def get_voltage(self) -> float:
+        """Get the current voltage for the extension motor"""
+        return self.voltage
+
+    def get_use_voltage(self) -> bool:
+        """Should use the `self.voltage` value for the extension motor"""
+        return self.use_voltage
 
     def set_angle(self, value: float) -> None:
         """Sets a goal angle to go to in radians, 0 forwards, CCW down"""
         self.goal_angle = clamp(value, MIN_ANGLE, MAX_ANGLE)
 
+    def set_voltage(self, value: float) -> None:
+        """Sets a voltage for the extension motor, will only activate if use_voltage is True"""
+        self.voltage = value
+
+    def set_use_voltage(self, value: bool) -> None:
+        """Should override calculations for voltage"""
+        if self.use_voltage and not value:
+            self.extension_controller.reset(self.get_extension())
+        self.use_voltage = value
+
     def set_length(self, value: float) -> None:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
-        self.voltage_movement = False
 
-    def go_to_setpoint(self, value: Setpoint) -> None:
-        self.set_length(value.extension)
-        self.set_angle(value.angle)
+    @feedback
+    def at_goal_angle(self) -> bool:
+        return self.rotation_controller.atGoal()
 
-    DEFAULT_ALLOWABLE_ANGLE_ERROR = math.radians(5)
+    @feedback
+    def at_goal_extension(self) -> bool:
+        return self.extension_controller.atGoal()
 
-    def at_goal_angle(
-        self, allowable_error: float = DEFAULT_ALLOWABLE_ANGLE_ERROR
-    ) -> bool:
-        return abs(self.get_angle() - self.goal_angle) < allowable_error
-
-    def at_goal_extension(self, allowable_error=0.1) -> bool:
-        return abs(self.get_extension() - self.goal_extension) < allowable_error
-
-    def is_angle_still(self, allowable_speed=0.01) -> bool:
+    def is_angle_still(self) -> bool:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
-        return abs(self.get_arm_speed()) < allowable_speed
+        return abs(self.get_arm_speed()) < self.STILL_ROTATION_SPEED_TOLERANCE
 
     def at_goal(self) -> bool:
         return (
             self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
         )
 
-    def brake(self) -> None:
-        self.brake_solenoid.set(False)
+    def brake_rotation(self) -> None:
+        self.rotation_brake_solenoid.set(False)
 
-    def unbrake(self) -> None:
-        self.brake_solenoid.set(True)
+    def unbrake_rotation(self) -> None:
+        self.rotation_brake_solenoid.set(True)
+
+    def brake_extension(self) -> None:
+        self.extension_brake_solenoid.set(False)
+
+    def unbrake_extension(self) -> None:
+        self.extension_brake_solenoid.set(True)
 
     def is_braking(self) -> bool:
-        return not self.brake_solenoid.get()
+        return not self.rotation_brake_solenoid.get()
 
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
         self.reset_controllers()
-        self.unbrake()
+        self.set_length(self.get_extension())
+        self.set_angle(self.get_angle())
 
     def stop(self) -> None:
         self.rotation_motor.set(0)
         self.extension_motor.set(0)
-        self.voltage_movement = False
 
     def reset_controllers(self) -> None:
         self.extension_controller.reset(self.get_extension())
         self.rotation_controller.reset(self.get_angle())
+
+    @feedback
+    def angle_error(self) -> float:
+        return self.rotation_controller.getPositionError()

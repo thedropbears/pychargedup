@@ -170,6 +170,10 @@ class Chassis:
     # metres between centre of front and back wheels
     WHEEL_BASE = 0.68665
 
+    # size including bumpers
+    LENGTH = 1.0105
+    WIDTH = 0.8705
+
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
 
@@ -396,3 +400,7 @@ class Chassis:
         return Pose2d(
             robot.translation() + offset.rotateBy(robot.rotation()), robot.rotation()
         )
+
+    def on_enable(self) -> None:
+        # update the odometry so the pose estimator dosent have an empty buffer
+        self.update_odometry()
