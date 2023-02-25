@@ -3,6 +3,7 @@ import math
 import time
 from typing import Optional
 
+import ctre
 import ctre.sensors
 import magicbot
 import navx
