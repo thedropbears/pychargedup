@@ -7,6 +7,7 @@ import random
 from ids import PwmChannels
 
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
+DISABLED_MULTIPLIER = 0.2
 
 
 class LedColors(Enum):
@@ -129,7 +130,7 @@ class WolframAutomata:
         return (
             (self.gen + int(a * self.genspan * self.age_hue_mul)) % 180,
             255,
-            MAX_BRIGHTNESS,
+            int(MAX_BRIGHTNESS * DISABLED_MULTIPLIER),
         )
 
     def set_leds_data(self) -> None:
@@ -190,33 +191,37 @@ class StatusLights:
     def want_cone_left(self) -> None:
         self.set_color(
             [
+                *([LedColors.OFF] * (self.led_length // 2)),
                 *([LedColors.YELLOW] * (self.led_length // 2)),
-                *([LedColors.RED] * (self.led_length // 2)),
             ]
         )
-        self.set_display_pattern(DisplayType.FLASH)
+        self.set_display_pattern(DisplayType.SOLID)
 
     def want_cone_right(self) -> None:
         self.set_color(
             [
-                *([LedColors.GREEN] * (self.led_length // 2)),
                 *([LedColors.YELLOW] * (self.led_length // 2)),
+                *([LedColors.OFF] * (self.led_length // 2)),
             ]
         )
-        self.set_display_pattern(DisplayType.FLASH)
+        self.set_display_pattern(DisplayType.SOLID)
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
         self.set_color([LedColors.VIOLET] * self.led_length)
-        self.set_display_pattern(DisplayType.FLASH)
+        self.set_display_pattern(DisplayType.SOLID)
+
+    def off(self) -> None:
+        self.set_color([LedColors.OFF] * self.led_length)
+        self.set_display_pattern(DisplayType.SOLID)
 
     def cone_onboard(self) -> None:
         self.set_color([LedColors.YELLOW] * self.led_length)
-        self.set_display_pattern(DisplayType.SOLID)
+        self.set_display_pattern(DisplayType.PULSE)
 
     def cube_onboard(self) -> None:
         self.set_color([LedColors.VIOLET] * self.led_length)
-        self.set_display_pattern(DisplayType.SOLID)
+        self.set_display_pattern(DisplayType.PULSE)
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
         return self.color

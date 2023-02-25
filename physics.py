@@ -89,7 +89,7 @@ class PhysicsEngine:
         )
         self.arm_sim = SingleJointedArmSim(
             arm_motors_sim,
-            robot.arm.ROTATE_GEAR_RATIO,
+            arm.Arm.ROTATE_GEAR_RATIO,
             arm_moi,
             arm_len,
             -arm.MAX_ANGLE - math.radians(10),
@@ -102,9 +102,9 @@ class PhysicsEngine:
         ELEVATOR_CARRIAGE_MASS = 0.655
         self.extension_sim = ElevatorSim(
             extension_motors_sim,
-            robot.arm.EXTEND_GEAR_RATIO,
+            arm.Arm.EXTEND_GEAR_RATIO,
             ELEVATOR_CARRIAGE_MASS + END_EFFECTOR_MASS,
-            robot.arm.SPOOL_CIRCUMFERENCE / math.tau,
+            arm.Arm.SPOOL_CIRCUMFERENCE / math.tau,
             arm.MIN_EXTENSION,
             arm.MAX_EXTENSION,
             simulateGravity=False,
@@ -113,7 +113,7 @@ class PhysicsEngine:
         self.extension_sim.setState(np.array([[arm.MIN_EXTENSION], [0]]))
 
         # Get arm objects
-        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm.absolute_encoder)
+        self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm_component.absolute_encoder)
         self.arm_brake = SolenoidSim(
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake
         )
@@ -135,8 +135,8 @@ class PhysicsEngine:
     def update_sim(self, now: float, tm_diff: float) -> None:
         # Update rotation sim
         self.arm_sim.setInputVoltage(-self.arm_motor_output.get())
-        # if self.arm_brake.getOutput():
-        self.arm_sim.update(tm_diff)
+        if self.arm_brake.getOutput():
+            self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
         self.arm_motor_vel.set(-self.arm_sim.getVelocity())
         # Update extension sim

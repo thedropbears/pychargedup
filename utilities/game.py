@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Optional
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag
+from components.chassis import Chassis
 
 apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
     robotpy_apriltag.AprilTagField.k2023ChargedUp
@@ -11,7 +13,7 @@ apriltag_layout = robotpy_apriltag.loadAprilTagLayoutField(
 FIELD_WIDTH = 8.0161
 tag_8 = apriltag_layout.getTagPose(8)
 tag_1 = apriltag_layout.getTagPose(1)
-# for type chcker
+# for type checker
 assert tag_8 is not None and tag_1 is not None
 FIELD_LENGTH = tag_1.x + tag_8.x
 
@@ -88,9 +90,55 @@ class Node:
     row: Rows
     col: int
 
+    def get_valid_piece(self) -> GamePiece:
+        if row is Rows.LOW:
+            return GamePiece.BOTH
+        if col % 2 == 1:
+            return GamePiece.CUBE
+        else:
+            return GamePiece.CONE
+
+
+def get_node(node: Node, red_side: bool) -> Translation3d:
+    if red_side:
+        return RED_NODES[node.row.value][node.col]
+    else:
+        return BLUE_NODES[node.row.value][node.col]
+
 
 # edge of the hybrid node baffles
 GRIDS_EDGE_X = 1.37
+
+
+def get_score_location(
+    node: Node, red_side: Optional[bool] = None
+) -> tuple[Pose2d, Rotation2d]:
+    """Returns the goal and approach direction for the given node"""
+    if red_side is None:
+        red_side = is_red()
+    node_location = get_node(node, red_side)
+
+    # always be up against the grids
+    x = GRIDS_EDGE_X + Chassis.LENGTH / 2
+    blue_pose = Pose2d(x, node_location.y, Rotation2d(0))
+    goal = field_flip_pose2d(blue_pose) if red_side else blue_pose
+    approach_blue = Rotation2d.fromDegrees(180)
+    approach = approach_blue if red_side else approach_blue
+    return goal, approach
+
+
+def get_closest_node(pos: Translation2d, piece: GamePiece, row: Rows) -> Node:
+    def get_node_dist(node: Node) -> float:
+        return get_score_location(node)[0].translation().distance(pos)
+
+    if piece == GamePiece.CONE:
+        nodes = [Node(row, i) for i in range(9) if i % 3 != 1]
+    elif piece == GamePiece.CUBE:
+        nodes = [Node(row, i) for i in range(1, 9, 3)]
+    else:  # NONE or BOTH
+        nodes = [Node(row, i) for i in range(9)]
+
+    return min(nodes, key=get_node_dist)
 
 
 # loading bays the red alliance uses, on the blue side of the field
@@ -103,14 +151,15 @@ DOUBLE_SUBSTATION_RED_DRIVER = Translation3d(0.15, 6.007, 0.948)
 DOUBLE_SUBSTATION_BLUE_DRIVER = field_flip_translation3d(DOUBLE_SUBSTATION_RED_DRIVER)
 
 
-def get_double_substation(is_red: bool, wall_side: bool):
-    if is_red:
-        if wall_side:
-            return DOUBLE_SUBSTATION_RED_WALL
-        else:
+def get_double_substation(red_side: bool, left_side: bool) -> Translation3d:
+    """Left/Right sides from perspective of current drivers"""
+    if red_side:
+        if left_side:
             return DOUBLE_SUBSTATION_RED_DRIVER
+        else:
+            return DOUBLE_SUBSTATION_RED_WALL
     else:
-        if wall_side:
+        if left_side:
             return DOUBLE_SUBSTATION_BLUE_WALL
         else:
             return DOUBLE_SUBSTATION_BLUE_DRIVER
@@ -146,3 +195,32 @@ def get_staged_pieces(alliance: wpilib.DriverStation.Alliance) -> list[Translati
         return STAGED_PIECES_BLUE
     else:
         return STAGED_PIECES_RED
+
+
+def is_red() -> bool:
+    return get_team() == wpilib.DriverStation.Alliance.kRed
+
+
+def get_team() -> wpilib.DriverStation.Alliance:
+    return wpilib.DriverStation.getAlliance()
+
+
+def get_cone_pickup(
+    targeting_left: bool, red_side: bool, offset_x: float
+) -> tuple[Pose2d, Rotation2d]:
+    """Returns the goal and approach direction for the given side"""
+    cone_trans = get_double_substation(False, targeting_left).toTranslation2d()
+    # as if we're blue
+    goal_rotation = Rotation2d.fromDegrees(180)
+    goal_approach = Rotation2d(0)
+    goal_trans = cone_trans + Translation2d(offset_x, 0)
+    goal = Pose2d(goal_trans, goal_rotation)
+
+    if red_side:
+        goal = field_flip_pose2d(goal)
+        goal_approach = field_flip_rotation2d(goal_approach)
+
+    return (
+        goal,
+        goal_approach,
+    )
