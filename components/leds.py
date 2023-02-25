@@ -71,10 +71,15 @@ class WolframAutomata:
         )
         self.age_hue_mul = 0.5
 
+        self.mutation_chance = 0.0625
+
     def reset_rule(self) -> None:
         self.gen_rule = 0
         self.genspan = random.randint(self.genspan_min, self.genspan_max)
         self.rule = random.randint(0, 255)
+        if random.random() < self.mutation_chance:
+            i = random.randrange(0, self.n)
+            self.world[i] = not self.world[i]
 
     def step(self) -> None:
         new_world = [False] * self.n
