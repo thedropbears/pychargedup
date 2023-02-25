@@ -45,10 +45,10 @@ class MyRobot(magicbot.MagicRobot):
         self.port_localizer_pos = Translation3d(-0.35001, 0.06583, 0.25)
         self.port_localizer_rot = Rotation3d(
             Quaternion(
-                -0.2156163454055786,
-                0.0850898027420044,
-                0.018863987177610397,
-                0.9725808501243591,
+                0.0850897952914238,
+                0.21561633050441742,
+                -0.9725809097290039,
+                0.018864024430513382,
             )
         )
 
@@ -56,10 +56,10 @@ class MyRobot(magicbot.MagicRobot):
         self.starboard_localizer_pos = Translation3d(-0.35001, -0.06583, 0.247)
         self.starboard_localizer_rot = Rotation3d(
             Quaternion(
-                0.21561579406261444,
                 0.08508981764316559,
-                -0.018863940611481667,
-                0.9725809693336487,
+                -0.21561576426029205,
+                -0.9725810289382935,
+                -0.01886390522122383,
             )
         )
 
