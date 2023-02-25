@@ -283,7 +283,7 @@ class Chassis:
             module.set(state)
 
         self.update_odometry()
- 
+
     def on_enable(self) -> None:
         # update the odometry so the pose estimator dosent have an empty buffer
         self.update_odometry()
