@@ -399,3 +399,7 @@ class Chassis:
         return Pose2d(
             robot.translation() + offset.rotateBy(robot.rotation()), robot.rotation()
         )
+
+    def on_enable(self) -> None:
+        # update the odometry so the pose estimator dosent have an empty buffer
+        self.update_odometry()
