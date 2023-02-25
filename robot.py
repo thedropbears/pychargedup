@@ -6,7 +6,7 @@ import magicbot
 from wpimath.geometry import Quaternion, Rotation3d, Translation3d
 
 from controllers.movement import Movement
-from controllers.arm import ArmController
+from controllers.arm import ArmController, Setpoints
 
 from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
@@ -181,8 +181,18 @@ class MyRobot(magicbot.MagicRobot):
 
         # Arm
         if self.gamepad.getAButton():
-            # TODO add functionality here if required
-            pass
+            # up
+            if dpad_angle == 0:
+                self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
+            # down
+            elif dpad_angle == 180:
+                self.arm.go_to_setpoint(Setpoints.HANDOFF)
+            # right
+            elif dpad_angle == 90:
+                self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
+            # left
+            elif dpad_angle == 270:
+                self.arm.go_to_setpoint(Setpoints.STOW)
 
         # State machines
         if self.gamepad.getXButton():

@@ -47,7 +47,7 @@ class Setpoint:
 
 class Setpoints:
     PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
-    PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.25)
+    PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
     HANDOFF = Setpoint(math.radians(45), MIN_EXTENSION)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-160), MIN_EXTENSION)
@@ -83,11 +83,10 @@ class ArmController(StateMachine):
         self._about_to_run: bool = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
-        # Only restart the state machine if the setpoint is different
         if setpoint != self._target_setpoint:  # and self.at_goal():
-            self._target_setpoint = setpoint
             self._about_to_run = True
-            self.engage()
+        self._target_setpoint = setpoint
+        self.engage()
 
     @feedback
     def get_target(self) -> str:
