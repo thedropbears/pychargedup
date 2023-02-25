@@ -238,6 +238,10 @@ class Arm:
         return self.absolute_encoder.getDistance() + self.runtime_offset
 
     @feedback
+    def get_angle_deg(self) -> float:
+        return math.degrees(self.get_angle())
+
+    @feedback
     def get_raw_angle(self) -> float:
         return self.absolute_encoder.get()
 

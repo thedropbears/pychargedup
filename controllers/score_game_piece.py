@@ -41,6 +41,8 @@ class ScoreGamePieceController(StateMachine):
 
     @state(must_finish=True)
     def deploying_arm(self):
+        if self.recover.is_executing:
+            return
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
