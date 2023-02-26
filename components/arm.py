@@ -30,8 +30,11 @@ class Arm:
     PIVOT_HEIGHT = 0.990924
     PIVOT_X = -0.283562
 
-    MAX_ANGLE_ERROR_TOLERANCE = math.radians(2)
-    MAX_EXTENSION_ERROR_TOLERANCE = 0.02
+    ANGLE_ERROR_TOLERANCE = math.radians(2)
+    ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(4)
+    EXTENSION_ERROR_TOLERANCE = 0.03
+    EXTENSION_BRAKING_ERROR_TOLERANCE = 0.05
+
     STILL_ROTATION_SPEED_TOLERANCE = 0.1
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
@@ -76,7 +79,6 @@ class Arm:
             maxVelocity=3, maxAcceleration=2
         )
         self.rotation_controller = ProfiledPIDController(25, 0, 1, rotation_constraints)
-        self.rotation_controller.setTolerance(self.MAX_ANGLE_ERROR_TOLERANCE)
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(
             kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
@@ -101,7 +103,6 @@ class Arm:
         self.extension_controller = ProfiledPIDController(
             30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
-        self.extension_controller.setTolerance(self.MAX_EXTENSION_ERROR_TOLERANCE)
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
@@ -292,18 +293,29 @@ class Arm:
 
     @feedback
     def at_goal_angle(self) -> bool:
-        return (
-            abs(self.get_angle() - self.goal_angle) < self.MAX_ANGLE_ERROR_TOLERANCE
-            and self.rotation_controller.getSetpoint().position == self.goal_angle
+        tolerance = (
+            self.ANGLE_BRAKING_ERROR_TOLERANCE
+            if self.is_braking_rotation()
+            else self.ANGLE_ERROR_TOLERANCE
         )
+        error = abs(self.get_angle() - self.goal_angle)
+        movement_done = (
+            self.rotation_controller.getSetpoint().position == self.goal_angle
+        )
+        return error < tolerance and movement_done
 
     @feedback
     def at_goal_extension(self) -> bool:
-        return (
-            abs(self.get_extension() - self.goal_extension)
-            < self.MAX_EXTENSION_ERROR_TOLERANCE
-            and self.extension_controller.getSetpoint().position == self.goal_extension
+        tolerance = (
+            self.EXTENSION_BRAKING_ERROR_TOLERANCE
+            if self.is_braking_extension()
+            else self.EXTENSION_ERROR_TOLERANCE
         )
+        error = abs(self.get_extension() - self.goal_extension)
+        movement_done = (
+            self.extension_controller.getSetpoint().position == self.goal_extension
+        )
+        return error < tolerance and movement_done
 
     def is_angle_still(self) -> bool:
         """Is the arm currently not moving, allowable speed is in Rotations/s"""
@@ -326,8 +338,11 @@ class Arm:
     def unbrake_extension(self) -> None:
         self.extension_brake_solenoid.set(True)
 
-    def is_braking(self) -> bool:
+    def is_braking_rotation(self) -> bool:
         return not self.rotation_brake_solenoid.get()
+
+    def is_braking_extension(self) -> bool:
+        return not self.extension_brake_solenoid.get()
 
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
