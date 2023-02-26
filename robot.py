@@ -222,6 +222,7 @@ class MyRobot(magicbot.MagicRobot):
         self.arm_component.execute()
         self.intake.execute()
         self.gripper.execute()
+        self.chassis.update_odometry()
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.status_lights.execute()
@@ -238,6 +239,7 @@ class MyRobot(magicbot.MagicRobot):
         pass
 
     def disabledPeriodic(self):
+        self.chassis.update_odometry()
         # self.status_lights.execute()
         self.port_localizer.execute()
         self.starboard_localizer.execute()
