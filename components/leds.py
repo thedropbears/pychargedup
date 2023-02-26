@@ -195,7 +195,7 @@ class StatusLights:
                 *([LedColors.YELLOW] * (self.led_length // 2)),
             ]
         )
-        self.set_display_pattern(DisplayType.SOLID)
+        self.set_display_pattern(DisplayType.FLASH)
 
     def want_cone_right(self) -> None:
         self.set_color(
@@ -204,12 +204,12 @@ class StatusLights:
                 *([LedColors.OFF] * (self.led_length // 2)),
             ]
         )
-        self.set_display_pattern(DisplayType.SOLID)
+        self.set_display_pattern(DisplayType.FLASH)
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
         self.set_color([LedColors.VIOLET] * self.led_length)
-        self.set_display_pattern(DisplayType.SOLID)
+        self.set_display_pattern(DisplayType.FLASH)
 
     def off(self) -> None:
         self.set_color([LedColors.OFF] * self.led_length)
@@ -217,11 +217,11 @@ class StatusLights:
 
     def cone_onboard(self) -> None:
         self.set_color([LedColors.YELLOW] * self.led_length)
-        self.set_display_pattern(DisplayType.PULSE)
+        self.set_display_pattern(DisplayType.SOLID)
 
     def cube_onboard(self) -> None:
         self.set_color([LedColors.VIOLET] * self.led_length)
-        self.set_display_pattern(DisplayType.PULSE)
+        self.set_display_pattern(DisplayType.SOLID)
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
         return self.color
