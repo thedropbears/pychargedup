@@ -88,6 +88,7 @@ class Arm:
             SparkMaxIds.arm_extension, rev.CANSparkMax.MotorType.kBrushless
         )
         self.extension_motor.restoreFactoryDefaults()
+        self.extension_motor.setSmartCurrentLimit(20)
         self.extension_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.extension_motor.setInverted(True)
         self.extension_encoder = self.extension_motor.getEncoder()
