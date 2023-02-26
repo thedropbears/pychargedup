@@ -14,7 +14,6 @@ from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 
 from math import radians
 
-
 @dataclass
 class PickupPath:
     goal: Pose2d
