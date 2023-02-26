@@ -1,4 +1,3 @@
-from typing import Optional
 from magicbot.state_machine import AutonomousStateMachine, state
 from dataclasses import dataclass
 
