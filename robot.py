@@ -148,7 +148,7 @@ class MyRobot(magicbot.MagicRobot):
         # left
         elif dpad_angle == 270:
             self.acquire_cone.target_left()
-            self.status_lights.want_cone_right()
+            self.status_lights.want_cone_left()
 
         # Manual overrides
         # Claw
