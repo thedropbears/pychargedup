@@ -8,6 +8,8 @@ from components.gripper import Gripper
 from controllers.arm import ArmController, Setpoint, Setpoints
 from controllers.movement import Movement
 from controllers.recover import RecoverController
+from controllers.score_game_piece import ScoreGamePieceController
+from controllers.acquire_cube import AcquireCubeController
 
 from utilities.functions import grid_col_to_field_y
 
@@ -39,6 +41,8 @@ class AutoBase(AutonomousStateMachine):
     intake: Intake
     movement: Movement
     recover: RecoverController
+    score_game_piece: ScoreGamePieceController
+    aquire_cube: AcquireCubeController
 
     INTAKE_PRE_TIME = 2.0
 
@@ -66,15 +70,11 @@ class AutoBase(AutonomousStateMachine):
             )
         self.movement.do_autodrive()
         if self.movement.time_to_goal < self.INTAKE_PRE_TIME:
-            self.arm.go_to_setpoint(Setpoints.HANDOFF)
-            self.intake.deploy()
+            self.aquire_cube.engage()
 
-        if self.movement.is_at_goal():
-            self.gripper.close()
-            if self.gripper.get_full_closed():
-                self.progress_idx += 1
-                self.next_state("score")
-                self.recover.engage()
+        if not self.aquire_cube.is_executing:
+            self.progress_idx += 1
+            self.next_state("score")
 
 
 class AutoTest(AutoBase):
