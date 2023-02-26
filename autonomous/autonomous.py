@@ -50,10 +50,9 @@ class AutoBase(AutonomousStateMachine):
             self.next_state("pickup_cube")
 
     @state
-    def pickup_cube(self, initial_call: bool) -> None:
+    def approach_cube(self, initial_call: bool) -> None:
         if initial_call:
             path = self.pickup_paths[self.progress_idx]
-            self.movement.next_state("autodrive")
             self.movement.set_goal(
                 path.goal,
                 path.approach_direction,
@@ -61,11 +60,20 @@ class AutoBase(AutonomousStateMachine):
             )
         self.movement.do_autodrive()
         if self.movement.time_to_goal < self.INTAKE_PRE_TIME:
+            self.next_state("pickup_cube")
+    
+    @state
+    def pickup_cube(self, initial_call, state_tm):
+        if initial_call == True:
+            self.movement.do_autodrive()
             self.aquire_cube.engage()
-
-        if not self.aquire_cube.is_executing:
+        elif not self.aquire_cube.is_executing:
             self.progress_idx += 1
             self.next_state("score")
+        
+        if state_tm > 1.5:
+            self.aquire_cube.manual_cube_present()
+
 
 
 class AutoTest(AutoBase):
