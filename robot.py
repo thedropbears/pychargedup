@@ -12,6 +12,7 @@ from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
 from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
+from controllers.behaviour import Behaviour
 
 from components.intake import Intake
 from components.chassis import Chassis
@@ -31,8 +32,7 @@ class MyRobot(magicbot.MagicRobot):
     acquire_cube: AcquireCubeController
     score_game_piece: ScoreGamePieceController
     recover: RecoverController
-
-    # arm_controller: ArmController
+    behaviour: Behaviour
 
     # Components
     chassis: Chassis
@@ -89,7 +89,7 @@ class MyRobot(magicbot.MagicRobot):
     def teleopInit(self) -> None:
         self.starboard_localizer.add_to_estimator = True
         self.port_localizer.add_to_estimator = True
-        self.recover.engage()
+        self.behaviour.do_recover()
 
     def teleopPeriodic(self) -> None:
         self.event_loop.poll()
@@ -103,22 +103,21 @@ class MyRobot(magicbot.MagicRobot):
 
         # Cone Pickup
         if self.left_trigger_down.getAsBoolean() and not self.recover.is_executing:
-            self.acquire_cone.engage()
+            self.behaviour.start_acquiring_cone()
         if self.left_trigger_up.getAsBoolean():
-            self.acquire_cone.done()
+            self.behaviour.done_acquiring_cone()
 
         # Score
         if self.right_trigger_down.getAsBoolean() and not self.recover.is_executing:
-            self.score_game_piece.engage()
+            self.behaviour.start_scoring_piece()
         if self.right_trigger_up.getAsBoolean():
-            self.score_game_piece.done()
+            self.behaviour.done_scoring_piece()
 
         # Intake
         if self.gamepad.getRightBumperPressed() and not self.recover.is_executing:
-            self.acquire_cube.engage()
-            self.status_lights.want_cube()
+            self.behaviour.start_acquiring_cube()
         if self.gamepad.getLeftBumperPressed():
-            self.acquire_cube.done()
+            self.behaviour.done_acquiring_cube()
 
         # Request / Set to score cube
         if self.gamepad.getXButtonPressed():
@@ -143,12 +142,10 @@ class MyRobot(magicbot.MagicRobot):
             self.score_game_piece.prefer_mid()
         # right
         elif dpad_angle == 90:
-            self.acquire_cone.target_right()
-            self.status_lights.want_cone_right()
+            self.behaviour.target_right_cone()
         # left
         elif dpad_angle == 270:
-            self.acquire_cone.target_left()
-            self.status_lights.want_cone_right()
+            self.behaviour.target_left_cone()
 
         # Manual overrides
         # Claw
@@ -197,28 +194,27 @@ class MyRobot(magicbot.MagicRobot):
         # State machines
         if self.gamepad.getXButton():
             if self.gamepad.getLeftBumperPressed():
-                self.acquire_cone.target_left()
+                self.behaviour.target_left_cone()
             if self.gamepad.getRightBumperPressed():
-                self.acquire_cone.target_right()
+                self.behaviour.target_right_cone()
             if dpad_angle == 180:
                 self.acquire_cone.engage("deploying_arm")
             if dpad_angle == 0:
-                self.acquire_cube.engage()
+                self.behaviour.start_acquiring_cone()
             if dpad_angle == 90 or dpad_angle == 270:
-                # self.recover.engage()
-                # Better to call cancel() so that all other SMs
-                # are cancelled before recover runs
-                self.cancel_controllers()
+                self.behaviour.do_recover()
             if self.gamepad.getLeftStickButtonPressed():
-                self.score_game_piece.engage()
+                self.behaviour.start_scoring_piece()
 
         # Cancel any running controllers
         if self.gamepad.getBackButtonPressed():
-            self.cancel_controllers()
+            self.behaviour.do_recover()
 
         # Tick the controllers
         # These will only do anything if engage() has been called on them
         self.arm.execute()
+
+        self.behaviour.execute()
         self.acquire_cone.execute()
         self.acquire_cube.execute()
         self.score_game_piece.execute()
@@ -231,13 +227,6 @@ class MyRobot(magicbot.MagicRobot):
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.status_lights.execute()
-
-    def cancel_controllers(self):
-        self.acquire_cone.done()
-        self.acquire_cube.done()
-        self.score_game_piece.done()
-        self.status_lights.off()
-        self.recover.engage()
 
     def disabledInit(self) -> None:
         # self.status_lights.set_display_pattern(DisplayType.WOLFRAM_AUTOMATA)
