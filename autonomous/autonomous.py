@@ -1,71 +1,115 @@
-# class CubeAutoBase:
-#     """Auto which starts with a preloaded cone, scores it then drives to pickup and score cubes"""
+from typing import Optional
+from magicbot.state_machine import AutonomousStateMachine, state
+from dataclasses import dataclass
 
-#     scoring: ScoringController
-#     chassis: Chassis
+from controllers.arm import Setpoint, Setpoints
+from controllers.movement import Movement
+from controllers.score_game_piece import ScoreGamePieceController
+from controllers.acquire_cube import AcquireCubeController
 
-#     def __init__(self, cubes: list[tuple[int, Rotation2d]], nodes: list[Node]) -> None:
-#         # list of cube idx and angle to hit pickup at as if was on blue alliance
-#         # 0 is closest to wall, 3 is closest to substations
-#         self.cubes = cubes
-#         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-#         self.nodes = nodes
-#         self.finished = False
+from utilities.functions import grid_col_to_field_y
 
-#     def on_enable(self) -> None:
-#         (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
-#         start_pose = field_flip_pose2d(start_pose) if is_red() else start_pose
-#         self.chassis.set_pose(start_pose)
-
-#         self.scoring.wants_piece = GamePiece.CUBE
-#         self.scoring.is_holding = GamePiece.CONE
-#         self.scoring.cube_stack = []
-#         all_pieces = get_staged_pieces(wpilib.DriverStation.getAlliance())
-#         for idx, rotation in self.cubes[::-1]:
-#             position = all_pieces[idx]
-#             # flip angle, position is already correctly flipped
-#             angle = field_flip_rotation2d(rotation) if is_red() else rotation
-#             # approach angle is the same as chassis heading
-#             pose = Pose2d(position, angle)
-#             self.scoring.cube_stack.append((pose, angle))
-
-#         self.scoring.score_stack = self.nodes[::-1]
-
-#     def on_iteration(self, tm: float) -> None:
-#         if not self.finished:
-#             self.scoring.autodrive = True
-#             self.scoring.engage()
-#         if len(self.scoring.cube_stack) == 0 and len(self.scoring.score_stack) == 0:
-#             self.finished = True
-
-#     def on_disable(self) -> None:
-#         self.scoring.wants_piece = GamePiece.CONE
+from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 
 
-# class WallSide3(CubeAutoBase):
-#     MODE_NAME = "Wall side 3"
+from math import radians
 
-#     def __init__(self):
-#         super().__init__(
-#             cubes=[(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))],
-#             nodes=[
-#                 Node(row=Rows.HIGH, col=0),
-#                 Node(row=Rows.HIGH, col=1),
-#                 Node(row=Rows.MID, col=1),
-#             ],
-#         )
+@dataclass
+class PickupPath:
+    goal: Pose2d
+    approach_direction: Rotation2d
+    intermediate_waypoints: Optional[list[Translation2d]]
 
 
-# class SubstationSide3(CubeAutoBase):
-#     MODE_NAME = "Substation side 3"
-#     DEFAULT = True
+@dataclass
+class ScorePath:
+    goal: Pose2d
+    approach_direction: Rotation2d
+    intermediate_waypoints: Optional[list[Translation2d]]
+    arm_setpoint: Setpoint
 
-#     def __init__(self):
-#         super().__init__(
-#             cubes=[(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))],
-#             nodes=[
-#                 Node(row=Rows.HIGH, col=8),
-#                 Node(row=Rows.HIGH, col=7),
-#                 Node(row=Rows.MID, col=7),
-#             ],
-#         )
+
+class AutoBase(AutonomousStateMachine):
+    movement: Movement
+    score_game_piece: ScoreGamePieceController
+    acquire_cube: AcquireCubeController
+
+    INTAKE_PRE_TIME = 2.0
+    MANUAL_CUBE_TIME = 1.5
+
+    def __init__(self) -> None:
+        self.pickup_paths = []
+        self.score_paths = []
+        self.progress_idx = 0
+
+    @state(first=True)
+    def score(self, initial_call: bool) -> None:
+        if initial_call:
+            self.score_game_piece.engage()
+        elif not self.score_game_piece.is_executing:
+            self.next_state("pickup_cube")
+
+    @state
+    def approach_cube(self, initial_call: bool) -> None:
+        if initial_call:
+            path = self.pickup_paths[self.progress_idx]
+            self.movement.set_goal(
+                path.goal,
+                path.approach_direction,
+                waypoints=path.intermediate_waypoints,
+            )
+        self.movement.do_autodrive()
+        if self.movement.time_to_goal < self.INTAKE_PRE_TIME:
+            self.next_state("pickup_cube")
+    
+    @state
+    def pickup_cube(self, initial_call, state_tm):
+        if initial_call == True:
+            self.movement.do_autodrive()
+            self.acquire_cube.engage()
+        elif not self.acquire_cube.is_executing:
+            self.progress_idx += 1
+            self.next_state("score")
+        
+        if state_tm > self.MANUAL_CUBE_TIME:
+            self.acquire_cube.manual_cube_present()
+
+
+
+class AutoTest(AutoBase):
+    MODE_NAME = "Auto Test"
+    DEFAULT = True
+
+    def setup(self) -> None:
+        self.score_paths = [
+            ScorePath(
+                Pose2d(1.88795, grid_col_to_field_y(0), Rotation2d(0.0)),
+                Rotation2d.fromDegrees(180.0),
+                [],
+                Setpoints.SCORE_CONE_HIGH,
+            ),
+            ScorePath(
+                Pose2d(1.88795, grid_col_to_field_y(1), Rotation2d(0.0)),
+                Rotation2d.fromDegrees(180.0),
+                [],
+                Setpoints.SCORE_CUBE_HIGH,
+            ),
+            ScorePath(
+                Pose2d(1.88795, grid_col_to_field_y(4), Rotation2d(0.0)),
+                Rotation2d.fromDegrees(180.0),
+                [],
+                Setpoints.SCORE_CUBE_HIGH,
+            ),
+        ]
+        self.pickup_paths = [
+            PickupPath(
+                Pose2d(6.65885, 0.88812, Rotation2d(radians(4.56))),
+                Rotation2d.fromDegrees(4.56),
+                [],
+            ),
+            PickupPath(
+                Pose2d(6.719, 1.92247, Rotation2d(radians(32.04))),
+                Rotation2d.fromDegrees(32.04),
+                [],
+            ),
+        ]
