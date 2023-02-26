@@ -2,12 +2,8 @@ from typing import Optional
 from magicbot.state_machine import AutonomousStateMachine, state
 from dataclasses import dataclass
 
-from components.chassis import Chassis
-from components.intake import Intake
-from components.gripper import Gripper
-from controllers.arm import ArmController, Setpoint, Setpoints
+from controllers.arm import Setpoint, Setpoints
 from controllers.movement import Movement
-from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
 from controllers.acquire_cube import AcquireCubeController
 
@@ -35,12 +31,7 @@ class ScorePath:
 
 
 class AutoBase(AutonomousStateMachine):
-    gripper: Gripper
-    arm: ArmController
-    chassis: Chassis
-    intake: Intake
     movement: Movement
-    recover: RecoverController
     score_game_piece: ScoreGamePieceController
     aquire_cube: AcquireCubeController
 
