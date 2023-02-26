@@ -19,14 +19,14 @@ from math import radians
 class PickupPath:
     goal: Pose2d
     approach_direction: Rotation2d
-    intermediate_waypoints: Optional[list[Translation2d]]
+    intermediate_waypoints: list[Translation2d]
 
 
 @dataclass
 class ScorePath:
     goal: Pose2d
     approach_direction: Rotation2d
-    intermediate_waypoints: Optional[list[Translation2d]]
+    intermediate_waypoints: list[Translation2d]
     arm_setpoint: Setpoint
 
 
@@ -57,7 +57,7 @@ class AutoBase(AutonomousStateMachine):
             self.movement.set_goal(
                 path.goal,
                 path.approach_direction,
-                waypoints=path.intermediate_waypoints,
+                waypoints=tuple(path.intermediate_waypoints),
             )
         self.movement.do_autodrive()
         if self.movement.time_to_goal < self.INTAKE_PRE_TIME:
