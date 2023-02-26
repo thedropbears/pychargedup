@@ -191,8 +191,8 @@ class StatusLights:
     def want_cone_left(self) -> None:
         self.set_color(
             [
-                *([LedColors.OFF] * (self.led_length // 2)),
                 *([LedColors.YELLOW] * (self.led_length // 2)),
+                *([LedColors.OFF] * (self.led_length // 2)),
             ]
         )
         self.set_display_pattern(DisplayType.SOLID)
@@ -200,8 +200,8 @@ class StatusLights:
     def want_cone_right(self) -> None:
         self.set_color(
             [
-                *([LedColors.YELLOW] * (self.led_length // 2)),
                 *([LedColors.OFF] * (self.led_length // 2)),
+                *([LedColors.YELLOW] * (self.led_length // 2)),
             ]
         )
         self.set_display_pattern(DisplayType.SOLID)
