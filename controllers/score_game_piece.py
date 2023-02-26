@@ -5,9 +5,9 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 
-from magicbot import state, StateMachine
+from magicbot import state, StateMachine, timed_state
 from enum import Enum, auto
-from utilities.game import Node, get_closest_node, get_score_location, Rows
+from utilities.game import Node, get_closest_node, get_score_location, Rows, is_red
 
 
 class NodePickStratergy(Enum):
@@ -43,13 +43,19 @@ class ScoreGamePieceController(StateMachine):
     def deploying_arm(self):
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
-            self.next_state("dropping")
+            self.next_state("hard_up")
 
-    @state(must_finish=True)
-    def dropping(self):
-        self.gripper.open()
-        if self.gripper.get_full_open():
-            self.done()
+    @timed_state(next_state="dropping", duration=0.5, must_finish=True)
+    def hard_up(self):
+        vx = 0.3 if is_red() else -0.3
+        self.movement.set_input(vx, 0, 0, False)
+
+    @timed_state(duration=5, must_finish=True)
+    def dropping(self, initial_call):
+        if initial_call:
+            self.gripper.open()
+        # elif self.gripper.get_full_open():
+        #     self.done()
 
     def done(self) -> None:
         super().done()
