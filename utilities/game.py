@@ -119,7 +119,7 @@ def get_score_location(
     node_location = get_node(node, red_side)
 
     # always be up against the grids
-    x = GRIDS_EDGE_X + Chassis.LENGTH / 2
+    x = GRIDS_EDGE_X + Chassis.LENGTH / 2 + 0.1
     blue_pose = Pose2d(x, node_location.y, Rotation2d(0))
     goal = field_flip_pose2d(blue_pose) if red_side else blue_pose
     approach_blue = Rotation2d.fromDegrees(180)

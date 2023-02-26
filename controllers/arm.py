@@ -52,8 +52,8 @@ class Setpoints:
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-160), MIN_EXTENSION)
     SCORE_CUBE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
-    SCORE_CONE_HIGH = Setpoint(math.radians(-165), 1.17)
-    SCORE_CUBE_HIGH = Setpoint(math.radians(-170), 1.17)
+    SCORE_CONE_HIGH = Setpoint(math.radians(-165), 1.21)
+    SCORE_CUBE_HIGH = Setpoint(math.radians(-165), 1.21)
 
     UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
     FORWARDS = Setpoint(0, MIN_EXTENSION)

@@ -18,7 +18,7 @@ import math
 
 
 MIN_EXTENSION = 0.9  # meters
-MAX_EXTENSION = 1.3
+MAX_EXTENSION = 1.25
 
 # Angle soft limits
 MIN_ANGLE = math.radians(-180)
@@ -32,15 +32,15 @@ class Arm:
 
     ANGLE_ERROR_TOLERANCE = math.radians(2)
     ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(4)
-    EXTENSION_ERROR_TOLERANCE = 0.03
-    EXTENSION_BRAKING_ERROR_TOLERANCE = 0.05
+    EXTENSION_ERROR_TOLERANCE = 0.01
+    EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
 
     STILL_ROTATION_SPEED_TOLERANCE = 0.1
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
     SPOOL_CIRCUMFERENCE = 42 * 0.005  # 42t x 5mm
-    EXTEND_GEAR_RATIO = (7 / 1) * (34 / 18)
+    EXTEND_GEAR_RATIO = (7 / 1) * (4 / 1) * (34 / 18)
     # converts from motor rotations to meters
     EXTEND_OUTPUT_RATIO = SPOOL_CIRCUMFERENCE / EXTEND_GEAR_RATIO
     EXTEND_GRAVITY_FEEDFORWARD = 0
@@ -101,7 +101,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            30, 0, 0, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
+            50, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
@@ -362,3 +362,11 @@ class Arm:
     @feedback
     def angle_error(self) -> float:
         return self.rotation_controller.getPositionError()
+
+    @feedback
+    def get_rotation_output(self) -> float:
+        return self.rotation_motor.get()
+
+    @feedback
+    def get_extension_output(self) -> float:
+        return self.extension_motor.get()
