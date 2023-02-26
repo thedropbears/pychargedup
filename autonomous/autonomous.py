@@ -50,24 +50,8 @@ class AutoBase(AutonomousStateMachine):
     @state(first=True)
     def score(self, initial_call: bool) -> None:
         if initial_call:
-            path = self.score_paths[self.progress_idx]
-            self.movement.next_state("autodrive")
-            self.movement.set_goal(
-                path.goal,
-                path.approach_direction,
-                waypoints=path.intermediate_waypoints,
-            )
-        self.movement.do_autodrive()
-        if self.movement.time_to_goal < 2:
-            self.arm.go_to_setpoint(self.score_paths[self.progress_idx].arm_setpoint)
-        if self.movement.is_at_goal() and self.arm.at_goal():
-            self.gripper.open()
-
-        if self.gripper.get_full_open():
-            if self.progress_idx >= len(self.pickup_paths):
-                self.done()
-                return
-            self.recover.engage()
+            self.score_game_piece.engage()
+        elif not self.score_game_piece.is_executing:
             self.next_state("pickup_cube")
 
     @state
