@@ -224,7 +224,6 @@ class MyRobot(magicbot.MagicRobot):
         self.score_game_piece.execute()
         self.recover.execute()
 
-        # self.scoring.execute()
         self.arm_component.execute()
         self.intake.execute()
         self.gripper.execute()

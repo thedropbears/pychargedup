@@ -85,6 +85,7 @@ class ArmController(StateMachine):
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
         if setpoint != self._target_setpoint:  # and self.at_goal():
             self._about_to_run = True
+            self.next_state("retracting_arm")
         self._target_setpoint = setpoint
         self.engage()
 
@@ -113,10 +114,10 @@ class ArmController(StateMachine):
             self.next_state("rotating_arm")
 
     @state(must_finish=True)
-    def rotating_arm(self) -> None:
+    def rotating_arm(self, initial_call) -> None:
         self._about_to_run = False
         self.arm_component.set_angle(self._target_setpoint.angle)
-        if self.arm_component.at_goal_angle():
+        if self.arm_component.at_goal_angle() and not initial_call:
             self.next_state("extending_arm")
 
     @state(must_finish=True)
