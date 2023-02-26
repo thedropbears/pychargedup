@@ -14,6 +14,7 @@ from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 
 from math import radians
 
+
 @dataclass
 class PickupPath:
     goal: Pose2d
@@ -61,19 +62,18 @@ class AutoBase(AutonomousStateMachine):
         self.movement.do_autodrive()
         if self.movement.time_to_goal < self.INTAKE_PRE_TIME:
             self.next_state("pickup_cube")
-    
+
     @state
     def pickup_cube(self, initial_call, state_tm):
-        if initial_call == True:
+        if initial_call is True:
             self.movement.do_autodrive()
             self.acquire_cube.engage()
         elif not self.acquire_cube.is_executing:
             self.progress_idx += 1
             self.next_state("score")
-        
+
         if state_tm > self.MANUAL_CUBE_TIME:
             self.acquire_cube.manual_cube_present()
-
 
 
 class AutoTest(AutoBase):
