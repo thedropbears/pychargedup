@@ -39,8 +39,8 @@ class AutoBase(AutonomousStateMachine):
     MANUAL_CUBE_TIME = 1.5
 
     def __init__(self) -> None:
-        self.pickup_paths:list[PickupPath] = []
-        self.score_paths:list[ScorePath] = []
+        self.pickup_paths: list[PickupPath] = []
+        self.score_paths: list[ScorePath] = []
         self.progress_idx = 0
 
     @state(first=True)
