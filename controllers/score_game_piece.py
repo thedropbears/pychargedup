@@ -37,7 +37,14 @@ class ScoreGamePieceController(StateMachine):
         self.movement.set_goal(*get_score_location(self.target_node))
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
-            self.next_state("deploying_arm")
+            self.next_state("hard_up")
+
+    @timed_state(next_state="deploying_arm", duration=0.3, must_finish=True)
+    def hard_up(self):
+        speed = 0.3
+        vx = speed if is_red() else -speed
+        self.movement.inputs_lock = True
+        self.movement.set_input(vx, 0, 0, False, override=True)
 
     @state(must_finish=True)
     def deploying_arm(self, initial_call):
@@ -45,13 +52,6 @@ class ScoreGamePieceController(StateMachine):
             self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
-
-    @timed_state(next_state="dropping", duration=0.3, must_finish=True)
-    def hard_up(self):
-        speed = 0.3
-        vx = speed if is_red() else -speed
-        self.movement.inputs_lock = True
-        self.movement.set_input(vx, 0, 0, False, override=True)
 
     @timed_state(duration=1, must_finish=True)
     def dropping(self, initial_call):
