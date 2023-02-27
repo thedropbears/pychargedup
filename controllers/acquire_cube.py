@@ -27,7 +27,7 @@ class AcquireCubeController(StateMachine):
         self.intake.deploy()
         self.status_lights.want_cube()
         self.gripper.open()
-        if self.gripper.get_full_open():
+        if self.gripper.get_full_open() and self.intake.is_fully_deployed():
             self.next_state("moving_arm")
 
     @state(must_finish=True)
@@ -46,6 +46,13 @@ class AcquireCubeController(StateMachine):
         """
         if self.intake.is_game_piece_present():
             self.intake.deploy_without_running()
+            self.next_state("clamping")
+
+    @state(must_finish=True)
+    def clamping(self) -> None:
+        """bring the intake in so the cube piece is in a known position"""
+        self.intake.retract()
+        if self.intake.is_fully_retracted():
             self.next_state("grabbing")
 
     @state(must_finish=True)
