@@ -2,13 +2,18 @@ from rev import CANSparkMax
 from wpilib import DoubleSolenoid, DigitalInput, PneumaticsModuleType
 from magicbot import tunable, feedback
 import ids
+import time
 
 
 class Intake:
     intake_speed = tunable(0.5)
+    CLOSE_TIME_THRESHOLD: float = 0.5
+    OPEN_TIME_THRESHOLD: float = 0.5
 
     def __init__(self) -> None:
         self.deployed = False
+        self._last_deployed = False
+        self.change_time = time.monotonic()
         self.running = False
         self.break_beam = DigitalInput(ids.DioChannels.intake_break_beam_sensor)
         self.motor = CANSparkMax(
@@ -39,7 +44,24 @@ class Intake:
         self.running = False
         self.deployed = False
 
+    @feedback
+    def is_fully_retracted(self) -> bool:
+        # has been in same state for some time, current state is closed and wasn't only just closed
+        return (
+            (time.monotonic() - self.change_time) >= Intake.CLOSE_TIME_THRESHOLD
+        ) and self._last_deployed is self.deployed is False
+
+    @feedback
+    def is_fully_deployed(self) -> bool:
+        return (
+            (time.monotonic() - self.change_time) >= Intake.OPEN_TIME_THRESHOLD
+        ) and self.deployed is self._last_deployed is True
+
     def execute(self) -> None:
+        if self.deployed != self._last_deployed:
+            self.change_time = time.monotonic()
+        self._last_deployed = self.deployed
+
         if self.running:
             self.motor.set(self.intake_speed)
         else:
