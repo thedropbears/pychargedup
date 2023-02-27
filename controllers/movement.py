@@ -31,6 +31,7 @@ class Movement(StateMachine):
     debug_trajectory = tunable(False)
 
     POSITION_TOLERANCE = 0.025
+    END_CONTROL_SCALER = 1
     ANGLE_TOLERANCE = math.radians(2)
     driver_inputs = will_reset_to((0.0, 0.0, 0.0))
     inputs_lock = will_reset_to(False)
@@ -100,11 +101,11 @@ class Movement(StateMachine):
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        end_control_vec = min(10, translation_distance * 1)
+        end_control_length = min(10, translation_distance * self.END_CONTROL_SCALER)
 
         goal_spline = Spline3.ControlVector(
-            (self.goal.X(), self.goal_approach_dir.cos() * end_control_vec),
-            (self.goal.Y(), self.goal_approach_dir.sin() * end_control_vec),
+            (self.goal.X(), self.goal_approach_dir.cos() * end_control_length),
+            (self.goal.Y(), self.goal_approach_dir.sin() * end_control_length),
         )
 
         start_point_spline = Spline3.ControlVector(
@@ -137,7 +138,7 @@ class Movement(StateMachine):
         self.goal = goal
         self.goal_approach_dir = approach_direction
 
-        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
+        self.config = TrajectoryConfig(maxVelocity=1, maxAcceleration=0.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
         topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
         bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
