@@ -64,7 +64,7 @@ class AutoBase(AutonomousStateMachine):
 
     @state
     def pickup_cube(self, initial_call, state_tm):
-        if initial_call is True:
+        if initial_call:
             self.movement.do_autodrive()
             self.acquire_cube.engage()
         elif not self.acquire_cube.is_executing:
