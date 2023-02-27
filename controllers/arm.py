@@ -48,7 +48,7 @@ class Setpoint:
 class Setpoints:
     PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
     PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
-    HANDOFF = Setpoint(math.radians(45), MIN_EXTENSION)
+    HANDOFF = Setpoint(math.radians(46), 0.99)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-160), MIN_EXTENSION)
     SCORE_CUBE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
