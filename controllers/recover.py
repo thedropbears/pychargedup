@@ -2,7 +2,7 @@ from controllers.arm import ArmController, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
 
-from magicbot import StateMachine, state, timed_state
+from magicbot import StateMachine, state
 
 
 class RecoverController(StateMachine):
@@ -15,14 +15,14 @@ class RecoverController(StateMachine):
     def __init__(self) -> None:
         self.has_initialized_arm = False
 
-    @state(first=True, must_finish=True)
+    @state(must_finish=True)
     def retracting_arm(self):
         """
         Retract the arm to the minimum extension
         """
         if self.has_initialized_arm:
             self.arm.arm_component.set_use_voltage(False)
-            self.next_state("clearing_intake")
+            self.next_state("stowing_arm")
             return
         if self.arm.is_at_retraction_limit():
             self.has_initialized_arm = True
@@ -30,7 +30,7 @@ class RecoverController(StateMachine):
         self.arm.arm_component.set_voltage(-2.0)
         self.arm.arm_component.set_use_voltage(True)
 
-    @timed_state(duration=0.4, next_state="stowing_arm", must_finish=True)
+    @state(first=True, must_finish=True)
     def clearing_intake(self) -> None:
         """
         Should check if the arm will foul on the intake
@@ -38,10 +38,13 @@ class RecoverController(StateMachine):
         and the arm will rotate above the intake
         """
 
-        if self.arm.get_angle() > self.ARM_FOULING_ANGLE and not self.intake.deployed:
-            self.intake.deploy_without_running()
-        else:
-            self.next_state("stowing_arm")
+        if self.arm.get_angle() < self.ARM_FOULING_ANGLE:
+            self.next_state("retracting_arm")
+
+        self.intake.deploy_without_running()
+
+        if self.intake.is_fully_deployed():
+            self.next_state("retracting_arm")
 
     @state(must_finish=True)
     def stowing_arm(self) -> None:
