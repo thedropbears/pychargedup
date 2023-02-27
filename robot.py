@@ -23,16 +23,15 @@ from utilities.scalers import rescale_js
 
 
 class MyRobot(magicbot.MagicRobot):
-    # Controllers
-    movement: Movement
-    arm: ArmController
-
+    # Automations
     acquire_cone: AcquireConeController
     acquire_cube: AcquireCubeController
     score_game_piece: ScoreGamePieceController
     recover: RecoverController
 
-    # arm_controller: ArmController
+    # Controllers
+    movement: Movement
+    arm: ArmController
 
     # Components
     chassis: Chassis

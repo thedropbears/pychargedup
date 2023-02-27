@@ -82,7 +82,7 @@ class PhysicsEngine:
         arm_motors_sim = DCMotor.NEO(2)
         arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
         # This value was pulled from the CAD Model on 19/02/23
-        ARM_MASS = 2.305
+        ARM_MASS = 2  # 2.305
         END_EFFECTOR_MASS = 0.724
         arm_moi = SingleJointedArmSim.estimateMOI(
             arm_len, mass=ARM_MASS + END_EFFECTOR_MASS

@@ -5,9 +5,9 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 
-from magicbot import state, StateMachine
+from magicbot import state, timed_state, StateMachine
 from enum import Enum, auto
-from utilities.game import Node, get_closest_node, get_score_location, Rows
+from utilities.game import Node, get_closest_node, get_score_location, Rows, is_red
 
 
 class NodePickStratergy(Enum):
@@ -40,19 +40,29 @@ class ScoreGamePieceController(StateMachine):
             self.next_state("deploying_arm")
 
     @state(must_finish=True)
-    def deploying_arm(self):
-        self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
+    def deploying_arm(self, initial_call):
+        if initial_call:
+            self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
 
-    @state(must_finish=True)
-    def dropping(self):
-        self.gripper.open()
-        if self.gripper.get_full_open():
-            self.done()
+    @timed_state(next_state="dropping", duration=0.3, must_finish=True)
+    def hard_up(self):
+        speed = 0.3
+        vx = speed if is_red() else -speed
+        self.movement.inputs_lock = True
+        self.movement.set_input(vx, 0, 0, False, override=True)
+
+    @timed_state(duration=1, must_finish=True)
+    def dropping(self, initial_call):
+        if initial_call:
+            self.gripper.open()
+        # elif self.gripper.get_full_open():
+        #     self.done()
 
     def done(self) -> None:
         super().done()
+        self.movement.inputs_lock = False
         self.recover.engage()
 
     def pick_node(self) -> Node:

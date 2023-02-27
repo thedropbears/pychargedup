@@ -1,4 +1,4 @@
-from magicbot import StateMachine, state, default_state, tunable
+from magicbot import StateMachine, state, default_state, tunable, will_reset_to
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
@@ -32,9 +32,10 @@ class Movement(StateMachine):
 
     POSITION_TOLERANCE = 0.025
     ANGLE_TOLERANCE = math.radians(2)
+    driver_inputs = will_reset_to((0.0, 0.0, 0.0))
+    inputs_lock = will_reset_to(False)
 
     def __init__(self) -> None:
-        self.inputs = (0.0, 0.0, 0.0)
         self.drive_local = False
 
         self.goal = Pose2d(math.inf, math.inf, math.inf)
@@ -99,7 +100,7 @@ class Movement(StateMachine):
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        end_control_vec = min(10, translation_distance * 2.8)
+        end_control_vec = min(10, translation_distance * 1)
 
         goal_spline = Spline3.ControlVector(
             (self.goal.X(), self.goal_approach_dir.cos() * end_control_vec),
@@ -165,9 +166,9 @@ class Movement(StateMachine):
         if self.debug_trajectory:
             self.generate_trajectory()
         if self.drive_local:
-            self.chassis.drive_local(*self.inputs)
+            self.chassis.drive_local(*self.driver_inputs)
         else:
-            self.chassis.drive_field(*self.inputs)
+            self.chassis.drive_field(*self.driver_inputs)
 
     @state(first=True)
     def autodrive(self, state_tm: float, initial_call: bool) -> None:
@@ -192,14 +193,16 @@ class Movement(StateMachine):
 
         self.time_to_goal = self.trajectory.totalTime() - state_tm
 
-    def set_input(self, vx: float, vy: float, vz: float, local: bool):
+    def set_input(self, vx: float, vy: float, vz: float, local: bool, override=False):
         """
         vx, vy: velocities in m/s
         vz: rotational velocity in rad/s
         local: drive reletive to robot frame rather than global frame
+        override: override driver lockout
         """
-        self.inputs = (vx, vy, vz)
-        self.drive_local = local
+        if not self.inputs_lock or override:
+            self.driver_inputs = (vx, vy, vz)
+            self.drive_local = local
 
     def do_autodrive(self) -> None:
         self.engage()
