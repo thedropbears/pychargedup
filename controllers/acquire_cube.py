@@ -64,6 +64,12 @@ class AcquireCubeController(StateMachine):
         self.gripper.close(GamePiece.CUBE)
         if self.gripper.get_full_closed():
             self.status_lights.cube_onboard()
+            self.next_state("raising")
+
+    @state(must_finish=True)
+    def raising(self):
+        self.arm.go_to_setpoint(Setpoints.HANDOFF, do_retract=False)
+        if self.arm.at_goal():
             self.done()
 
     def done(self) -> None:
