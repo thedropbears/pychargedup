@@ -88,8 +88,9 @@ class ArmController(StateMachine):
         # Interrupt what we are doing and move to the new setpoint
         if setpoint != self._target_setpoint:
             self._about_to_run = True
+            self.next_state("retracting_arm")
             self._target_setpoint = setpoint
-            self.engage("retracting_arm", force=True)
+            self.engage()
 
         # If it is the same setpoint we should check to see if we are actually there
         # Maybe we got interrupted at some point...
