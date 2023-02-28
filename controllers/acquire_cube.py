@@ -46,7 +46,7 @@ class AcquireCubeController(StateMachine):
         """
         if self.intake.is_game_piece_present():
             self.intake.deploy_without_running()
-            self.next_state("clamping")
+            self.next_state("grabbing")
 
     @state(must_finish=True)
     def clamping(self) -> None:
