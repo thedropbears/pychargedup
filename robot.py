@@ -213,10 +213,10 @@ class MyRobot(magicbot.MagicRobot):
 
         # Tick the controllers
         # These will only do anything if engage() has been called on them
-        # self.arm.execute()
-        # self.acquire_cone.execute()
+        self.arm.execute()
+        self.acquire_cone.execute()
         self.acquire_cube.execute()
-        # self.score_game_piece.execute()
+        self.score_game_piece.execute()
         self.recover.execute()
 
         self.arm_component.execute()
