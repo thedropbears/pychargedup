@@ -54,11 +54,8 @@ class ScoreGamePieceController(StateMachine):
             self.next_state("dropping")
 
     @timed_state(duration=1, must_finish=True)
-    def dropping(self, initial_call: bool) -> None:
-        if initial_call:
-            self.gripper.open()
-        # elif self.gripper.get_full_open():
-        #     self.done()
+    def dropping(self) -> None:
+        self.gripper.open()
 
     def done(self) -> None:
         super().done()
