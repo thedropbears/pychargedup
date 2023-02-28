@@ -83,11 +83,19 @@ class ArmController(StateMachine):
         self._about_to_run: bool = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
-        if setpoint != self._target_setpoint:  # and self.at_goal():
+        # If this is a different setpoint, we want to take it
+        # Interrupt what we are doing and move to the new setpoint
+        if setpoint != self._target_setpoint:
             self._about_to_run = True
-            self.next_state("retracting_arm")
-        self._target_setpoint = setpoint
-        self.engage()
+            self._target_setpoint = setpoint
+            self.engage("retracting_arm", force=True)
+
+        # If it is the same setpoint we should check to see if we are actually there
+        # Maybe we got interrupted at some point...
+        # First see if the controller is already running
+        elif not self.is_executing and not self.at_goal():
+            self._about_to_run = True
+            self.engage()
 
     @feedback
     def get_target(self) -> str:
@@ -98,7 +106,13 @@ class ArmController(StateMachine):
 
     @feedback
     def at_goal(self) -> bool:
-        return not (self.is_executing or self._about_to_run)
+        return self.arm_component.at_pose(
+            self._target_setpoint.angle, self._target_setpoint.extension
+        )
+
+    @property
+    def is_executing(self):
+        return super().is_executing or self._about_to_run
 
     def is_at_forward_limit(self) -> bool:
         return self.arm_component.get_wall_switch()

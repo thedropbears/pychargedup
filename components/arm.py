@@ -293,28 +293,30 @@ class Arm:
 
     @feedback
     def at_goal_angle(self) -> bool:
+        return self.at_angle(self.goal_angle)
+
+    def at_angle(self, angle: float) -> bool:
         tolerance = (
             self.ANGLE_BRAKING_ERROR_TOLERANCE
             if self.is_braking_rotation()
             else self.ANGLE_ERROR_TOLERANCE
         )
-        error = abs(self.get_angle() - self.goal_angle)
-        movement_done = (
-            self.rotation_controller.getSetpoint().position == self.goal_angle
-        )
+        error = abs(self.get_angle() - angle)
+        movement_done = self.rotation_controller.getSetpoint().position == angle
         return error < tolerance and movement_done
 
     @feedback
     def at_goal_extension(self) -> bool:
+        return self.at_extension(self.goal_extension)
+
+    def at_extension(self, extension: float) -> bool:
         tolerance = (
             self.EXTENSION_BRAKING_ERROR_TOLERANCE
             if self.is_braking_extension()
             else self.EXTENSION_ERROR_TOLERANCE
         )
-        error = abs(self.get_extension() - self.goal_extension)
-        movement_done = (
-            self.extension_controller.getSetpoint().position == self.goal_extension
-        )
+        error = abs(self.get_extension() - extension)
+        movement_done = self.extension_controller.getSetpoint().position == extension
         return error < tolerance and movement_done
 
     def is_angle_still(self) -> bool:
@@ -322,8 +324,13 @@ class Arm:
         return abs(self.get_arm_speed()) < self.STILL_ROTATION_SPEED_TOLERANCE
 
     def at_goal(self) -> bool:
+        return self.at_pose(self.goal_angle, self.goal_extension)
+
+    def at_pose(self, angle: float, extension: float) -> bool:
         return (
-            self.at_goal_extension() and self.at_goal_angle() and self.is_angle_still()
+            self.at_extension(extension)
+            and self.at_angle(angle)
+            and self.is_angle_still()
         )
 
     def brake_rotation(self) -> None:
