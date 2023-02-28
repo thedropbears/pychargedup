@@ -53,14 +53,24 @@ class MyRobot(magicbot.MagicRobot):
         self.joystick = wpilib.Joystick(1)
 
         self.event_loop = wpilib.event.EventLoop()
-        self.right_trigger_down = self.gamepad.rightTrigger(
-            0.3, self.event_loop
+        # Right trigger events
+        self.right_trigger_down_full = self.gamepad.rightTrigger(
+            0.9, self.event_loop
         ).rising()
+        self.right_trigger_down_half = self.gamepad.rightTrigger(0.1, self.event_loop)
         self.right_trigger_up = self.gamepad.rightTrigger(
-            0.3, self.event_loop
+            0.9, self.event_loop
         ).falling()
-        self.left_trigger_down = self.gamepad.leftTrigger(0.3, self.event_loop).rising()
-        self.left_trigger_up = self.gamepad.leftTrigger(0.3, self.event_loop).falling()
+
+        # Left trigger events
+        self.left_trigger_down_full = self.gamepad.leftTrigger(
+            0.9, self.event_loop
+        ).rising()
+        self.left_trigger_down_half = self.gamepad.leftTrigger(
+            0.1, self.event_loop
+        ).rising()
+        self.left_trigger_up = self.gamepad.leftTrigger(0.9, self.event_loop).falling()
+
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
@@ -100,35 +110,36 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Cone Pickup
-        if self.left_trigger_down.getAsBoolean() and not self.recover.is_executing:
+        if (
+            self.left_trigger_down_full.getAsBoolean()
+            or self.right_trigger_down_full.getAsBoolean()
+        ):
             self.acquire_cone.engage()
-        if self.left_trigger_up.getAsBoolean():
+        if self.left_trigger_up.getAsBoolean() or self.right_trigger_up.getAsBoolean():
             self.acquire_cone.done()
 
-        # Score
-        if self.right_trigger_down.getAsBoolean() and not self.recover.is_executing:
-            self.score_game_piece.engage()
-        if self.right_trigger_up.getAsBoolean():
+        # Score, auto pick node
+        if self.gamepad.getAButtonPressed():
+            self.score_game_piece.score_best()
+        if self.gamepad.getAButtonReleased():
             self.score_game_piece.done()
 
         # Intake
-        if self.gamepad.getRightBumperPressed() and not self.recover.is_executing:
+        if self.gamepad.getRightBumperPressed():
             self.acquire_cube.engage()
-            self.status_lights.want_cube()
         if self.gamepad.getLeftBumperPressed():
             self.acquire_cube.done()
 
-        # Request / Set to score cube
+        # Request cube
         if self.gamepad.getXButtonPressed():
             self.status_lights.want_cube()
 
-        # Request / Set to score cone
-        if self.gamepad.getYButtonPressed():
-            if self.acquire_cone.targeting_left:
-                self.status_lights.want_cone_left()
-            else:
-                self.status_lights.want_cone_left()
-
+        # Request cone
+        if self.left_trigger_down_half.getAsBoolean():
+            self.acquire_cone.target_left()
+        if self.right_trigger_down_half.getAsBoolean():
+            self.acquire_cone.target_right()
+        # Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
 
@@ -137,20 +148,12 @@ class MyRobot(magicbot.MagicRobot):
             self.movement.toggle_balance()
 
         dpad_angle = self.gamepad.getPOV()
-        # up
+        # Up, score closest high
         if dpad_angle == 0:
-            self.score_game_piece.prefer_high()
-        # down
+            self.score_game_piece.score_high()
+        # Down, score closest mid
         elif dpad_angle == 180:
-            self.score_game_piece.prefer_mid()
-        # right
-        elif dpad_angle == 90:
-            self.acquire_cone.target_right()
-            self.status_lights.want_cone_right()
-        # left
-        elif dpad_angle == 270:
-            self.acquire_cone.target_left()
-            self.status_lights.want_cone_left()
+            self.score_game_piece.score_mid()
 
         # Manual overrides
         # Claw

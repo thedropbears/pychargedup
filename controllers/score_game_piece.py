@@ -73,10 +73,12 @@ class ScoreGamePieceController(StateMachine):
                 cur_pos, self.gripper.get_current_piece(), self.prefered_row
             )
 
-    def prefer_high(self) -> None:
+    def score_high(self) -> None:
         self.prefered_row = Rows.HIGH
+        self.node_stratergy = NodePickStratergy.CLOSEST
+        self.engage()
 
-    def prefer_mid(self) -> None:
+    def score_mid(self) -> None:
         self.prefered_row = Rows.MID
 
     def score_without_moving(self, node: Node) -> None:
