@@ -123,7 +123,7 @@ def get_score_location(
     blue_pose = Pose2d(x, node_location.y, Rotation2d(0))
     goal = field_flip_pose2d(blue_pose) if red_side else blue_pose
     approach_blue = Rotation2d.fromDegrees(180)
-    approach = approach_blue if red_side else approach_blue
+    approach = field_flip_rotation2d(approach_blue) if red_side else approach_blue
     return goal, approach
 
 
