@@ -79,8 +79,9 @@ class ArmController(StateMachine):
     arm_component: Arm
 
     def __init__(self) -> None:
-        self._target_setpoint: Setpoint = Setpoints.STOW
+        self._target_setpoint: Setpoint = Setpoint(0, 0)
         self._about_to_run: bool = False
+        self.initialised = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
         # If this is a different setpoint, we want to take it
