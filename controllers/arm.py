@@ -79,18 +79,16 @@ class ArmController(StateMachine):
     arm_component: Arm
 
     def __init__(self) -> None:
-        self._target_setpoint: Setpoint = Setpoint(0, 0)
+        self._target_setpoint: Setpoint = Setpoints.STOW
         self._about_to_run: bool = False
-        self.initialised = False
 
     def go_to_setpoint(self, setpoint: Setpoint) -> None:
         # If this is a different setpoint, we want to take it
         # Interrupt what we are doing and move to the new setpoint
         if setpoint != self._target_setpoint:
             self._about_to_run = True
-            self.next_state("retracting_arm")
             self._target_setpoint = setpoint
-            self.engage()
+            self.engage("retracting_arm", force=True)
 
         # If it is the same setpoint we should check to see if we are actually there
         # Maybe we got interrupted at some point...
