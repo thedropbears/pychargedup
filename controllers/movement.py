@@ -194,7 +194,9 @@ class Movement(StateMachine):
 
         self.time_to_goal = self.trajectory.totalTime() - state_tm
 
-    def set_input(self, vx: float, vy: float, vz: float, local: bool, override=False):
+    def set_input(
+        self, vx: float, vy: float, vz: float, local: bool, override: bool = False
+    ) -> None:
         """
         vx, vy: velocities in m/s
         vz: rotational velocity in rad/s

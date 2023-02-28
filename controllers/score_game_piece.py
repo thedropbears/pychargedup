@@ -31,7 +31,7 @@ class ScoreGamePieceController(StateMachine):
         self.target_node = Node(Rows.HIGH, 0)
 
     @state(first=True, must_finish=True)
-    def driving_to_position(self, initial_call):
+    def driving_to_position(self, initial_call: bool) -> None:
         if initial_call:
             self.target_node = self.pick_node()
         self.movement.set_goal(*get_score_location(self.target_node))
@@ -40,21 +40,21 @@ class ScoreGamePieceController(StateMachine):
             self.next_state("hard_up")
 
     @timed_state(next_state="deploying_arm", duration=0.3, must_finish=True)
-    def hard_up(self):
+    def hard_up(self) -> None:
         speed = 0.3
         vx = speed if is_red() else -speed
         self.movement.inputs_lock = True
         self.movement.set_input(vx, 0, 0, False, override=True)
 
     @state(must_finish=True)
-    def deploying_arm(self, initial_call):
+    def deploying_arm(self, initial_call: bool) -> None:
         if initial_call:
             self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
 
     @timed_state(duration=1, must_finish=True)
-    def dropping(self, initial_call):
+    def dropping(self, initial_call: bool) -> None:
         if initial_call:
             self.gripper.open()
         # elif self.gripper.get_full_open():
