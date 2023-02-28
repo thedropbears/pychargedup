@@ -97,7 +97,7 @@ class ArmController(StateMachine):
                 self.engage("retracting_arm", force=True)
             else:
                 self.engage("rotating_arm", force=True)
-    
+
     def go_to_setpoint_without_retracting(self, setpoint: Setpoint) -> None:
         self.go_to_setpoint(setpoint, False)
 
