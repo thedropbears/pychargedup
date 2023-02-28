@@ -114,8 +114,11 @@ class PhysicsEngine:
 
         # Get arm objects
         self.arm_abs_encoder = DutyCycleEncoderSim(robot.arm_component.absolute_encoder)
-        self.arm_brake = SolenoidSim(
+        self.arm_rotation_brake = SolenoidSim(
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake
+        )
+        self.arm_extension_brake = SolenoidSim(
+            wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
         )
 
         self.arm_motor = SimDeviceSim("SPARK MAX ", SparkMaxIds.arm_rotation_main)
@@ -135,13 +138,14 @@ class PhysicsEngine:
     def update_sim(self, now: float, tm_diff: float) -> None:
         # Update rotation sim
         self.arm_sim.setInputVoltage(-self.arm_motor_output.get())
-        if self.arm_brake.getOutput():
+        if self.arm_rotation_brake.getOutput():
             self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
         self.arm_motor_vel.set(-self.arm_sim.getVelocity())
         # Update extension sim
         self.extension_sim.setInputVoltage(self.arm_extension_output.get())
-        self.extension_sim.update(tm_diff)
+        if self.arm_extension_brake.getOutput():
+            self.extension_sim.update(tm_diff)
         self.arm_extension_pos.set(self.extension_sim.getPosition())
         self.arm_extension_vel.set(self.extension_sim.getVelocity())
 
