@@ -46,13 +46,12 @@ class ScoreGamePieceController(StateMachine):
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
     @state(must_finish=True)
-    def deploying_arm(self, initial_call: bool) -> None:
-        if initial_call:
-            self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
+    def deploying_arm(self) -> None:
+        self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
 
-    @timed_state(duration=1, must_finish=True)
+    @timed_state(duration=0.5, must_finish=True)
     def dropping(self) -> None:
         self.gripper.open()
 

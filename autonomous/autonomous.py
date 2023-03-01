@@ -1,8 +1,10 @@
 from magicbot.state_machine import AutonomousStateMachine, state
 from wpimath.geometry import Rotation2d, Translation2d
 from dataclasses import dataclass
+from components.arm import Arm
 
 from controllers.movement import Movement
+from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
 from controllers.acquire_cube import AcquireCubeController
 
@@ -56,6 +58,8 @@ class AutoBase(AutonomousStateMachine):
     movement: Movement
     score_game_piece: ScoreGamePieceController
     acquire_cube: AcquireCubeController
+    recover: RecoverController
+    arm_component: Arm
 
     INTAKE_PRE_TIME = 2.0
     SCORE_PRE_TIME = 2.0
@@ -75,10 +79,13 @@ class AutoBase(AutonomousStateMachine):
     @state(first=True)
     def score_cone(self, initial_call: bool) -> None:
         if initial_call:
+            self.arm_component.set_at_min_extension()
+            self.recover.has_initialized_arm = True
+            self.recover.done()
             self.score_game_piece.set_score_node(
                 self.score_actions[self.progress_idx].node
             )
-            self.engage("deploying_arm")
+            self.score_game_piece.engage("deploying_arm")
         elif not self.score_game_piece.is_executing:
             self.next_state("approach_cube")
 
@@ -99,6 +106,7 @@ class AutoBase(AutonomousStateMachine):
     def pickup_cube(self, initial_call: bool, state_tm: float) -> None:
         if initial_call:
             self.acquire_cube.engage()
+            self.recover.done()
         elif not self.acquire_cube.is_executing:
             self.next_state("approach_grid")
             self.progress_idx += 1
@@ -122,6 +130,7 @@ class AutoBase(AutonomousStateMachine):
     @state
     def score_cube(self, initial_call: bool) -> None:
         if initial_call:
+            self.recover.done()
             self.score_game_piece.engage("deploying_arm")
         elif not self.score_game_piece.is_executing:
             if self.progress_idx >= len(self.pickup_actions):
