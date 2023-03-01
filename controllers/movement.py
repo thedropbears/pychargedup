@@ -21,6 +21,8 @@ from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
 
+from utilities.functions import clamp
+
 
 class Movement(StateMachine):
     chassis: Chassis
@@ -54,37 +56,26 @@ class Movement(StateMachine):
 
     def generate_trajectory(self) -> Trajectory:
         """Generates a trajectory to self.goal and displays it"""
-        x_controller = PIDController(2.5, 0, 0)
-        y_controller = PIDController(2.5, 0, 0)
-        heading_controller = ProfiledPIDControllerRadians(
-            5.5, 0, 0, TrapezoidProfileRadians.Constraints(2, 2)
-        )
-        heading_controller.enableContinuousInput(math.pi, -math.pi)
-
-        self.drive_controller = HolonomicDriveController(
-            x_controller, y_controller, heading_controller
-        )
-
         chassis_velocity = self.chassis.get_velocity()
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
         pose = self.chassis.get_pose()
 
-        translation = self.goal.translation() - pose.translation()
-        translation_distance = translation.norm()
+        next_pos = self.waypoints[0] if self.waypoints else self.goal.translation()
+        translation_to_next = next_pos - pose.translation()
 
         # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
         # return an empty trajectory that starts at the end point so the robot won't move.
-        if translation_distance <= 0.01:
+        distance_to_goal = (self.goal.translation() - pose.translation()).norm()
+        if distance_to_goal <= 0.01:
             return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
         if chassis_speed < 0.2:
             # If the robot is stationary, instead of accounting for the momentum of the robot,
-            # this section of code will point the control vector at the goal to avoid the robot
-            # taking unnecessary turns before moving towards the goal.
+            # point the control vector at the next waypoint
             kD = 0.3
 
-            spline_start_momentum_x = translation.x * kD
-            spline_start_momentum_y = translation.y * kD
+            spline_start_momentum_x = translation_to_next.x * kD
+            spline_start_momentum_y = translation_to_next.y * kD
 
         else:
             # It is more efficient to make trajectories account for the robot's current momentum so
@@ -97,11 +88,7 @@ class Movement(StateMachine):
             spline_start_momentum_x = chassis_velocity.vx * kvx
             spline_start_momentum_y = chassis_velocity.vy * kvy
 
-        # If the robot is close to the goal but still not enough, making the robot reverse to
-        # approach the control vector is unnecessary; this constant scales the derivative of
-        # the goal derivative according to the translation distance.
-        # The closer the robot gets to the goal, the small the derivative is.
-        end_control_length = min(10, translation_distance * self.END_CONTROL_SCALER)
+        end_control_length = 2
 
         goal_spline = Spline3.ControlVector(
             (self.goal.X(), self.goal_approach_dir.cos() * end_control_length),
@@ -117,6 +104,20 @@ class Movement(StateMachine):
 
         trajectory = TrajectoryGenerator.generateTrajectory(
             start_point_spline, list(self.waypoints), goal_spline, self.config
+        )
+
+        required_rotation = pose.rotation() - self.goal.rotation()
+        time = trajectory.totalTime() * 0.5
+        rotation_speed = clamp(abs(required_rotation.radians() / time), 0.5, 5)
+
+        heading_controller = ProfiledPIDControllerRadians(
+            5.5, 0, 0, TrapezoidProfileRadians.Constraints(rotation_speed, 4)
+        )
+        heading_controller.enableContinuousInput(math.pi, -math.pi)
+        x_controller = PIDController(2.5, 0, 0)
+        y_controller = PIDController(2.5, 0, 0)
+        self.drive_controller = HolonomicDriveController(
+            x_controller, y_controller, heading_controller
         )
 
         self.robot_object.setTrajectory(trajectory)
