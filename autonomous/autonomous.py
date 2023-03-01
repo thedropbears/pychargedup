@@ -2,6 +2,7 @@ from magicbot.state_machine import AutonomousStateMachine, state
 from wpimath.geometry import Rotation2d, Translation2d
 from dataclasses import dataclass
 from components.arm import Arm
+from components.intake import Intake
 
 from controllers.movement import Movement
 from controllers.recover import RecoverController
@@ -60,10 +61,11 @@ class AutoBase(AutonomousStateMachine):
     acquire_cube: AcquireCubeController
     recover: RecoverController
     arm_component: Arm
+    intake: Intake
 
-    INTAKE_PRE_TIME = 2.0
-    SCORE_PRE_TIME = 2.0
-    MANUAL_CUBE_TIME = 1.0
+    INTAKE_PRE_TIME = 2.5
+    SCORE_PRE_TIME = 2.5
+    MANUAL_CUBE_TIME = 0.5
 
     def __init__(self) -> None:
         self.pickup_actions: list[PickupAction] = []
@@ -79,9 +81,13 @@ class AutoBase(AutonomousStateMachine):
     @state(first=True)
     def score_cone(self, initial_call: bool) -> None:
         if initial_call:
+            # Assume we start with arm fully retracted
             self.arm_component.set_at_min_extension()
+            # Stop recovery doing homing
             self.recover.has_initialized_arm = True
+            # Make sure recovery isnt running
             self.recover.done()
+            self.intake.deploy_without_running()
             self.score_game_piece.set_score_node(
                 self.score_actions[self.progress_idx].node
             )

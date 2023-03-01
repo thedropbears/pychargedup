@@ -99,7 +99,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            50, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
+            50, 0, 1, TrapezoidProfile.Constraints(maxVelocity=2.0, maxAcceleration=4.0)
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
@@ -173,6 +173,9 @@ class Arm:
         if self.is_retracted() and self.use_voltage:
             self.set_at_min_extension()
             self.use_voltage = False
+
+        # if self.is_retracted():
+        #     self.set_at_min_extension()
 
         if self.use_voltage:
             if abs(self.voltage) > 0.01:
@@ -263,6 +266,7 @@ class Arm:
     def set_at_min_extension(self) -> None:
         """Sets the extension position to the min extension"""
         self.extension_encoder.setPosition(MIN_EXTENSION)
+        self.extension_controller.reset(self.get_extension())
 
     @feedback
     def is_retracted(self) -> bool:
