@@ -48,6 +48,8 @@ class Arm:
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
 
+    UPRIGHT_THRESHOLD = math.radians(40)
+
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
 
@@ -304,6 +306,19 @@ class Arm:
         )
         error = abs(self.get_angle() - angle)
         return error < tolerance
+
+    def safe_to_extend(self):
+        is_angle_forwards = math.copysign(1, self.get_angle() + (math.pi / 2))
+        is_goal_forwards = math.copysign(1, self.goal_angle + (math.pi / 2))
+        # if we plan on rotating overhead
+        is_going_over = is_angle_forwards != is_goal_forwards
+        # if we are currently overhead
+        is_currently_up = (
+            self.UPRIGHT_THRESHOLD
+            > (self.get_angle() + math.pi / 2)
+            > -self.UPRIGHT_THRESHOLD
+        )
+        return not is_going_over and not is_currently_up
 
     @feedback
     def at_goal_extension(self) -> bool:

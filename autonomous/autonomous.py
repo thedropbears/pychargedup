@@ -102,28 +102,31 @@ class AutoBase(AutonomousStateMachine):
             self.movement.set_goal(
                 *get_staged_pickup(path.piece_idx, path.approach_direction),
                 path.intermediate_waypoints,
-                slow_dist=0
+                slow_dist=0,
             )
         elif self.movement.time_to_goal < self.INTAKE_PRE_TIME:
             self.next_state("pickup_cube")
         self.movement.do_autodrive()
 
     @state
-    def pickup_cube(self, initial_call: bool, state_tm: float) -> None:
+    def pickup_cube(self, initial_call: bool, state_tm: float, tm: float) -> None:
         if initial_call:
             self.acquire_cube.engage()
             self.recover.done()
         elif not self.acquire_cube.is_executing:
             self.next_state("approach_grid")
             self.progress_idx += 1
-            return
+            if self.progress_idx >= len(self.score_actions):
+                print(f"Finished auto at {tm}")
+                self.done()
+                return
 
         self.movement.do_autodrive()
         if state_tm - self.INTAKE_PRE_TIME > self.MANUAL_CUBE_TIME:
             self.acquire_cube.manual_cube_present()
 
     @state
-    def approach_grid(self, initial_call: bool, state_tm: float) -> None:
+    def approach_grid(self, initial_call: bool) -> None:
         if initial_call:
             path = self.score_actions[self.progress_idx].with_correct_flipped()
             self.movement.set_goal(
@@ -134,12 +137,13 @@ class AutoBase(AutonomousStateMachine):
             self.next_state("score_cube")
 
     @state
-    def score_cube(self, initial_call: bool) -> None:
+    def score_cube(self, initial_call: bool, tm: float) -> None:
         if initial_call:
             self.recover.done()
             self.score_game_piece.engage("deploying_arm")
         elif not self.score_game_piece.is_executing:
             if self.progress_idx >= len(self.pickup_actions):
+                print(f"Finished auto at {tm}")
                 self.done()
                 return
             self.next_state("approach_cube")
@@ -160,10 +164,10 @@ class LoadingSide3(AutoBase):
                 Node(Rows.HIGH, 7),
                 (Translation2d(3.5, 4.7),),
             ),
-            ScoreAction(
-                Node(Rows.MID, 7),
-                (Translation2d(5.3, 4.4),),
-            ),
+            # ScoreAction(
+            #     Node(Rows.MID, 7),
+            #     (Translation2d(5.3, 4.4),),
+            # ),
         ]
         self.pickup_actions = [
             PickupAction(
