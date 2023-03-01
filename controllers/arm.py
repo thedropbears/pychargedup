@@ -81,6 +81,7 @@ class ArmController(StateMachine):
     def __init__(self) -> None:
         self._target_setpoint: Setpoint = Setpoints.STOW
         self._about_to_run: bool = False
+        self.pre_extend = True
 
     def go_to_setpoint(self, setpoint: Setpoint, do_retract: bool = True) -> None:
         # If this is a different setpoint, we want to take it
@@ -135,10 +136,13 @@ class ArmController(StateMachine):
 
     @state(must_finish=True)
     def rotating_arm(self, initial_call) -> None:
+        if (
+            self.arm_component.at_goal_angle()
+            or (self.arm_component.safe_to_extend() and self.pre_extend)
+        ) and not initial_call:
+            self.next_state("extending_arm")
         self._about_to_run = False
         self.arm_component.set_angle(self._target_setpoint.angle)
-        if self.arm_component.at_goal_angle() and not initial_call:
-            self.next_state("extending_arm")
 
     @state(must_finish=True)
     def extending_arm(self) -> None:

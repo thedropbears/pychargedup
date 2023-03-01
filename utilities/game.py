@@ -243,7 +243,7 @@ def get_cone_pickup(targeting_left: bool, offset_x: float) -> tuple[Pose2d, Rota
 
 
 def get_staged_pickup(
-    staged_idx: int, rotation: Rotation2d, distance: float = 0.1
+    staged_idx: int, rotation: Rotation2d, distance: float = 0.3
 ) -> tuple[Pose2d, Rotation2d]:
     """Gets the pose to go to to pick up a staged piece
     Args:
