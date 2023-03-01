@@ -31,7 +31,7 @@ class ScoreGamePieceController(StateMachine):
         self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
 
-    @state(first=True, must_finish=True)
+    @state(first=True)
     def driving_to_position(self, initial_call: bool) -> None:
         if initial_call:
             self.target_node = self.pick_node()
@@ -40,12 +40,12 @@ class ScoreGamePieceController(StateMachine):
         if self.movement.is_at_goal():
             self.next_state("hard_up")
 
-    @timed_state(next_state="deploying_arm", duration=0.3, must_finish=True)
+    @timed_state(next_state="deploying_arm", duration=0.3)
     def hard_up(self) -> None:
         self.movement.inputs_lock = True
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
-    @state(must_finish=True)
+    @state
     def deploying_arm(self, initial_call: bool) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
@@ -57,7 +57,6 @@ class ScoreGamePieceController(StateMachine):
 
     def done(self) -> None:
         super().done()
-        self.movement.inputs_lock = False
         self.recover.engage()
 
     def pick_node(self) -> Node:

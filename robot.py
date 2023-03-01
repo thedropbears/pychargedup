@@ -100,10 +100,16 @@ class MyRobot(magicbot.MagicRobot):
             )
         )
 
-    def rumble_for(self, duration: float):
+    def rumble_for(self, intensity: float, duration: float):
         self.rumble_duration = duration
         self.rumble_timer.reset()
-        self.gamepad.setRumble(wpilib.XboxController.RumbleType.kBothRumble, 0.5)
+        self.gamepad.setRumble(wpilib.XboxController.RumbleType.kBothRumble, intensity)
+
+    def short_rumble(self):
+        self.rumble_for(0.4, 0.1)
+
+    def long_rumble(self):
+        self.rumble_for(0.8, 0.3)
 
     def teleopInit(self) -> None:
         self.recover.engage()
@@ -125,14 +131,12 @@ class MyRobot(magicbot.MagicRobot):
         ):
             self.acquire_cone.engage()
         if self.left_trigger_up.getAsBoolean() or self.right_trigger_up.getAsBoolean():
-            self.rumble_for(0.3)
+            self.short_rumble()
             self.acquire_cone.done()
 
         # Score, auto pick node
-        if self.gamepad.getAButtonPressed():
+        if self.gamepad.getAButton():
             self.score_game_piece.score_best()
-        if self.gamepad.getAButtonReleased():
-            self.score_game_piece.done()
 
         # Intake
         if self.gamepad.getRightBumperPressed():
@@ -147,14 +151,15 @@ class MyRobot(magicbot.MagicRobot):
         # Request cone
         if self.left_trigger_down_half.getAsBoolean():
             self.acquire_cone.target_left()
-            self.rumble_for(0.1)
+            self.long_rumble()
         if self.right_trigger_down_half.getAsBoolean():
             self.acquire_cone.target_right()
-            self.rumble_for(0.1)
+            self.long_rumble()
 
-        # Clear request
+        # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
+            self.cancel_controllers()
 
         # Do auto balance
         if self.gamepad.getAButtonPressed():
