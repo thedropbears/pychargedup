@@ -150,7 +150,7 @@ class Arm:
         )
         self.extension_limit_switch_reverse.enableLimitSwitch(True)
 
-        self.use_voltage = False
+        self.use_voltage = True
         self.voltage = 0.0
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
@@ -170,10 +170,14 @@ class Arm:
 
     def execute(self) -> None:
         self.update_display()
+        if self.is_retracted():
+            self.set_at_min_extension()
+            self.use_voltage = False
 
         if self.use_voltage:
-            self.extension_motor.setVoltage(self.voltage)
-            self.unbrake_extension()
+            if abs(self.voltage) > 0.01:
+                self.extension_motor.setVoltage(self.voltage)
+                self.unbrake_extension()
             self.rotation_motor.setVoltage(0)
             self.brake_rotation()
             return
@@ -280,12 +284,6 @@ class Arm:
         """Sets a voltage for the extension motor, will only activate if use_voltage is True"""
         self.voltage = value
 
-    def set_use_voltage(self, value: bool) -> None:
-        """Should override calculations for voltage"""
-        if self.use_voltage and not value:
-            self.extension_controller.reset(self.get_extension())
-        self.use_voltage = value
-
     def set_length(self, value: float) -> None:
         """Sets a goal length to go to in meters"""
         self.goal_extension = clamp(value, MIN_EXTENSION, MAX_EXTENSION)
@@ -352,6 +350,7 @@ class Arm:
     def on_enable(self) -> None:
         if self.get_angle() > math.pi / 2:
             self.runtime_offset = -math.tau
+        self.use_voltage = True
         self.reset_controllers()
         self.set_length(self.get_extension())
         self.set_angle(self.get_angle())

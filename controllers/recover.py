@@ -15,21 +15,6 @@ class RecoverController(StateMachine):
     def __init__(self) -> None:
         self.has_initialized_arm = False
 
-    @state(must_finish=True)
-    def retracting_arm(self):
-        """
-        Retract the arm to the minimum extension
-        """
-        if self.has_initialized_arm:
-            self.arm.arm_component.set_use_voltage(False)
-            self.next_state("stowing_arm")
-            return
-        if self.arm.is_at_retraction_limit():
-            self.has_initialized_arm = True
-            self.arm.arm_component.set_at_min_extension()
-        self.arm.arm_component.set_voltage(-2.0)
-        self.arm.arm_component.set_use_voltage(True)
-
     @state(first=True, must_finish=True)
     def clearing_intake(self) -> None:
         """
@@ -39,13 +24,13 @@ class RecoverController(StateMachine):
         """
 
         if self.arm.get_angle() < self.ARM_FOULING_ANGLE:
-            self.next_state("retracting_arm")
+            self.next_state("stowing_arm")
             return
 
         self.intake.deploy_without_running()
 
         if self.intake.is_fully_deployed():
-            self.next_state("retracting_arm")
+            self.next_state("stowing_arm")
 
     @state(must_finish=True)
     def stowing_arm(self) -> None:
