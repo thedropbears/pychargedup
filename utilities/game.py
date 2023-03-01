@@ -207,7 +207,11 @@ for i in range(4):
     STAGED_PIECES_RED.append(field_flip_translation2d(blue_piece))
 
 
-def get_staged_pieces(alliance: wpilib.DriverStation.Alliance) -> list[Translation2d]:
+def get_staged_pieces(
+    alliance: Optional[wpilib.DriverStation.Alliance] = None,
+) -> list[Translation2d]:
+    if alliance is None:
+        alliance = get_team()
     if alliance == wpilib.DriverStation.Alliance.kBlue:
         return STAGED_PIECES_BLUE
     else:
@@ -236,3 +240,21 @@ def get_cone_pickup(targeting_left: bool, offset_x: float) -> tuple[Pose2d, Rota
         goal,
         goal_approach,
     )
+
+
+def get_staged_pickup(
+    staged_idx: int, rotation: Rotation2d, distance: float = 0.4
+) -> tuple[Pose2d, Rotation2d]:
+    """Gets the pose to go to to pick up a staged piece
+    Args:
+        staged_idx: index of the piece, 0 is closest to the wall, 3 is closest to the loading zones
+        rotation: approach dir and chassis rotation
+        distance: distance from robot center to piece
+    """
+    piece = get_staged_pieces()[staged_idx]
+    robot_pose = Pose2d(
+        piece.x - rotation.cos() * distance,
+        piece.y - rotation.sin() * distance,
+        rotation,
+    )
+    return robot_pose, rotation
