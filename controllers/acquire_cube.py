@@ -68,7 +68,7 @@ class AcquireCubeController(StateMachine):
 
     @state(must_finish=True)
     def raising(self):
-        self.arm.go_to_setpoint(Setpoints.HANDOFF, do_retract=False)
+        self.arm.go_to_setpoint(Setpoints.STOW, do_retract=False)
         if self.arm.at_goal():
             self.done()
 
