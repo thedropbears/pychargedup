@@ -49,13 +49,15 @@ class Intake:
         # has been in same state for some time, current state is closed and wasn't only just closed
         return (
             (time.monotonic() - self.change_time) >= Intake.CLOSE_TIME_THRESHOLD
-        ) and self._last_deployed is self.deployed is False
+        ) and not (self._last_deployed or self.deployed)
 
     @feedback
     def is_fully_deployed(self) -> bool:
         return (
-            (time.monotonic() - self.change_time) >= Intake.OPEN_TIME_THRESHOLD
-        ) and self.deployed is self._last_deployed is True
+            ((time.monotonic() - self.change_time) >= Intake.OPEN_TIME_THRESHOLD)
+            and self.deployed
+            and self._last_deployed
+        )
 
     def execute(self) -> None:
         if self.deployed != self._last_deployed:
