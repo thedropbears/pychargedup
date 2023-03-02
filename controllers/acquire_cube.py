@@ -18,9 +18,6 @@ class AcquireCubeController(StateMachine):
 
     recover: RecoverController
 
-    def __init__(self) -> None:
-        self.override_cube_present = False
-
     @state(first=True, must_finish=True)
     def intaking(self) -> None:
         """
@@ -47,9 +44,8 @@ class AcquireCubeController(StateMachine):
         """
         Keep the intake spinning until the cube breaks the break-beam sensor.
         """
-        if self.intake.is_game_piece_present() or self.override_cube_present:
+        if self.intake.is_game_piece_present():
             self.intake.deploy_without_running()
-            self.override_cube_present = False
             self.next_state("grabbing")
 
     @state(must_finish=True)
@@ -79,6 +75,3 @@ class AcquireCubeController(StateMachine):
     def done(self) -> None:
         super().done()
         self.recover.engage()
-
-    def manual_cube_present(self) -> None:
-        self.override_cube_present = True

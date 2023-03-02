@@ -122,8 +122,6 @@ class AutoBase(AutonomousStateMachine):
                 return
 
         self.movement.do_autodrive()
-        if state_tm - self.INTAKE_PRE_TIME > self.MANUAL_CUBE_TIME:
-            self.acquire_cube.manual_cube_present()
 
     @state
     def approach_grid(self, initial_call: bool) -> None:
