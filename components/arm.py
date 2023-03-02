@@ -263,7 +263,6 @@ class Arm:
     def set_at_min_extension(self) -> None:
         """Sets the extension position to the min extension"""
         self.extension_encoder.setPosition(MIN_EXTENSION)
-        self.extension_controller.reset(self.get_extension())
 
     @feedback
     def is_retracted(self) -> bool:
