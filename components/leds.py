@@ -15,12 +15,11 @@ class LedColors(Enum):
     RED = (0, 255, MAX_BRIGHTNESS)
     ORANGE = (20, 255, MAX_BRIGHTNESS)
     YELLOW = (30, 255, MAX_BRIGHTNESS)
-    PINK = (150, 255, MAX_BRIGHTNESS)
+    MAGENTA = (150, 255, MAX_BRIGHTNESS)
     BLUE = (120, 255, MAX_BRIGHTNESS)
     CYAN = (90, 255, MAX_BRIGHTNESS)
     GREEN = (60, 255, MAX_BRIGHTNESS)
     WHITE = (0, 0, MAX_BRIGHTNESS)
-    VIOLET = (180, 45, MAX_BRIGHTNESS)
     OFF = (0, 0, 0)
 
 
@@ -208,7 +207,7 @@ class StatusLights:
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
-        self.set_color([LedColors.VIOLET] * self.led_length)
+        self.set_color([LedColors.MAGENTA] * self.led_length)
         self.set_display_pattern(DisplayType.FLASH)
 
     def off(self) -> None:
@@ -220,7 +219,7 @@ class StatusLights:
         self.set_display_pattern(DisplayType.SOLID)
 
     def cube_onboard(self) -> None:
-        self.set_color([LedColors.VIOLET] * self.led_length)
+        self.set_color([LedColors.MAGENTA] * self.led_length)
         self.set_display_pattern(DisplayType.SOLID)
 
     def calc_solid(self) -> list[tuple[int, int, int]]:
