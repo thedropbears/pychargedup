@@ -302,8 +302,7 @@ class Arm:
             else self.ANGLE_ERROR_TOLERANCE
         )
         error = abs(self.get_angle() - angle)
-        movement_done = self.rotation_controller.getSetpoint().position == angle
-        return error < tolerance and movement_done
+        return error < tolerance
 
     @feedback
     def at_goal_extension(self) -> bool:
