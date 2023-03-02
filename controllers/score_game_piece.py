@@ -81,6 +81,6 @@ class ScoreGamePieceController(StateMachine):
     def prefer_mid(self) -> None:
         self.prefered_row = Rows.MID
 
-    def set_score_node(self, node: Node) -> None:
-        self.node_stratergy = NodePickStratergy.OVERRIDE
-        self.override_node = node
+    def score_without_moving(self, node: Node) -> None:
+        self.target_node = node
+        self.engage("deploying_arm")
