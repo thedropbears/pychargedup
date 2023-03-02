@@ -48,8 +48,6 @@ class Arm:
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
 
-    UPRIGHT_THRESHOLD = math.radians(40)
-
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
 
@@ -101,7 +99,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            50, 0, 1, TrapezoidProfile.Constraints(maxVelocity=2.0, maxAcceleration=4.0)
+            50, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
@@ -175,9 +173,6 @@ class Arm:
         if self.is_retracted():
             self.set_at_min_extension()
             self.use_voltage = False
-
-        # if self.is_retracted():
-        #     self.set_at_min_extension()
 
         if self.use_voltage:
             if abs(self.voltage) > 0.01:
@@ -306,19 +301,6 @@ class Arm:
         )
         error = abs(self.get_angle() - angle)
         return error < tolerance
-
-    def safe_to_extend(self):
-        is_angle_forwards = math.copysign(1, self.get_angle() + (math.pi / 2))
-        is_goal_forwards = math.copysign(1, self.goal_angle + (math.pi / 2))
-        # if we plan on rotating overhead
-        is_going_over = is_angle_forwards != is_goal_forwards
-        # if we are currently overhead
-        is_currently_up = (
-            self.UPRIGHT_THRESHOLD
-            > (self.get_angle() + math.pi / 2)
-            > -self.UPRIGHT_THRESHOLD
-        )
-        return not is_going_over and not is_currently_up
 
     @feedback
     def at_goal_extension(self) -> bool:
