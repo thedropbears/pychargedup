@@ -79,29 +79,27 @@ class AutoBase(AutonomousStateMachine):
         return super().on_enable()
 
     @state(first=True)
+    def initialise(self):
+        self.recover.engage()
+        if not self.recover.is_executing:
+            self.next_state("score_cone")
+
+    @state
     def score_cone(self, initial_call: bool) -> None:
         if initial_call:
-            # Assume we start with arm fully retracted
-            self.arm_component.set_at_min_extension()
-            # Stop recovery doing homing
-            self.recover.has_initialized_arm = True
-            # Make sure recovery isnt running
-            self.recover.done()
-            self.intake.deploy_without_running()
-            self.score_game_piece.set_score_node(
+            self.score_game_piece.score_without_moving(
                 self.score_actions[self.progress_idx].node
             )
-            self.score_game_piece.engage("deploying_arm")
         elif not self.score_game_piece.is_executing:
             self.next_state("approach_cube")
 
     @state
     def approach_cube(self, initial_call: bool) -> None:
         if initial_call:
-            path = self.pickup_actions[self.progress_idx].with_correct_flipped()
+            action = self.pickup_actions[self.progress_idx].with_correct_flipped()
             self.movement.set_goal(
-                *get_staged_pickup(path.piece_idx, path.approach_direction),
-                path.intermediate_waypoints,
+                *get_staged_pickup(action.piece_idx, action.approach_direction),
+                action.intermediate_waypoints,
                 slow_dist=0,
             )
         elif self.movement.time_to_goal < self.INTAKE_PRE_TIME:
@@ -138,7 +136,9 @@ class AutoBase(AutonomousStateMachine):
     def score_cube(self, initial_call: bool, tm: float) -> None:
         if initial_call:
             self.recover.done()
-            self.score_game_piece.engage("deploying_arm")
+            self.score_game_piece.score_without_moving(
+                self.score_actions[self.progress_idx].node
+            )
         elif not self.score_game_piece.is_executing:
             if self.progress_idx >= len(self.pickup_actions):
                 print(f"Finished auto at {tm}")
@@ -160,12 +160,12 @@ class LoadingSide3(AutoBase):
             ),
             ScoreAction(
                 Node(Rows.HIGH, 7),
-                (Translation2d(3.5, 4.7),),
+                (),  # (Translation2d(3.5, 4.7),),
             ),
-            # ScoreAction(
-            #     Node(Rows.MID, 7),
-            #     (Translation2d(5.3, 4.4),),
-            # ),
+            ScoreAction(
+                Node(Rows.MID, 7),
+                (),  # (Translation2d(5.3, 4.4),),
+            ),
         ]
         self.pickup_actions = [
             PickupAction(
@@ -176,6 +176,6 @@ class LoadingSide3(AutoBase):
             PickupAction(
                 2,
                 Rotation2d.fromDegrees(-20),
-                (Translation2d(3, 4.9), Translation2d(5, 4.5)),
+                (),  # (Translation2d(3, 4.9), Translation2d(5, 4.5)),
             ),
         ]
