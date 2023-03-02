@@ -87,12 +87,13 @@ class Movement(StateMachine):
         chassis_speed = math.hypot(chassis_velocity.vx, chassis_velocity.vy)
         pose = self.chassis.get_pose()
 
-        translation = self.goal.translation() - pose.translation()
-        translation_distance = translation.norm()
+        next_pos = self.waypoints[0] if self.waypoints else self.goal.translation()
+        translation = next_pos - pose.translation()
 
         # Generating a trajectory when the robot is very close to the goal is unnecesary, so this
         # return an empty trajectory that starts at the end point so the robot won't move.
-        if translation_distance <= 0.01:
+        distance_to_goal = (self.goal.translation() - pose.translation()).norm()
+        if distance_to_goal <= 0.01:
             return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
         if chassis_speed < 0.2:
@@ -119,7 +120,7 @@ class Movement(StateMachine):
         # approach the control vector is unnecessary; this constant scales the derivative of
         # the goal derivative according to the translation distance.
         # The closer the robot gets to the goal, the small the derivative is.
-        end_control_length = min(10, translation_distance * self.END_CONTROL_SCALER)
+        end_control_length = 1
 
         goal_spline = Spline3.ControlVector(
             (self.goal.X(), self.goal_approach_dir.cos() * end_control_length),
