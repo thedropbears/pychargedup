@@ -157,7 +157,7 @@ class Movement(StateMachine):
         self.goal = goal
         self.goal_approach_dir = approach_direction
 
-        self.config = TrajectoryConfig(maxVelocity=2.5, maxAcceleration=2.5)
+        self.config = TrajectoryConfig(maxVelocity=2, maxAcceleration=1.5)
         self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
         topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
         bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
