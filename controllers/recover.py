@@ -40,6 +40,7 @@ class RecoverController(StateMachine):
 
         if self.arm.get_angle() < self.ARM_FOULING_ANGLE:
             self.next_state("retracting_arm")
+            return
 
         self.intake.deploy_without_running()
 

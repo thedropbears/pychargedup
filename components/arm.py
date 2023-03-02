@@ -76,13 +76,11 @@ class Arm:
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=3, maxAcceleration=2
+            maxVelocity=3, maxAcceleration=4
         )
-        self.rotation_controller = ProfiledPIDController(25, 0, 1, rotation_constraints)
+        self.rotation_controller = ProfiledPIDController(33, 0, 1, rotation_constraints)
         wpilib.SmartDashboard.putData(self.rotation_controller)
-        self.rotation_ff = ArmFeedforward(
-            kS=0, kG=-self.ROTATE_GRAVITY_FEEDFORWARDS, kV=1, kA=0.1
-        )
+        self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=1, kA=0.1)
         self.rotation_last_setpoint_vel = 0
 
         # Create extension things
@@ -195,13 +193,14 @@ class Arm:
         pid_output = self.rotation_controller.calculate(
             self.get_angle(), self.goal_angle
         )
+        ff_output = self.calculate_rotation_feedforwards()
         # Rotation
         if self.at_goal_angle() and self.is_angle_still():
             self.brake_rotation()
             self.rotation_motor.setVoltage(0)
         else:
             self.unbrake_rotation()
-            self.rotation_motor.setVoltage(pid_output)
+            self.rotation_motor.setVoltage(pid_output + ff_output)
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -371,8 +370,8 @@ class Arm:
 
     @feedback
     def get_rotation_output(self) -> float:
-        return self.rotation_motor.get()
+        return self.rotation_motor.getAppliedOutput()
 
     @feedback
     def get_extension_output(self) -> float:
-        return self.extension_motor.get()
+        return self.extension_motor.getAppliedOutput()
