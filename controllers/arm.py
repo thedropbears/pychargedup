@@ -48,7 +48,7 @@ class Setpoint:
 class Setpoints:
     PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
     PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
-    HANDOFF = Setpoint(math.radians(45), MIN_EXTENSION)
+    HANDOFF = Setpoint(math.radians(46), 0.99)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-160), MIN_EXTENSION)
     SCORE_CUBE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
@@ -82,20 +82,24 @@ class ArmController(StateMachine):
         self._target_setpoint: Setpoint = Setpoints.STOW
         self._about_to_run: bool = False
 
-    def go_to_setpoint(self, setpoint: Setpoint) -> None:
+    def go_to_setpoint(self, setpoint: Setpoint, do_retract: bool = True) -> None:
         # If this is a different setpoint, we want to take it
         # Interrupt what we are doing and move to the new setpoint
-        if setpoint != self._target_setpoint:
+        setpoint_changed = setpoint != self._target_setpoint
+        # If it is the same setpoint we should check to see if we are actually there
+        # Maybe we got interrupted or just started
+        done_and_not_at_goal = not self.is_executing and not self.at_goal()
+
+        if setpoint_changed or done_and_not_at_goal:
             self._about_to_run = True
             self._target_setpoint = setpoint
-            self.engage("retracting_arm", force=True)
+            if do_retract:
+                self.engage("retracting_arm", force=True)
+            else:
+                self.engage("rotating_arm", force=True)
 
-        # If it is the same setpoint we should check to see if we are actually there
-        # Maybe we got interrupted at some point...
-        # First see if the controller is already running
-        elif not self.is_executing and not self.at_goal():
-            self._about_to_run = True
-            self.engage()
+    def go_to_setpoint_without_retracting(self, setpoint: Setpoint) -> None:
+        self.go_to_setpoint(setpoint, False)
 
     @feedback
     def get_target(self) -> str:
