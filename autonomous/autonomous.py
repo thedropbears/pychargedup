@@ -2,6 +2,7 @@ from magicbot.state_machine import AutonomousStateMachine, state
 from wpimath.geometry import Rotation2d, Translation2d
 from dataclasses import dataclass
 from components.arm import Arm
+from components.gripper import Gripper
 from components.intake import Intake
 
 from controllers.movement import Movement
@@ -61,6 +62,7 @@ class AutoBase(AutonomousStateMachine):
     acquire_cube: AcquireCubeController
     recover: RecoverController
     arm_component: Arm
+    gripper: Gripper
     intake: Intake
 
     INTAKE_PRE_TIME = 2.5
@@ -81,6 +83,7 @@ class AutoBase(AutonomousStateMachine):
     @state(first=True)
     def initialise(self, initial_call):
         if initial_call:
+            self.gripper.close()
             self.recover.engage()
         elif not self.recover.is_executing:
             self.next_state("score_cone")
