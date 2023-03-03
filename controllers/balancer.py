@@ -19,12 +19,13 @@ class ChargeStation(StateMachine):
     @state(first=True)
     def drive_on(self) -> None:
         """Drive until we detect we are on the station"""
-        self.chassis.drive_field(
+        self.movement.set_input(
             self.DRIVE_ON_SPEED
             if self.drive_direction_positive
             else -self.DRIVE_ON_SPEED,
             0,
             0,
+            False,
         )
         if abs(self.chassis.get_tilt()) > self.LEVEL_THRESHOLD:
             self.next_state("balance")
@@ -32,12 +33,13 @@ class ChargeStation(StateMachine):
     @state
     def balance(self) -> None:
         """Drive until the station tilts"""
-        self.chassis.drive_field(
+        self.movement.set_input(
             self.BALANCE_SPEED
             if self.drive_direction_positive
             else -self.BALANCE_SPEED,
             0,
             0,
+            False,
         )
         if abs(self.chassis.get_tilt()) < self.LEVEL_THRESHOLD:
             self.done()
