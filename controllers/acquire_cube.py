@@ -5,7 +5,7 @@ from components.leds import StatusLights
 
 from controllers.recover import RecoverController
 
-from magicbot import state, StateMachine
+from magicbot import state, StateMachine, timed_state
 
 from utilities.game import GamePiece
 
@@ -46,14 +46,11 @@ class AcquireCubeController(StateMachine):
         """
         if self.intake.is_game_piece_present():
             self.intake.deploy_without_running()
-            self.next_state("grabbing")
+            self.next_state("waiting_with_cube")
 
-    @state(must_finish=True)
-    def clamping(self) -> None:
-        """bring the intake in so the cube piece is in a known position"""
-        self.intake.retract()
-        if self.intake.is_fully_retracted():
-            self.next_state("grabbing")
+    @timed_state(must_finish=True, next_state="grabbing", duration=0.5)
+    def waiting_with_cube(self) -> None:
+        ...
 
     @state(must_finish=True)
     def grabbing(self) -> None:
