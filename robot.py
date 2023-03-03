@@ -73,7 +73,7 @@ class MyRobot(magicbot.MagicRobot):
 
         self.rumble_timer = wpilib.Timer()
         self.rumble_timer.start()
-        self.rumble_duration = 0
+        self.rumble_duration = 0.0
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
@@ -134,6 +134,14 @@ class MyRobot(magicbot.MagicRobot):
             self.short_rumble()
             self.acquire_cone.done()
 
+        # Request cone / Set pickup side
+        if self.left_trigger_down_half.getAsBoolean():
+            self.acquire_cone.target_left()
+            self.long_rumble()
+        if self.right_trigger_down_half.getAsBoolean():
+            self.acquire_cone.target_right()
+            self.long_rumble()
+
         # Score, auto pick node
         if self.gamepad.getAButton():
             self.score_game_piece.score_best()
@@ -148,14 +156,6 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButtonPressed():
             self.status_lights.want_cube()
 
-        # Request cone
-        if self.left_trigger_down_half.getAsBoolean():
-            self.acquire_cone.target_left()
-            self.long_rumble()
-        if self.right_trigger_down_half.getAsBoolean():
-            self.acquire_cone.target_right()
-            self.long_rumble()
-
         # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
@@ -168,10 +168,10 @@ class MyRobot(magicbot.MagicRobot):
         dpad_angle = self.gamepad.getPOV()
         # Up, score closest high
         if dpad_angle == 0:
-            self.score_game_piece.score_high()
+            self.score_game_piece.score_closest_high()
         # Down, score closest mid
         elif dpad_angle == 180:
-            self.score_game_piece.score_mid()
+            self.score_game_piece.score_closest_mid()
 
         # Manual overrides
         # Claw
