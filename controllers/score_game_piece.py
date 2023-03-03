@@ -7,7 +7,7 @@ from controllers.recover import RecoverController
 
 from magicbot import state, timed_state, StateMachine
 from enum import Enum, auto
-from utilities.game import Node, get_closest_node, get_score_location, Rows, is_red
+from utilities.game import Node, get_closest_node, get_score_location, Rows
 
 
 class NodePickStratergy(Enum):
@@ -23,6 +23,7 @@ class ScoreGamePieceController(StateMachine):
 
     movement: Movement
     recover: RecoverController
+    HARD_UP_SPEED = 0.3
 
     def __init__(self) -> None:
         self.node_stratergy = NodePickStratergy.CLOSEST
@@ -41,10 +42,8 @@ class ScoreGamePieceController(StateMachine):
 
     @timed_state(next_state="deploying_arm", duration=0.3, must_finish=True)
     def hard_up(self) -> None:
-        speed = 0.3
-        vx = speed if is_red() else -speed
         self.movement.inputs_lock = True
-        self.movement.set_input(vx, 0, 0, False, override=True)
+        self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
     @state(must_finish=True)
     def deploying_arm(self, initial_call: bool) -> None:
