@@ -2,6 +2,7 @@ import math
 from magicbot import StateMachine, state
 
 from components.chassis import Chassis
+from utilities.game import get_team
 
 
 class ChargeStation(StateMachine):
@@ -11,12 +12,29 @@ class ChargeStation(StateMachine):
     BALANCE_SPEED = 0.3
     LEVEL_THRESHOLD = math.radians(7)
 
+    BLUE_CHARGE_STATION_X = 3.15165
+    RED_CHARGE_STATION_X = 12.70255
+
     def __init__(self) -> None:
         self.drive_direction_positive = True
 
+    def get_direction(self):
+        team = get_team().name
+        pose = self.chassis.get_pose()
+        if team == "kBlue":
+            self.drive_direction_positive = (
+                True if pose.X() < self.BLUE_CHARGE_STATION_X else False
+            )
+        else:
+            self.drive_direction_positive = (
+                True if pose.X() < self.RED_CHARGE_STATION_X else False
+            )
+
     @state(first=True)
-    def drive_on(self) -> None:
+    def drive_on(self, initial_call) -> None:
         """Drive until we detect we are on the station"""
+        if initial_call:
+            self.get_direction()
         self.chassis.drive_field(
             self.DRIVE_ON_SPEED
             if self.drive_direction_positive
@@ -40,6 +58,5 @@ class ChargeStation(StateMachine):
         if abs(self.chassis.get_tilt()) < self.LEVEL_THRESHOLD:
             self.done()
 
-    def start(self, positive_x: bool) -> None:
+    def start(self) -> None:
         self.engage()
-        self.drive_direction_positive = positive_x

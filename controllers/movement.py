@@ -198,7 +198,7 @@ class Movement(StateMachine):
 
     @state
     def balance(self):
-        self.balancer.start(True)
+        self.balancer.start()
 
     def set_input(
         self, vx: float, vy: float, vz: float, local: bool, override: bool = False
