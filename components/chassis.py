@@ -360,3 +360,7 @@ class Chassis:
     def get_rotation(self) -> Rotation2d:
         """Get the current heading of the robot."""
         return self.get_pose().rotation()
+
+    def get_tilt(self) -> float:
+        # TODO: check if gyro x is same as robot x
+        return self.imu.getPitch()
