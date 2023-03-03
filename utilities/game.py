@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional
 import wpilib
 from wpimath.geometry import Pose2d, Translation2d, Rotation2d, Translation3d
 import robotpy_apriltag

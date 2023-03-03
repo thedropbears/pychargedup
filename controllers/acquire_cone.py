@@ -40,9 +40,7 @@ class AcquireConeController(StateMachine):
             + self.arm.arm_component.PIVOT_X
             + stop_distance
         )
-        self.movement.set_goal(
-            *get_cone_pickup(self.targeting_left, x_offset)
-        )
+        self.movement.set_goal(*get_cone_pickup(self.targeting_left, x_offset))
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
