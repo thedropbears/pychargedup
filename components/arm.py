@@ -78,7 +78,7 @@ class Arm:
         rotation_constraints = TrapezoidProfile.Constraints(
             maxVelocity=3, maxAcceleration=4
         )
-        self.rotation_controller = ProfiledPIDController(33, 0, 1, rotation_constraints)
+        self.rotation_controller = ProfiledPIDController(25, 0, 1, rotation_constraints)
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=1, kA=0.1)
         self.rotation_last_setpoint_vel = 0
