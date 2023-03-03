@@ -178,7 +178,7 @@ def get_single_substation(alliance: wpilib.DriverStation.Alliance) -> Translatio
 
 STAGED_PIECES_Y_OFFSET = 0.920
 STAGED_PIECES_Y_BETWEEN = 1.219
-STAGED_PIECES_X = 4.5  # 7.067
+STAGED_PIECES_X = 7.067
 
 STAGED_PIECES_BLUE: list[Translation2d] = []
 STAGED_PIECES_RED: list[Translation2d] = []

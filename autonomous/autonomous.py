@@ -79,9 +79,10 @@ class AutoBase(AutonomousStateMachine):
         return super().on_enable()
 
     @state(first=True)
-    def initialise(self):
-        self.recover.engage()
-        if not self.recover.is_executing:
+    def initialise(self, initial_call):
+        if initial_call:
+            self.recover.engage()
+        elif not self.recover.is_executing:
             self.next_state("score_cone")
 
     @state
@@ -162,20 +163,11 @@ class LoadingSide3(AutoBase):
                 Node(Rows.HIGH, 7),
                 (),  # (Translation2d(3.5, 4.7),),
             ),
-            ScoreAction(
-                Node(Rows.MID, 7),
-                (),  # (Translation2d(5.3, 4.4),),
-            ),
         ]
         self.pickup_actions = [
             PickupAction(
                 3,
                 Rotation2d.fromDegrees(0),
                 (),
-            ),
-            PickupAction(
-                2,
-                Rotation2d.fromDegrees(-20),
-                (),  # (Translation2d(3, 4.9), Translation2d(5, 4.5)),
             ),
         ]
