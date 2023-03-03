@@ -1,12 +1,10 @@
 import math
 from magicbot import StateMachine, state
 
-from controllers.movement import Movement
 from components.chassis import Chassis
 
 
 class ChargeStation(StateMachine):
-    movement: Movement
     chassis: Chassis
 
     DRIVE_ON_SPEED = 0.5
@@ -19,13 +17,12 @@ class ChargeStation(StateMachine):
     @state(first=True)
     def drive_on(self) -> None:
         """Drive until we detect we are on the station"""
-        self.movement.set_input(
+        self.chassis.drive_field(
             self.DRIVE_ON_SPEED
             if self.drive_direction_positive
             else -self.DRIVE_ON_SPEED,
             0,
             0,
-            False,
         )
         if abs(self.chassis.get_tilt()) > self.LEVEL_THRESHOLD:
             self.next_state("balance")
@@ -33,13 +30,12 @@ class ChargeStation(StateMachine):
     @state
     def balance(self) -> None:
         """Drive until the station tilts"""
-        self.movement.set_input(
+        self.chassis.drive_field(
             self.BALANCE_SPEED
             if self.drive_direction_positive
             else -self.BALANCE_SPEED,
             0,
             0,
-            False,
         )
         if abs(self.chassis.get_tilt()) < self.LEVEL_THRESHOLD:
             self.done()
