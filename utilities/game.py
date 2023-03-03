@@ -99,8 +99,8 @@ class Node:
             return GamePiece.CONE
 
 
-def get_node(node: Node, red_side: bool) -> Translation3d:
-    if red_side:
+def get_node_location(node: Node) -> Translation3d:
+    if is_red():
         return RED_NODES[node.row.value][node.col]
     else:
         return BLUE_NODES[node.row.value][node.col]
@@ -110,13 +110,10 @@ def get_node(node: Node, red_side: bool) -> Translation3d:
 GRIDS_EDGE_X = 1.37
 
 
-def get_score_location(
-    node: Node, red_side: Optional[bool] = None
-) -> tuple[Pose2d, Rotation2d]:
+def get_score_location(node: Node) -> tuple[Pose2d, Rotation2d]:
     """Returns the goal and approach direction for the given node"""
-    if red_side is None:
-        red_side = is_red()
-    node_location = get_node(node, red_side)
+    red_side = is_red()
+    node_location = get_node_location(node)
 
     # always be up against the grids
     x = GRIDS_EDGE_X + Chassis.LENGTH / 2 + 0.1
@@ -151,9 +148,9 @@ DOUBLE_SUBSTATION_RED_DRIVER = Translation3d(0.15, 6.007, 0.948)
 DOUBLE_SUBSTATION_BLUE_DRIVER = field_flip_translation3d(DOUBLE_SUBSTATION_RED_DRIVER)
 
 
-def get_double_substation(red_side: bool, left_side: bool) -> Translation3d:
+def get_double_substation(left_side: bool) -> Translation3d:
     """Left/Right sides from perspective of current drivers"""
-    if red_side:
+    if is_red():
         if left_side:
             return DOUBLE_SUBSTATION_RED_DRIVER
         else:
@@ -205,20 +202,15 @@ def get_team() -> wpilib.DriverStation.Alliance:
     return wpilib.DriverStation.getAlliance()
 
 
-def get_cone_pickup(
-    targeting_left: bool, red_side: bool, offset_x: float
-) -> tuple[Pose2d, Rotation2d]:
+def get_cone_pickup(targeting_left: bool, offset_x: float) -> tuple[Pose2d, Rotation2d]:
     """Returns the goal and approach direction for the given side"""
-    cone_trans = get_double_substation(False, targeting_left).toTranslation2d()
-    # as if we're blue
-    goal_rotation = Rotation2d.fromDegrees(180)
-    goal_approach = Rotation2d(0)
-    goal_trans = cone_trans + Translation2d(offset_x, 0)
-    goal = Pose2d(goal_trans, goal_rotation)
+    red_side = is_red()
+    goal_rotation = Rotation2d(0) if red_side else Rotation2d.fromDegrees(180)
+    goal_approach = Rotation2d.fromDegrees(180) if red_side else Rotation2d(0)
+    cone_trans = get_double_substation(targeting_left).toTranslation2d()
+    goal_trans = cone_trans + Translation2d(-offset_x if red_side else offset_x, 0)
 
-    if red_side:
-        goal = field_flip_pose2d(goal)
-        goal_approach = field_flip_rotation2d(goal_approach)
+    goal = Pose2d(goal_trans, goal_rotation)
 
     return (
         goal,
