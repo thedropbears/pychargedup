@@ -22,13 +22,9 @@ class ChargeStation(StateMachine):
         team = get_team().name
         pose = self.chassis.get_pose()
         if team == "kBlue":
-            self.drive_direction_positive = (
-                True if pose.X() < self.BLUE_CHARGE_STATION_X else False
-            )
+            self.drive_direction_positive = pose.X() < self.BLUE_CHARGE_STATION_X
         else:
-            self.drive_direction_positive = (
-                True if pose.X() < self.RED_CHARGE_STATION_X else False
-            )
+            self.drive_direction_positive = pose.X() < self.RED_CHARGE_STATION_X
 
     @state(first=True)
     def drive_on(self, initial_call) -> None:
