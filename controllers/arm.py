@@ -127,6 +127,8 @@ class ArmController(StateMachine):
     @state(first=True, must_finish=True)
     def retracting_arm(self) -> None:
         self._about_to_run = False
+        if self.arm_component.use_voltage:
+            self.arm_component.set_voltage(-2.0)
         self.arm_component.set_length(MIN_EXTENSION)
         if self.arm_component.at_goal_extension():
             self.next_state("rotating_arm")
