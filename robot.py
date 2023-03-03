@@ -18,8 +18,9 @@ from components.chassis import Chassis
 from components.vision import VisualLocalizer
 from components.arm import Arm
 from components.gripper import Gripper
-from components.leds import StatusLights
+from components.leds import StatusLights, DisplayType, LedColors
 from utilities.scalers import rescale_js
+from utilities.game import is_red
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -235,12 +236,17 @@ class MyRobot(magicbot.MagicRobot):
         self.recover.engage()
 
     def disabledInit(self) -> None:
-        # self.status_lights.set_display_pattern(DisplayType.WOLFRAM_AUTOMATA)
-        pass
+        self.status_lights.set_display_pattern(DisplayType.PULSE)
 
     def disabledPeriodic(self):
         self.chassis.update_odometry()
-        # self.status_lights.execute()
+        # This could be set in init, but it is more responsive if we do it here
+        if is_red():
+            self.status_lights.set_color([LedColors.RED])
+        else:
+            self.status_lights.set_color([LedColors.BLUE])
+
+        self.status_lights.execute()
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.arm_component.update_display()
