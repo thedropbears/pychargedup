@@ -161,7 +161,7 @@ class LoadingSide3(AutoBase):
             ),
             ScoreAction(
                 Node(Rows.HIGH, 7),
-                (),  # (Translation2d(3.5, 4.7),),
+                (Translation2d(3.5, 4.7),),
             ),
         ]
         self.pickup_actions = [
