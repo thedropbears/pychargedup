@@ -31,7 +31,7 @@ class ScoreGamePieceController(StateMachine):
         self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
 
-    @state(first=True)
+    @state(first=True, must_finish=True)
     def driving_to_position(self) -> None:
         self.movement.set_goal(*get_score_location(self.target_node))
         self.movement.do_autodrive()
@@ -43,7 +43,7 @@ class ScoreGamePieceController(StateMachine):
         self.movement.inputs_lock = True
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
-    @state
+    @state(must_finish=True)
     def deploying_arm(self, initial_call: bool) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():

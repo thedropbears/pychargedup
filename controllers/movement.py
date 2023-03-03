@@ -251,7 +251,6 @@ class Movement(StateMachine):
             self.drive_local = local
 
     def do_autodrive(self) -> None:
-<<<<<<< HEAD
         self.engage("autodrive")
 
     def toggle_balance(self) -> None:
@@ -259,9 +258,4 @@ class Movement(StateMachine):
             self.done()
         else:
             self.engage("balance")
-=======
         self.engage()
-
-    def block_driver(self) -> None:
-        self.inputs_lock = True
->>>>>>> ce95b2e (tweaks)
