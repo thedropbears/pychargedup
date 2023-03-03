@@ -14,10 +14,15 @@ class Gripper:
         self.last_opened = self.opened
         self.change_time = time.monotonic()
 
-        self.solenoid = DoubleSolenoid(
+        self.gripper_solenoid = DoubleSolenoid(
             PneumaticsModuleType.REVPH,
             ids.PhChannels.gripper_solenoid_forward,
             ids.PhChannels.gripper_solenoid_reverse,
+        )
+        self.flapper_solenoid = DoubleSolenoid(
+            PneumaticsModuleType.REVPH,
+            ids.PhChannels.flapper_solenoid_forward,
+            ids.PhChannels.flapper_solenoid_reverse,
         )
 
         self.holding = GamePiece.NONE
@@ -54,9 +59,11 @@ class Gripper:
         self.last_opened = self.opened
 
         if self.opened:
-            self.solenoid.set(DoubleSolenoid.Value.kReverse)
+            self.gripper_solenoid.set(DoubleSolenoid.Value.kReverse)
+            self.flapper_solenoid.set(DoubleSolenoid.Value.kReverse)
         else:
-            self.solenoid.set(DoubleSolenoid.Value.kForward)
+            self.gripper_solenoid.set(DoubleSolenoid.Value.kForward)
+            self.flapper_solenoid.set(DoubleSolenoid.Value.kForward)
 
     def get_current_piece(self) -> GamePiece:
         if self.opened:
