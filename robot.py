@@ -12,6 +12,7 @@ from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
 from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
+from controllers.balancer import ChargeStation
 
 from components.intake import Intake
 from components.chassis import Chassis
@@ -33,6 +34,7 @@ class MyRobot(magicbot.MagicRobot):
     # Controllers
     movement: Movement
     arm: ArmController
+    balancer: ChargeStation
 
     # Components
     chassis: Chassis

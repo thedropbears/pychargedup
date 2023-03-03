@@ -1,5 +1,6 @@
 from magicbot import StateMachine, state, default_state, tunable, will_reset_to
 from components.chassis import Chassis
+from controllers.balancer import ChargeStation
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
     TrajectoryConfig,
@@ -25,6 +26,7 @@ from wpilib import Field2d
 class Movement(StateMachine):
     chassis: Chassis
     field: Field2d
+    balancer: ChargeStation
 
     # When on True, a trajectory is generated every code run to be displayed
     # When on False, a trajectory is only generated when needed to save resources.
@@ -194,6 +196,10 @@ class Movement(StateMachine):
 
         self.time_to_goal = self.trajectory.totalTime() - state_tm
 
+    @state
+    def balance(self):
+        self.balancer.start(True)
+
     def set_input(
         self, vx: float, vy: float, vz: float, local: bool, override: bool = False
     ) -> None:
@@ -209,3 +215,7 @@ class Movement(StateMachine):
 
     def do_autodrive(self) -> None:
         self.engage()
+
+    def do_balance(self) -> None:
+        self.engage()
+        self.next_state("balance")
