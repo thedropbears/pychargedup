@@ -43,8 +43,8 @@ class PhChannels(enum.IntEnum):
     gripper_solenoid_forward = 0
     gripper_solenoid_reverse = 1
 
-    spare_channel_1 = 2
-    spare_channel_2 = 3
+    flapper_solenoid_forward = 2
+    flapper_solenoid_reverse = 3
 
 
 @enum.unique
