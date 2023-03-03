@@ -362,5 +362,4 @@ class Chassis:
         return self.get_pose().rotation()
 
     def get_tilt(self) -> float:
-        # TODO: check if gyro x is same as robot x
-        return self.imu.getPitch()
+        return math.radians(self.imu.getRoll())
