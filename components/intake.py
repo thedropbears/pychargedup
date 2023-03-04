@@ -38,7 +38,7 @@ class Intake:
 
     def deploy_without_running(self):
         self.deployed = True
-        self.running = True
+        self.running = False
 
     def retract(self) -> None:
         self.running = False
