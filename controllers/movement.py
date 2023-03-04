@@ -47,7 +47,9 @@ class Movement(StateMachine):
 
     BALANCE_MAX_SPEED = 0.5
     BALANCE_GAIN = 1.5
-    BALANCE_RATE_GAIN = 0.2
+    BALANCE_RATE_GAIN = (
+        -0.2
+    )  # Needs to be negative to counteract increasing pitch when the charge station shifts
     BALANCE_TILT_ANGLE_THRESHOLD = math.radians(2)
     BALANCE_TILT_RATE_THRESHOLD = math.radians(2)
 
@@ -211,17 +213,18 @@ class Movement(StateMachine):
 
     @state(must_finish=True)
     def balance(self):
+        tilt_error = 0.0 - self.chassis.get_tilt()
+        tilt_rate_error = 0.0 - self.chassis.get_tilt_rate()
         speed_x = (
-            self.chassis.get_tilt() * self.BALANCE_GAIN
-            - self.chassis.get_tilt_rate() * self.BALANCE_RATE_GAIN
+            tilt_error * self.BALANCE_GAIN + tilt_rate_error * self.BALANCE_RATE_GAIN
         )
         speed_x = clamp(
-            -speed_x, -Movement.BALANCE_MAX_SPEED, Movement.BALANCE_MAX_SPEED
+            speed_x, -Movement.BALANCE_MAX_SPEED, Movement.BALANCE_MAX_SPEED
         )
         self.chassis.drive_local(speed_x, 0, 0)
         if (
-            abs(self.chassis.get_tilt()) < Movement.BALANCE_TILT_ANGLE_THRESHOLD
-            and abs(self.chassis.get_tilt_rate()) < Movement.BALANCE_TILT_RATE_THRESHOLD
+            abs(tilt_error) < Movement.BALANCE_TILT_ANGLE_THRESHOLD
+            and abs(tilt_rate_error) < Movement.BALANCE_TILT_RATE_THRESHOLD
         ):
             self.done()
 
