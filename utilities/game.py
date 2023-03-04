@@ -167,10 +167,12 @@ DOUBLE_SUBSTATION_BLUE_GRID = blue_substation_tag - Translation3d(
     0, SUBSTATION_Y_OFFSET, 0
 )
 
+SUBSTATION_PICKUP_X_OFFSET = -1.38
 
-def get_double_substation(left_side: bool) -> Translation3d:
+
+def get_double_substation(red_substation: bool, left_side: bool) -> Translation3d:
     """Left/Right sides from perspective of current drivers"""
-    if is_red():
+    if red_substation:
         if left_side:
             return DOUBLE_SUBSTATION_RED_GRID
         else:
@@ -222,13 +224,17 @@ def get_team() -> wpilib.DriverStation.Alliance:
     return wpilib.DriverStation.getAlliance()
 
 
-def get_cone_pickup(targeting_left: bool, offset_x: float) -> tuple[Pose2d, Rotation2d]:
-    """Returns the goal and approach direction for the given side"""
-    red_side = is_red()
-    goal_rotation = Rotation2d(0) if red_side else Rotation2d.fromDegrees(180)
-    goal_approach = Rotation2d.fromDegrees(180) if red_side else Rotation2d(0)
-    cone_trans = get_double_substation(targeting_left).toTranslation2d()
-    goal_trans = cone_trans + Translation2d(-offset_x if red_side else offset_x, 0)
+def get_cone_pickup(
+    robot_pose: Pose2d, targeting_left: bool
+) -> tuple[Pose2d, Rotation2d]:
+    """Returns the goal and approach direction for side deduced from the position of the robot"""
+    red_substation = robot_pose.x < FIELD_LENGTH / 2.0
+    goal_rotation = Rotation2d(0) if red_substation else Rotation2d.fromDegrees(180)
+    goal_approach = Rotation2d.fromDegrees(180) if red_substation else Rotation2d(0)
+    cone_trans = get_double_substation(red_substation, targeting_left).toTranslation2d()
+    goal_trans = cone_trans + Translation2d(
+        -SUBSTATION_PICKUP_X_OFFSET if red_substation else SUBSTATION_PICKUP_X_OFFSET, 0
+    )
 
     goal = Pose2d(goal_trans, goal_rotation)
 
