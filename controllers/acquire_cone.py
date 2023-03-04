@@ -11,7 +11,8 @@ from controllers.recover import RecoverController
 from utilities.game import (
     GamePiece,
     get_cone_pickup,
-    is_red,
+    field_flip_pose2d,
+    field_flip_rotation2d,
 )
 
 
@@ -26,8 +27,7 @@ class AcquireConeController(StateMachine):
 
     EXTEND_VOLTAGE = tunable(3)
 
-    # swap the the side of the substation to test on a half field
-    swap_substation = tunable(False)
+    flip = tunable(False)
 
     def __init__(self) -> None:
         self.targeting_left: bool = False
@@ -38,17 +38,19 @@ class AcquireConeController(StateMachine):
         Get the chassis to the correct position to start moving towards cone.
         Requires that the state has had the goal position injected into it.
         """
-        # if we want the substation to be as if we are on the red alliance
-        red_side = is_red() != self.swap_substation
         stop_distance = -0.15
         x_offset = (
             Setpoints.PREPARE_PICKUP_CONE.toCartesian()[0]
             + self.arm.arm_component.PIVOT_X
             + stop_distance
         )
-        self.movement.set_goal(
-            *get_cone_pickup(self.targeting_left, red_side, x_offset)
-        )
+        if self.flip:
+            goal_pose, approach_dir = get_cone_pickup(self.targeting_left, x_offset)
+            self.movement.set_goal(
+                field_flip_pose2d(goal_pose), field_flip_rotation2d(approach_dir)
+            )
+        else:
+            self.movement.set_goal(*get_cone_pickup(self.targeting_left, x_offset))
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
