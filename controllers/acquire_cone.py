@@ -75,7 +75,7 @@ class AcquireConeController(StateMachine):
         """
 
         self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
-        if self.arm.is_at_forward_limit():
+        if self.arm.is_at_forward_limit() or self.arm.at_goal():
             self.next_state("grabbing")
 
     @state(must_finish=True)
