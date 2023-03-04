@@ -134,6 +134,9 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
 
+        if self.gamepad.getAButtonPressed():
+            self.movement.do_balance()
+
         dpad_angle = self.gamepad.getPOV()
         # up
         if dpad_angle == 0:
