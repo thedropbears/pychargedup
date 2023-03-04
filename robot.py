@@ -19,6 +19,7 @@ from components.vision import VisualLocalizer
 from components.arm import Arm
 from components.gripper import Gripper
 from components.leds import StatusLights
+from components.start_pose_tracker import StartPoseTracker
 from utilities.scalers import rescale_js
 
 
@@ -39,6 +40,8 @@ class MyRobot(magicbot.MagicRobot):
     intake: Intake
     status_lights: StatusLights
     gripper: Gripper
+
+    start_pose_tracker: StartPoseTracker
 
     port_localizer: VisualLocalizer
     starboard_localizer: VisualLocalizer

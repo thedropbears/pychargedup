@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from components.arm import Arm
 from components.gripper import Gripper
 from components.intake import Intake
+from components.start_pose_tracker import StartPoseTracker
 
 from controllers.movement import Movement
 from controllers.recover import RecoverController
@@ -174,3 +175,33 @@ class LoadingSide3(AutoBase):
                 (),
             ),
         ]
+
+
+class Dynamic(AutoBase):
+    start_pose_tracker: StartPoseTracker
+
+    MODE_NAME = "Dynamic"
+
+    def setup(self) -> None:
+        pass
+
+    def on_enable(self) -> None:
+        row = self.start_pose_tracker.best_row()
+        if row == 8:
+            self.score_actions = [
+                ScoreAction(
+                    Node(Rows.HIGH, 8),
+                    (),
+                ),
+                ScoreAction(
+                    Node(Rows.HIGH, 7),
+                    (Translation2d(3.5, 4.7),),
+                ),
+            ]
+            self.pickup_actions = [
+                PickupAction(
+                    3,
+                    Rotation2d.fromDegrees(0),
+                    (),
+                ),
+            ]

@@ -9,6 +9,7 @@ from photonvision import PhotonCamera, PhotonTrackedTarget
 from wpimath.geometry import Pose2d, Rotation3d, Transform3d, Translation3d
 
 from components.chassis import Chassis
+from components.start_pose_tracker import StartPoseTracker
 from utilities.game import apriltag_layout
 
 
@@ -19,6 +20,7 @@ class VisualLocalizer:
     """
 
     add_to_estimator = tunable(False)
+    add_to_start_pose_tracker = tunable(True)
     should_log = tunable(False)
 
     rejected_in_row = tunable(0.0)
@@ -35,6 +37,7 @@ class VisualLocalizer:
         field: wpilib.Field2d,
         data_log: wpiutil.log.DataLog,
         chassis: Chassis,
+        start_pose_tracker: StartPoseTracker,
     ) -> None:
         self.camera = PhotonCamera(name)
         self.camera_to_robot = Transform3d(pos, rot).inverse()
@@ -46,12 +49,15 @@ class VisualLocalizer:
         )
 
         self.chassis = chassis
+        self.start_pose_tracker = start_pose_tracker
 
     def on_disable(self) -> None:
         self.add_to_estimator = False
+        self.add_to_start_pose_tracker = True
 
     def on_enable(self) -> None:
         self.add_to_estimator = True
+        self.add_to_start_pose_tracker = False
 
     def execute(self) -> None:
         # if results didn't see any targets
@@ -100,6 +106,8 @@ class VisualLocalizer:
                     timestamp,
                     (3.0, 3.0, 1.0),
                 )
+            if self.add_to_start_pose_tracker:
+                self.start_pose_tracker.add_measurement(pose)
 
             if self.should_log:
                 ground_truth_pose = self.chassis.get_pose()
