@@ -239,7 +239,7 @@ class StatusLights:
         hue = round(180 * (elapsed_time / loop_time % 1))
         return [(hue, 255, MAX_BRIGHTNESS)] * self.led_length
 
-    def calc_pacman(self):
+    def calc_pacman(self) -> None:
         elapsed_time = time.monotonic() - self.start_time
         # find the pattern of leds and its position
         if elapsed_time % self.PACMAN_PERIOD < self.PACMAN_PERIOD / 2:
