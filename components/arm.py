@@ -30,7 +30,7 @@ class Arm:
     PIVOT_HEIGHT = 0.990924
     PIVOT_X = -0.283562
 
-    ANGLE_ERROR_TOLERANCE = math.radians(2)
+    ANGLE_ERROR_TOLERANCE = math.radians(3)
     ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(4)
     EXTENSION_ERROR_TOLERANCE = 0.01
     EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
@@ -78,7 +78,9 @@ class Arm:
         rotation_constraints = TrapezoidProfile.Constraints(
             maxVelocity=3, maxAcceleration=4
         )
-        self.rotation_controller = ProfiledPIDController(25, 0, 1, rotation_constraints)
+        self.rotation_controller = ProfiledPIDController(
+            27, 0, 1.5, rotation_constraints
+        )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=1, kA=0.1)
         self.rotation_last_setpoint_vel = 0
@@ -239,6 +241,7 @@ class Arm:
     def get_raw_angle(self) -> float:
         return self.absolute_encoder.get()
 
+    @feedback
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
