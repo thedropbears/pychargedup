@@ -137,28 +137,49 @@ def get_closest_node(pos: Translation2d, piece: GamePiece, row: Rows) -> Node:
     return min(nodes, key=get_node_dist)
 
 
-# loading bays the red alliance uses, on the blue side of the field
-# side closer to the wall
-DOUBLE_SUBSTATION_RED_WALL = Translation3d(0.15, 6.969, 0.948)
-DOUBLE_SUBSTATION_BLUE_WALL = field_flip_translation3d(DOUBLE_SUBSTATION_RED_WALL)
+# tag in blue loading bay, on red side of field 16=x
+tag_4 = apriltag_layout.getTagPose(4)
+assert tag_4 is not None
+blue_substation_tag = tag_4.translation()
 
-# side closer to drivers
-DOUBLE_SUBSTATION_RED_DRIVER = Translation3d(0.15, 6.007, 0.948)
-DOUBLE_SUBSTATION_BLUE_DRIVER = field_flip_translation3d(DOUBLE_SUBSTATION_RED_DRIVER)
+# tag in red loading bay, on the blue side of field 0=x
+tag_5 = apriltag_layout.getTagPose(5)
+assert tag_5 is not None
+red_substation_tag = tag_5.translation()
+
+# offset from tag to the left/right cone spots
+# aligned with the second vertical pole underneath the shelf on each side
+SUBSTATION_Y_OFFSET = 0.722
+
+# side closer to the wall
+DOUBLE_SUBSTATION_RED_WALL = red_substation_tag + Translation3d(
+    0, SUBSTATION_Y_OFFSET, 0
+)
+DOUBLE_SUBSTATION_BLUE_WALL = blue_substation_tag + Translation3d(
+    0, SUBSTATION_Y_OFFSET, 0
+)
+
+# side closer to grids
+DOUBLE_SUBSTATION_RED_GRID = red_substation_tag - Translation3d(
+    0, SUBSTATION_Y_OFFSET, 0
+)
+DOUBLE_SUBSTATION_BLUE_GRID = blue_substation_tag - Translation3d(
+    0, SUBSTATION_Y_OFFSET, 0
+)
 
 
 def get_double_substation(left_side: bool) -> Translation3d:
     """Left/Right sides from perspective of current drivers"""
     if is_red():
         if left_side:
-            return DOUBLE_SUBSTATION_RED_DRIVER
+            return DOUBLE_SUBSTATION_RED_GRID
         else:
             return DOUBLE_SUBSTATION_RED_WALL
     else:
         if left_side:
             return DOUBLE_SUBSTATION_BLUE_WALL
         else:
-            return DOUBLE_SUBSTATION_BLUE_DRIVER
+            return DOUBLE_SUBSTATION_BLUE_GRID
 
 
 SINGLE_SUBSTATION_RED = Translation2d(2.303, 8.077)
