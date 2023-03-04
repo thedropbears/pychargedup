@@ -115,7 +115,7 @@ def get_score_location(node: Node) -> tuple[Pose2d, Rotation2d]:
     node_location = get_node_location(node)
 
     # always be up against the grids
-    x = GRIDS_EDGE_X + Chassis.LENGTH / 2 + 0.1
+    x = GRIDS_EDGE_X + Chassis.LENGTH / 2  # + 0.1
     blue_pose = Pose2d(x, node_location.y, Rotation2d(0))
     goal = field_flip_pose2d(blue_pose) if red_side else blue_pose
     approach_blue = Rotation2d.fromDegrees(180)
@@ -236,3 +236,21 @@ def get_cone_pickup(targeting_left: bool, offset_x: float) -> tuple[Pose2d, Rota
         goal,
         goal_approach,
     )
+
+
+def get_staged_pickup(
+    staged_idx: int, rotation: Rotation2d, distance: float = 0.3
+) -> tuple[Pose2d, Rotation2d]:
+    """Gets the pose to go to to pick up a staged piece
+    Args:
+        staged_idx: index of the piece, 0 is closest to the wall, 3 is closest to the loading zones
+        rotation: approach dir and chassis rotation
+        distance: distance from robot center to piece
+    """
+    piece = get_staged_pieces(get_team())[staged_idx]
+    robot_pose = Pose2d(
+        piece.x - rotation.cos() * distance,
+        piece.y - rotation.sin() * distance,
+        rotation,
+    )
+    return robot_pose, rotation

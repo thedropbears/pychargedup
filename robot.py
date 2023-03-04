@@ -161,6 +161,8 @@ class MyRobot(magicbot.MagicRobot):
 
     def testInit(self) -> None:
         self.arm_component.on_enable()
+        self.port_localizer.add_to_estimator = True
+        self.starboard_localizer.add_to_estimator = True
 
     def testPeriodic(self) -> None:
         dpad_angle = self.gamepad.getPOV()
@@ -242,7 +244,7 @@ class MyRobot(magicbot.MagicRobot):
     def disabledInit(self) -> None:
         self.status_lights.set_display_pattern(DisplayType.PULSE)
 
-    def disabledPeriodic(self):
+    def disabledPeriodic(self) -> None:
         self.chassis.update_odometry()
         # This could be set in init, but it is more responsive if we do it here
         if is_red():
@@ -254,6 +256,10 @@ class MyRobot(magicbot.MagicRobot):
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.arm_component.update_display()
+
+    def autonomousInit(self) -> None:
+        self.port_localizer.add_to_estimator = True
+        self.starboard_localizer.add_to_estimator = True
 
 
 if __name__ == "__main__":

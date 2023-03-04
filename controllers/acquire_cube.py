@@ -45,7 +45,6 @@ class AcquireCubeController(StateMachine):
         Keep the intake spinning until the cube breaks the break-beam sensor.
         """
         if self.intake.is_game_piece_present():
-            self.intake.deploy_without_running()
             self.next_state("waiting_with_cube")
 
     @timed_state(must_finish=True, next_state="grabbing", duration=0.5)
@@ -68,6 +67,7 @@ class AcquireCubeController(StateMachine):
         self.arm.go_to_setpoint(Setpoints.STOW, do_retract=False)
         if self.arm.at_goal():
             self.done()
+            self.intake.deploy_without_running()
 
     def done(self) -> None:
         super().done()

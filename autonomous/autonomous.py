@@ -1,71 +1,176 @@
-# class CubeAutoBase:
-#     """Auto which starts with a preloaded cone, scores it then drives to pickup and score cubes"""
+from magicbot.state_machine import AutonomousStateMachine, state
+from wpimath.geometry import Rotation2d, Translation2d
+from dataclasses import dataclass
+from components.arm import Arm
+from components.gripper import Gripper
+from components.intake import Intake
 
-#     scoring: ScoringController
-#     chassis: Chassis
+from controllers.movement import Movement
+from controllers.recover import RecoverController
+from controllers.score_game_piece import ScoreGamePieceController
+from controllers.acquire_cube import AcquireCubeController
 
-#     def __init__(self, cubes: list[tuple[int, Rotation2d]], nodes: list[Node]) -> None:
-#         # list of cube idx and angle to hit pickup at as if was on blue alliance
-#         # 0 is closest to wall, 3 is closest to substations
-#         self.cubes = cubes
-#         # list of nodes to score on, 0 is closest to wall, 8 is closest to substations
-#         self.nodes = nodes
-#         self.finished = False
-
-#     def on_enable(self) -> None:
-#         (start_pose, _), _ = self.scoring.score_location_from_node(self.nodes[0], False)
-#         start_pose = field_flip_pose2d(start_pose) if is_red() else start_pose
-#         self.chassis.set_pose(start_pose)
-
-#         self.scoring.wants_piece = GamePiece.CUBE
-#         self.scoring.is_holding = GamePiece.CONE
-#         self.scoring.cube_stack = []
-#         all_pieces = get_staged_pieces(wpilib.DriverStation.getAlliance())
-#         for idx, rotation in self.cubes[::-1]:
-#             position = all_pieces[idx]
-#             # flip angle, position is already correctly flipped
-#             angle = field_flip_rotation2d(rotation) if is_red() else rotation
-#             # approach angle is the same as chassis heading
-#             pose = Pose2d(position, angle)
-#             self.scoring.cube_stack.append((pose, angle))
-
-#         self.scoring.score_stack = self.nodes[::-1]
-
-#     def on_iteration(self, tm: float) -> None:
-#         if not self.finished:
-#             self.scoring.autodrive = True
-#             self.scoring.engage()
-#         if len(self.scoring.cube_stack) == 0 and len(self.scoring.score_stack) == 0:
-#             self.finished = True
-
-#     def on_disable(self) -> None:
-#         self.scoring.wants_piece = GamePiece.CONE
+from utilities.game import (
+    Node,
+    Rows,
+    field_flip_rotation2d,
+    field_flip_translation2d,
+    get_score_location,
+    get_staged_pickup,
+    is_red,
+)
 
 
-# class WallSide3(CubeAutoBase):
-#     MODE_NAME = "Wall side 3"
+@dataclass
+class PickupAction:
+    piece_idx: int
+    approach_direction: Rotation2d
+    intermediate_waypoints: tuple[Translation2d, ...]
 
-#     def __init__(self):
-#         super().__init__(
-#             cubes=[(0, Rotation2d(0)), (1, Rotation2d.fromDegrees(40))],
-#             nodes=[
-#                 Node(row=Rows.HIGH, col=0),
-#                 Node(row=Rows.HIGH, col=1),
-#                 Node(row=Rows.MID, col=1),
-#             ],
-#         )
+    def with_correct_flipped(self) -> "PickupAction":
+        if is_red():
+            waypoints = tuple(
+                field_flip_translation2d(x) for x in self.intermediate_waypoints
+            )
+            return PickupAction(
+                self.piece_idx,
+                field_flip_rotation2d(self.approach_direction),
+                waypoints,
+            )
+        return self
 
 
-# class SubstationSide3(CubeAutoBase):
-#     MODE_NAME = "Substation side 3"
-#     DEFAULT = True
+@dataclass
+class ScoreAction:
+    node: Node
+    intermediate_waypoints: tuple[Translation2d, ...]
 
-#     def __init__(self):
-#         super().__init__(
-#             cubes=[(3, Rotation2d(0)), (2, Rotation2d.fromDegrees(-40))],
-#             nodes=[
-#                 Node(row=Rows.HIGH, col=8),
-#                 Node(row=Rows.HIGH, col=7),
-#                 Node(row=Rows.MID, col=7),
-#             ],
-#         )
+    def with_correct_flipped(self) -> "ScoreAction":
+        if is_red():
+            waypoints = tuple(
+                field_flip_translation2d(x) for x in self.intermediate_waypoints
+            )
+            return ScoreAction(self.node, waypoints)
+        return self
+
+
+class AutoBase(AutonomousStateMachine):
+    """Alternates between the action in the score and pickup lists"""
+
+    movement: Movement
+    score_game_piece: ScoreGamePieceController
+    acquire_cube: AcquireCubeController
+    recover: RecoverController
+    arm_component: Arm
+    gripper: Gripper
+    intake: Intake
+
+    INTAKE_PRE_TIME = 2.5
+    SCORE_PRE_TIME = 2.5
+    MANUAL_CUBE_TIME = 0.5
+
+    def __init__(self) -> None:
+        self.pickup_actions: list[PickupAction] = []
+        self.score_actions: list[ScoreAction] = []
+        self.progress_idx = 0
+
+    def on_enable(self) -> None:
+        start_pose, _ = get_score_location(self.score_actions[0].node)
+        self.movement.chassis.set_pose(start_pose)
+        self.progress_idx = 0
+        return super().on_enable()
+
+    @state(first=True)
+    def initialise(self, initial_call):
+        if initial_call:
+            self.gripper.close()
+            self.recover.engage()
+        elif not self.recover.is_executing:
+            self.next_state("score_cone")
+
+    @state
+    def score_cone(self, initial_call: bool) -> None:
+        if initial_call:
+            self.score_game_piece.score_without_moving(
+                self.score_actions[self.progress_idx].node
+            )
+        elif not self.score_game_piece.is_executing:
+            self.next_state("approach_cube")
+
+    @state
+    def approach_cube(self, initial_call: bool) -> None:
+        if initial_call:
+            action = self.pickup_actions[self.progress_idx].with_correct_flipped()
+            self.movement.set_goal(
+                *get_staged_pickup(action.piece_idx, action.approach_direction),
+                action.intermediate_waypoints,
+                slow_dist=0,
+            )
+        elif self.movement.time_to_goal < self.INTAKE_PRE_TIME:
+            self.next_state("pickup_cube")
+        self.movement.do_autodrive()
+
+    @state
+    def pickup_cube(self, initial_call: bool, state_tm: float, tm: float) -> None:
+        if initial_call:
+            self.acquire_cube.engage()
+            self.recover.done()
+        elif not self.acquire_cube.is_executing:
+            self.next_state("approach_grid")
+            self.progress_idx += 1
+            if self.progress_idx >= len(self.score_actions):
+                print(f"Finished auto at {tm}")
+                self.done()
+                return
+
+        self.movement.do_autodrive()
+
+    @state
+    def approach_grid(self, initial_call: bool) -> None:
+        if initial_call:
+            path = self.score_actions[self.progress_idx].with_correct_flipped()
+            self.movement.set_goal(
+                *get_score_location(path.node), path.intermediate_waypoints
+            )
+        self.movement.do_autodrive()
+        if self.movement.time_to_goal < self.SCORE_PRE_TIME:
+            self.next_state("score_cube")
+
+    @state
+    def score_cube(self, initial_call: bool, tm: float) -> None:
+        if initial_call:
+            self.recover.done()
+            self.score_game_piece.score_without_moving(
+                self.score_actions[self.progress_idx].node
+            )
+        elif not self.score_game_piece.is_executing:
+            if self.progress_idx >= len(self.pickup_actions):
+                print(f"Finished auto at {tm}")
+                self.done()
+                return
+            self.next_state("approach_cube")
+        self.movement.do_autodrive()
+
+
+class LoadingSide3(AutoBase):
+    MODE_NAME = "Loading side 3 piece"
+    DEFAULT = True
+
+    def setup(self) -> None:
+        self.score_actions = [
+            ScoreAction(
+                Node(Rows.HIGH, 8),
+                (),
+            ),
+            ScoreAction(
+                Node(Rows.HIGH, 7),
+                (Translation2d(3.5, 4.7),),
+            ),
+        ]
+        self.pickup_actions = [
+            PickupAction(
+                3,
+                Rotation2d.fromDegrees(0),
+                (),
+            ),
+        ]
