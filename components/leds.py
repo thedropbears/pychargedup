@@ -247,7 +247,7 @@ class StatusLights:
                 [
                     (LedColors.ORANGE, 2),
                     (LedColors.OFF, 2),
-                    (LedColors.PINK, 2),
+                    (LedColors.MAGENTA, 2),
                     (LedColors.OFF, 2),
                     (LedColors.CYAN, 2),
                     (LedColors.OFF, 2),
