@@ -38,7 +38,7 @@ class AcquireConeController(StateMachine):
         Get the chassis to the correct position to start moving towards cone.
         Requires that the state has had the goal position injected into it.
         """
-        stop_distance = -0.15
+        stop_distance = -0.20
         x_offset = (
             Setpoints.PREPARE_PICKUP_CONE.toCartesian()[0]
             + self.arm.arm_component.PIVOT_X
