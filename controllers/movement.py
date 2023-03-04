@@ -205,12 +205,12 @@ class Movement(StateMachine):
         override: override driver lockout
         """
         if not self.inputs_lock or override:
+            if is_red():
+                vx = -vx
+                vy = -vy
+
             self.driver_inputs = (vx, vy, vz)
             self.drive_local = local
-
-        if is_red():
-            vx = -vx
-            vy = -vy
 
     def do_autodrive(self) -> None:
         self.engage()
