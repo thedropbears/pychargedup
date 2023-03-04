@@ -1,6 +1,12 @@
-from magicbot import StateMachine, state, default_state, tunable, will_reset_to
+from magicbot import (
+    StateMachine,
+    feedback,
+    state,
+    default_state,
+    tunable,
+    will_reset_to,
+)
 from components.chassis import Chassis
-from controllers.balancer import ChargeStation
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
     TrajectoryConfig,
@@ -22,11 +28,13 @@ from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
 
+from utilities.functions import clamp
+
 
 class Movement(StateMachine):
     chassis: Chassis
     field: Field2d
-    balancer: ChargeStation
+    control_loop_wait_time: float
 
     # When on True, a trajectory is generated every code run to be displayed
     # When on False, a trajectory is only generated when needed to save resources.
@@ -38,6 +46,10 @@ class Movement(StateMachine):
     driver_inputs = will_reset_to((0.0, 0.0, 0.0))
     inputs_lock = will_reset_to(False)
 
+    BALANCE_MAX_SPEED = 0.5
+    BALANCE_GAIN = 1.5
+    BALANCE_RATE_GAIN = 0.2
+
     def __init__(self) -> None:
         self.drive_local = False
 
@@ -47,6 +59,7 @@ class Movement(StateMachine):
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
         self.time_to_goal = 3
+        self.rate_met_count = 0
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -196,9 +209,24 @@ class Movement(StateMachine):
 
         self.time_to_goal = self.trajectory.totalTime() - state_tm
 
-    @state
-    def balance(self):
-        self.balancer.start()
+    @state(must_finish=True)
+    def balance(self, initial_call):
+        if initial_call:
+            self.rate_met_count = 0
+        speed_x = (
+            self.chassis.get_tilt() * self.BALANCE_GAIN
+            - self.chassis.get_tilt_rate() * self.BALANCE_RATE_GAIN
+        )
+        speed_x = clamp(-speed_x, -0.5, 0.5)
+        self.chassis.drive_local(speed_x, 0, 0)
+        if abs(self.chassis.get_tilt()) < math.radians(2) and abs(
+            self.chassis.get_tilt_rate()
+        ) < math.radians(2):
+            self.done()
+
+    @feedback
+    def get_rate_met_count(self):
+        return self.rate_met_count * 100
 
     def set_input(
         self, vx: float, vy: float, vz: float, local: bool, override: bool = False
@@ -214,8 +242,10 @@ class Movement(StateMachine):
             self.drive_local = local
 
     def do_autodrive(self) -> None:
-        self.engage()
+        self.engage("autodrive")
 
-    def do_balance(self) -> None:
-        self.engage()
-        self.next_state("balance")
+    def toggle_balance(self) -> None:
+        if self.is_executing:
+            self.done()
+        else:
+            self.engage("balance")

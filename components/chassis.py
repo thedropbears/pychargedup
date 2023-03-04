@@ -369,4 +369,4 @@ class Chassis:
 
     @feedback
     def get_tilt_rate(self) -> float:
-        return self.imu.getRawGyroX()
+        return math.radians(self.imu.getRawGyroY())

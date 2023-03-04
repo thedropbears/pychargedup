@@ -12,7 +12,6 @@ from controllers.acquire_cone import AcquireConeController
 from controllers.acquire_cube import AcquireCubeController
 from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
-from controllers.balancer import ChargeStation
 
 from components.intake import Intake
 from components.chassis import Chassis
@@ -30,7 +29,6 @@ class MyRobot(magicbot.MagicRobot):
     acquire_cube: AcquireCubeController
     score_game_piece: ScoreGamePieceController
     recover: RecoverController
-    balancer: ChargeStation
 
     # Controllers
     movement: Movement
@@ -134,8 +132,9 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
 
+        # Do auto balance
         if self.gamepad.getAButtonPressed():
-            self.movement.do_balance()
+            self.movement.toggle_balance()
 
         dpad_angle = self.gamepad.getPOV()
         # up
