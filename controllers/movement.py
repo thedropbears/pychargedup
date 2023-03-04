@@ -20,6 +20,7 @@ from wpimath.controller import (
 from wpimath.spline import Spline3
 import math
 from wpilib import Field2d
+from utilities.game import is_red
 
 
 class Movement(StateMachine):
@@ -204,6 +205,10 @@ class Movement(StateMachine):
         override: override driver lockout
         """
         if not self.inputs_lock or override:
+            if is_red():
+                vx = -vx
+                vy = -vy
+
             self.driver_inputs = (vx, vy, vz)
             self.drive_local = local
 
