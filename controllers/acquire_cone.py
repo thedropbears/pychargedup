@@ -64,8 +64,7 @@ class AcquireConeController(StateMachine):
 
         # TODO Test if gripper opening interfere with the arm moving from HANDOFF
         self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
-        if self.arm.at_goal():
-            self.gripper.open()
+        self.gripper.open()
         if self.gripper.get_full_open():
             self.next_state("extending_arm")
 
