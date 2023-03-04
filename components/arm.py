@@ -170,7 +170,7 @@ class Arm:
 
     def execute(self) -> None:
         self.update_display()
-        if self.is_retracted():
+        if self.is_retracted() and self.use_voltage:
             self.set_at_min_extension()
             self.use_voltage = False
 
