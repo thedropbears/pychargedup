@@ -9,11 +9,11 @@ class StartPoseTracker:
     DECAY_FACTOR = 0.99
 
     def __init__(self):
-        self.cone_rows = [col for col in range(9) if col % 3 != 1]
+        self.cone_cols = [3, 6, 8]
         self.cone_ys = [
-            Y_OFFSET_TO_GRID + Y_DISTANCE_BETWEEN_NODES * col for col in self.cone_rows
+            Y_OFFSET_TO_GRID + Y_DISTANCE_BETWEEN_NODES * col for col in self.cone_cols
         ]
-        self.accs = [0.0 for _ in self.cone_rows]
+        self.accs = [0.0 for _ in self.cone_cols]
 
     def execute(self) -> None:
         pass
@@ -32,11 +32,11 @@ class StartPoseTracker:
             self.accs[i] *= self.DECAY_FACTOR
 
     @feedback
-    def best_row(self) -> int:
+    def best_col(self) -> int:
         max_a = -1.0
         max_i = 0
         for i in range(len(self.accs)):
             if self.accs[i] > max_a:
                 max_a = self.accs[i]
                 max_i = i
-        return self.cone_rows[max_i]
+        return self.cone_cols[max_i]

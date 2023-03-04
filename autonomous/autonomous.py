@@ -186,7 +186,7 @@ class Dynamic(AutoBase):
         pass
 
     def on_enable(self) -> None:
-        row = self.start_pose_tracker.best_row()
+        row = self.start_pose_tracker.best_col()
         if row == 8:
             self.score_actions = [
                 ScoreAction(
