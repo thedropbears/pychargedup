@@ -258,8 +258,8 @@ class MyRobot(magicbot.MagicRobot):
         self.arm_component.update_display()
 
     def autonomousInit(self) -> None:
-        self.port_localizer.add_to_estimator = False
-        self.starboard_localizer.add_to_estimator = False
+        self.port_localizer.add_to_estimator = True
+        self.starboard_localizer.add_to_estimator = True
 
 
 if __name__ == "__main__":
