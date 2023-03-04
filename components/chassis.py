@@ -16,6 +16,8 @@ from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.estimator import SwerveDrive4PoseEstimator
 from wpimath.controller import SimpleMotorFeedforwardMeters
 
+from magicbot import feedback
+
 from utilities.functions import constrain_angle, rate_limit_module
 from utilities.ctre import FALCON_CPR, FALCON_FREE_RPS
 from ids import CancoderIds, TalonIds
@@ -361,5 +363,10 @@ class Chassis:
         """Get the current heading of the robot."""
         return self.get_pose().rotation()
 
+    @feedback
     def get_tilt(self) -> float:
         return math.radians(self.imu.getRoll())
+
+    @feedback
+    def get_tilt_rate(self) -> float:
+        return self.imu.getRawGyroX()
