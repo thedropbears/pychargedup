@@ -216,11 +216,13 @@ class StatusLights:
         self.set_display_pattern(DisplayType.SOLID)
 
     def calc_flash(self) -> tuple[Hsv, Hsv]:
+        """Blinking (alternate off and on over time)."""
         elapsed_time = time.monotonic() - self.start_time
-        brightness = math.cos(self.FLASH_FREQUENCY * elapsed_time * math.tau) / 2 + 0.5
-        return self.calc_with_brightness(brightness)
+        is_lit = math.cos(self.FLASH_FREQUENCY * elapsed_time * math.tau) >= 0
+        return self.calc_with_brightness(is_lit)
 
     def calc_with_brightness(self, brightness: float) -> tuple[Hsv, Hsv]:
+        """Calculate the colors with the given relative brightness in [0,1]."""
         left = (
             self.left_color[0],
             self.left_color[1],
@@ -300,6 +302,7 @@ class StatusLights:
         self.leds.setData(led_data[: self.led_length])
 
     def calc_pulse(self) -> tuple[Hsv, Hsv]:
+        """Fade in and out over time."""
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
         return self.calc_with_brightness(brightness)
