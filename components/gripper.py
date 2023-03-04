@@ -71,3 +71,6 @@ class Gripper:
         if self.opened:
             return GamePiece.NONE
         return self.holding
+
+    def cube_present(self) -> bool:
+        return self.get_full_open() and not self.cube_break_beam.get()
