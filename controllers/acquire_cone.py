@@ -38,7 +38,7 @@ class AcquireConeController(StateMachine):
         Get the chassis to the correct position to start moving towards cone.
         Requires that the state has had the goal position injected into it.
         """
-        stop_distance = -0.15
+        stop_distance = -0.20
         x_offset = (
             Setpoints.PREPARE_PICKUP_CONE.toCartesian()[0]
             + self.arm.arm_component.PIVOT_X
@@ -64,9 +64,8 @@ class AcquireConeController(StateMachine):
 
         # TODO Test if gripper opening interfere with the arm moving from HANDOFF
         self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
-        if self.arm.at_goal():
-            self.gripper.open()
-        if self.gripper.get_full_open():
+        self.gripper.open()
+        if self.gripper.get_full_open() and self.arm.at_goal():
             self.next_state("extending_arm")
 
     @state(must_finish=True)
@@ -76,7 +75,7 @@ class AcquireConeController(StateMachine):
         """
 
         self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
-        if self.arm.is_at_forward_limit():
+        if self.arm.is_at_forward_limit() or self.arm.at_goal():
             self.next_state("grabbing")
 
     @state(must_finish=True)
