@@ -6,7 +6,7 @@ import time
 
 
 class Intake:
-    intake_speed = tunable(0.5)
+    intake_speed = tunable(0.8)
     CLOSE_TIME_THRESHOLD: float = 0.5
     OPEN_TIME_THRESHOLD: float = 0.5
 
