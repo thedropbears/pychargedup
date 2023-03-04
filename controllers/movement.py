@@ -1,6 +1,5 @@
 from magicbot import (
     StateMachine,
-    feedback,
     state,
     default_state,
     tunable,
@@ -59,7 +58,6 @@ class Movement(StateMachine):
         self.waypoints: tuple[Translation2d, ...] = ()
         self.is_pickup = False
         self.time_to_goal = 3
-        self.rate_met_count = 0
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
@@ -210,9 +208,7 @@ class Movement(StateMachine):
         self.time_to_goal = self.trajectory.totalTime() - state_tm
 
     @state(must_finish=True)
-    def balance(self, initial_call):
-        if initial_call:
-            self.rate_met_count = 0
+    def balance(self):
         speed_x = (
             self.chassis.get_tilt() * self.BALANCE_GAIN
             - self.chassis.get_tilt_rate() * self.BALANCE_RATE_GAIN
@@ -223,10 +219,6 @@ class Movement(StateMachine):
             self.chassis.get_tilt_rate()
         ) < math.radians(2):
             self.done()
-
-    @feedback
-    def get_rate_met_count(self):
-        return self.rate_met_count * 100
 
     def set_input(
         self, vx: float, vy: float, vz: float, local: bool, override: bool = False
