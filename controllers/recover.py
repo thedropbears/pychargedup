@@ -4,6 +4,7 @@ from components.gripper import Gripper
 import math
 
 from magicbot import StateMachine, state
+import math
 
 
 class RecoverController(StateMachine):
