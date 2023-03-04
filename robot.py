@@ -30,11 +30,11 @@ class MyRobot(magicbot.MagicRobot):
     acquire_cube: AcquireCubeController
     score_game_piece: ScoreGamePieceController
     recover: RecoverController
+    balancer: ChargeStation
 
     # Controllers
     movement: Movement
     arm: ArmController
-    balancer: ChargeStation
 
     # Components
     chassis: Chassis
