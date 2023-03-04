@@ -207,11 +207,7 @@ for i in range(4):
     STAGED_PIECES_RED.append(field_flip_translation2d(blue_piece))
 
 
-def get_staged_pieces(
-    alliance: Optional[wpilib.DriverStation.Alliance] = None,
-) -> list[Translation2d]:
-    if alliance is None:
-        alliance = get_team()
+def get_staged_pieces(alliance: wpilib.DriverStation.Alliance) -> list[Translation2d]:
     if alliance == wpilib.DriverStation.Alliance.kBlue:
         return STAGED_PIECES_BLUE
     else:
