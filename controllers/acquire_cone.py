@@ -11,6 +11,8 @@ from controllers.recover import RecoverController
 from utilities.game import (
     GamePiece,
     get_cone_pickup,
+    field_flip_pose2d,
+    field_flip_rotation2d
 )
 
 
@@ -24,6 +26,8 @@ class AcquireConeController(StateMachine):
     recover: RecoverController
 
     EXTEND_VOLTAGE = tunable(3)
+
+    flip = tunable(False)
 
     def __init__(self) -> None:
         self.targeting_left: bool = False
@@ -40,7 +44,11 @@ class AcquireConeController(StateMachine):
             + self.arm.arm_component.PIVOT_X
             + stop_distance
         )
-        self.movement.set_goal(*get_cone_pickup(self.targeting_left, x_offset))
+        if self.flip:
+            goal_pose, approach_dir = get_cone_pickup(self.targeting_left, x_offset)
+            self.movement.set_goal(field_flip_pose2d(goal_pose), field_flip_rotation2d(approach_dir))
+        else:
+            self.movement.set_goal(*get_cone_pickup(self.targeting_left, x_offset))
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
