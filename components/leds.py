@@ -9,6 +9,8 @@ from ids import PwmChannels
 MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
 DISABLED_MULTIPLIER = 0.2
 
+Hsv = tuple[int, int, int]
+
 
 class LedColors(Enum):
     # Use HSV to get nicer fading, hues are 0-180 so half usual hue
@@ -150,12 +152,19 @@ class StatusLights:
 
     def __init__(self) -> None:
         self.leds = wpilib.AddressableLED(PwmChannels.leds)
+        strip_length = 144
+        self.led_length = strip_length * 2
+        self.leds.setLength(self.led_length)
 
-        self.led_length = 288
+        self.left_led_data = wpilib.AddressableLED.LEDData()
+        self.right_led_data = wpilib.AddressableLED.LEDData()
+        self.leds_data = [self.left_led_data] * strip_length
+        self.leds_data += [self.right_led_data] * strip_length
 
         self.start_time = time.monotonic()
 
-        self.color: list[tuple[int, int, int]] = [LedColors.CYAN.value]
+        self.left_color: Hsv = LedColors.CYAN.value
+        self.right_color: Hsv = LedColors.CYAN.value
 
         self.pattern = DisplayType.SOLID
 
@@ -165,79 +174,70 @@ class StatusLights:
 
         self.wolfram = WolframAutomata(self.led_length)
 
-    def setup(self) -> None:
         self.choose_morse_message()
-        self.leds.setLength(self.led_length)
-        self.single_led_data = wpilib.AddressableLED.LEDData()
-        self.single_led_data.setHSV(*self.color[0])
-        self.leds_data = [self.single_led_data] * self.led_length
+        self.left_led_data.setHSV(*self.left_color)
+        self.right_led_data.setHSV(*self.right_color)
         self.leds.setData(self.leds_data)
         self.leds.start()
 
-    def set_color(self, color: list[LedColors]):
-        # colors = (color * (self.led_length // len(color)))[:self.led_length]
-        repeated_colors: list[LedColors] = []
-        while len(repeated_colors) < self.led_length:
-            repeated_colors = [*repeated_colors, *color]
-        new_colors = []
-        for i in repeated_colors:
-            new_colors.append((i.value[0], i.value[1], i.value[2]))
-        self.color = new_colors
+    def set_color(self, color: LedColors) -> None:
+        self.set_colors(color, color)
+
+    def set_colors(self, left: LedColors, right: LedColors) -> None:
+        self.left_color = left.value
+        self.right_color = right.value
 
     def set_display_pattern(self, pattern: DisplayType):
         self.pattern = pattern
 
     def want_cone_left(self) -> None:
-        self.set_color(
-            [
-                *([LedColors.YELLOW] * (self.led_length // 2)),
-                *([LedColors.OFF] * (self.led_length // 2)),
-            ]
-        )
+        self.set_colors(LedColors.YELLOW, LedColors.OFF)
         self.set_display_pattern(DisplayType.FLASH)
 
     def want_cone_right(self) -> None:
-        self.set_color(
-            [
-                *([LedColors.OFF] * (self.led_length // 2)),
-                *([LedColors.YELLOW] * (self.led_length // 2)),
-            ]
-        )
+        self.set_colors(LedColors.OFF, LedColors.YELLOW)
         self.set_display_pattern(DisplayType.FLASH)
 
     def want_cube(self) -> None:
         """A side-ambiguous request for a cube"""
-        self.set_color([LedColors.MAGENTA] * self.led_length)
+        self.set_color(LedColors.MAGENTA)
         self.set_display_pattern(DisplayType.FLASH)
 
     def off(self) -> None:
-        self.set_color([LedColors.OFF] * self.led_length)
+        self.set_color(LedColors.OFF)
         self.set_display_pattern(DisplayType.SOLID)
 
     def cone_onboard(self) -> None:
-        self.set_color([LedColors.YELLOW] * self.led_length)
+        self.set_color(LedColors.YELLOW)
         self.set_display_pattern(DisplayType.SOLID)
 
     def cube_onboard(self) -> None:
-        self.set_color([LedColors.MAGENTA] * self.led_length)
+        self.set_color(LedColors.MAGENTA)
         self.set_display_pattern(DisplayType.SOLID)
 
-    def calc_solid(self) -> list[tuple[int, int, int]]:
-        return self.color
-
-    def calc_flash(self) -> list[tuple[int, int, int]]:
+    def calc_flash(self) -> tuple[Hsv, Hsv]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(self.FLASH_FREQUENCY * elapsed_time * math.tau) / 2 + 0.5
-        new_color = []
-        for i in self.color:
-            new_color.append((i[0], i[1], int(i[2] * round(brightness))))
-        return new_color
+        return self.calc_with_brightness(brightness)
 
-    def calc_rainbow(self) -> list[tuple[int, int, int]]:
+    def calc_with_brightness(self, brightness: float) -> tuple[Hsv, Hsv]:
+        left = (
+            self.left_color[0],
+            self.left_color[1],
+            round(self.left_color[2] * brightness),
+        )
+        right = (
+            self.right_color[0],
+            self.right_color[1],
+            round(self.right_color[2] * brightness),
+        )
+        return left, right
+
+    def calc_rainbow(self) -> Hsv:
         elapsed_time = time.monotonic() - self.start_time
         loop_time = self.RAINBOW_PERIOD / 3
         hue = round(180 * (elapsed_time / loop_time % 1))
-        return [(hue, 255, MAX_BRIGHTNESS)] * self.led_length
+        return (hue, 255, MAX_BRIGHTNESS)
 
     def calc_pacman(self):
         elapsed_time = time.monotonic() - self.start_time
@@ -299,13 +299,10 @@ class StatusLights:
             led_data.extend([wpilib.AddressableLED.LEDData(0, 0, 0)] * leds_left)
         self.leds.setData(led_data[: self.led_length])
 
-    def calc_pulse(self) -> list[tuple[int, int, int]]:
+    def calc_pulse(self) -> tuple[Hsv, Hsv]:
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
-        new_color = []
-        for i in self.color:
-            new_color.append((i[0], i[1], round(i[2] * brightness)))
-        return new_color
+        return self.calc_with_brightness(brightness)
 
     def calc_alternating(self):
         elapsed_time = time.monotonic() - self.start_time
@@ -367,7 +364,7 @@ class StatusLights:
             + 3 * self._morse_message.count(" ")
         )
 
-    def calc_morse(self) -> list[tuple[int, int, int]]:
+    def calc_morse(self) -> Hsv:
         # Work out how far through the message we are
         DOT_LENGTH = 0.15  # seconds
         total_time = self._morse_length * DOT_LENGTH
@@ -383,11 +380,11 @@ class StatusLights:
             if running_total > elapsed_time:
                 # This is the current character
                 if token == " ":
-                    return [LedColors.OFF.value] * self.led_length
+                    return LedColors.OFF.value
                 else:
-                    return [LedColors.BLUE.value] * self.led_length
+                    return LedColors.BLUE.value
         # Default - should never be hit
-        return [LedColors.OFF.value] * self.led_length
+        return LedColors.OFF.value
 
     def choose_morse_message(self, _message=None) -> None:
         # Choose a morse message at random, unless specific message requested
@@ -448,7 +445,7 @@ class StatusLights:
         # Add more space at the end
         self._morse_message += "  "
 
-    def calc_wolfram(self):
+    def calc_wolfram(self) -> None:
         now = time.monotonic()
         if now - self.last_triggered > self.WOLFRAM_PERIOD:
             self.last_triggered = now
@@ -457,18 +454,15 @@ class StatusLights:
             self.leds.setData(self.wolfram.leds_data)
 
     def execute(self) -> None:
-        # use the current color as a fallback if (for whatever reason) there is no pattern set.
-        color = self.color
-        if self.pattern == DisplayType.SOLID:
-            color = self.calc_solid()
-        elif self.pattern == DisplayType.FLASH:
-            color = self.calc_flash()
+        if self.pattern == DisplayType.FLASH:
+            left, right = self.calc_flash()
         elif self.pattern == DisplayType.PULSE:
-            color = self.calc_pulse()
+            left, right = self.calc_pulse()
+        # These are the same color on all the LEDs
         elif self.pattern == DisplayType.RAINBOW:
-            color = self.calc_rainbow()
+            left = right = self.calc_rainbow()
         elif self.pattern == DisplayType.MORSE:
-            color = self.calc_morse()
+            left = right = self.calc_morse()
         # These set data directly
         elif self.pattern == DisplayType.PACMAN:
             self.calc_pacman()
@@ -476,9 +470,10 @@ class StatusLights:
         elif self.pattern == DisplayType.WOLFRAM_AUTOMATA:
             self.calc_wolfram()
             return
+        else:
+            # Fallback to solid
+            left, right = self.left_color, self.right_color
 
-        new_color: list[wpilib.AddressableLED.LEDData] = []
-        for i in color:
-            new_color.append(wpilib.AddressableLED.LEDData())
-            new_color[-1].setHSV(*i)
-        self.leds.setData(new_color)
+        self.left_led_data.setHSV(*left)
+        self.right_led_data.setHSV(*right)
+        self.leds.setData(self.leds_data)
