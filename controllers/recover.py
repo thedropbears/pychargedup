@@ -1,6 +1,7 @@
 from controllers.arm import ArmController, Setpoints
 from components.intake import Intake
 from components.gripper import Gripper
+import math
 
 from magicbot import StateMachine, state
 
@@ -10,7 +11,7 @@ class RecoverController(StateMachine):
     intake: Intake
     arm: ArmController
 
-    ARM_FOULING_ANGLE = 0.55
+    ARM_FOULING_ANGLE = math.radians(45)
 
     def __init__(self) -> None:
         self.has_initialized_arm = False
