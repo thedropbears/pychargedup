@@ -1,4 +1,10 @@
-from magicbot import StateMachine, state, default_state, tunable, will_reset_to
+from magicbot import (
+    StateMachine,
+    state,
+    default_state,
+    tunable,
+    will_reset_to,
+)
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
@@ -22,10 +28,13 @@ import math
 from wpilib import Field2d
 from utilities.game import is_red
 
+from utilities.functions import clamp
+
 
 class Movement(StateMachine):
     chassis: Chassis
     field: Field2d
+    control_loop_wait_time: float
 
     # When on True, a trajectory is generated every code run to be displayed
     # When on False, a trajectory is only generated when needed to save resources.
@@ -36,6 +45,14 @@ class Movement(StateMachine):
     ANGLE_TOLERANCE = math.radians(2)
     driver_inputs = will_reset_to((0.0, 0.0, 0.0))
     inputs_lock = will_reset_to(False)
+
+    BALANCE_MAX_SPEED = 0.5
+    BALANCE_GAIN = 1.5
+    BALANCE_RATE_GAIN = (
+        -0.2
+    )  # Needs to be negative to counteract increasing pitch when the charge station shifts
+    BALANCE_TILT_ANGLE_THRESHOLD = math.radians(2)
+    BALANCE_TILT_RATE_THRESHOLD = math.radians(2)
 
     def __init__(self) -> None:
         self.drive_local = False
@@ -195,6 +212,23 @@ class Movement(StateMachine):
 
         self.time_to_goal = self.trajectory.totalTime() - state_tm
 
+    @state(must_finish=True)
+    def balance(self):
+        tilt_error = 0.0 - self.chassis.get_tilt()
+        tilt_rate_error = 0.0 - self.chassis.get_tilt_rate()
+        speed_x = (
+            tilt_error * self.BALANCE_GAIN + tilt_rate_error * self.BALANCE_RATE_GAIN
+        )
+        speed_x = clamp(
+            speed_x, -Movement.BALANCE_MAX_SPEED, Movement.BALANCE_MAX_SPEED
+        )
+        self.chassis.drive_local(speed_x, 0, 0)
+        if (
+            abs(tilt_error) < Movement.BALANCE_TILT_ANGLE_THRESHOLD
+            and abs(tilt_rate_error) < Movement.BALANCE_TILT_RATE_THRESHOLD
+        ):
+            self.done()
+
     def set_input(
         self, vx: float, vy: float, vz: float, local: bool, override: bool = False
     ) -> None:
@@ -213,4 +247,10 @@ class Movement(StateMachine):
             self.drive_local = local
 
     def do_autodrive(self) -> None:
-        self.engage()
+        self.engage("autodrive")
+
+    def toggle_balance(self) -> None:
+        if self.is_executing:
+            self.done()
+        else:
+            self.engage("balance")
