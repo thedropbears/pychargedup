@@ -12,7 +12,7 @@ from utilities.game import (
     GamePiece,
     get_cone_pickup,
     field_flip_pose2d,
-    field_flip_rotation2d
+    field_flip_rotation2d,
 )
 
 
@@ -46,7 +46,9 @@ class AcquireConeController(StateMachine):
         )
         if self.flip:
             goal_pose, approach_dir = get_cone_pickup(self.targeting_left, x_offset)
-            self.movement.set_goal(field_flip_pose2d(goal_pose), field_flip_rotation2d(approach_dir))
+            self.movement.set_goal(
+                field_flip_pose2d(goal_pose), field_flip_rotation2d(approach_dir)
+            )
         else:
             self.movement.set_goal(*get_cone_pickup(self.targeting_left, x_offset))
         self.movement.do_autodrive()
