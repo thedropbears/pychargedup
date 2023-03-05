@@ -50,7 +50,7 @@ class Arm:
     SPRING_MOUNT_RADIUS = 0.1
     SPRING_RESTING_LENGTH = SPRING_OFFSET_Z - SPRING_MOUNT_RADIUS - 0.02
     SPRING_CONSTANT = 5900
-    TORQUE_TO_VOLTAGE = 0.01
+    TORQUE_TO_VOLTAGE = 0.015
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
 
@@ -205,16 +205,17 @@ class Arm:
         pid_output = self.rotation_controller.calculate(
             self.get_angle(), self.goal_angle
         )
+        # pid_output = 0
         ff_output = self.calculate_rotation_feedforwards()
         # Rotation
-        if self.at_goal_angle() and self.is_angle_still():
-            self.brake_rotation()
-            self.rotation_motor.setVoltage(0)
-        else:
-            self.unbrake_rotation()
-            self.rotation_motor.setVoltage(pid_output + ff_output)
-            self.rotation_motor.set
+        # if self.at_goal_angle() and self.is_angle_still():
+        #     self.brake_rotation()
+        #     self.rotation_motor.setVoltage(0)
+        # else:
+        self.unbrake_rotation()
+        self.rotation_motor.setVoltage(pid_output + ff_output)
 
+    @feedback
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage."""
         state: TrapezoidProfile.State = self.rotation_controller.getSetpoint()
@@ -233,10 +234,10 @@ class Arm:
         # calculate spring torque
         angle = self.get_angle()
         dist = math.hypot(
-            math.sin(angle) * self.SPRING_MOUNT_RADIUS,
-            self.SPRING_OFFSET_Z + math.cos(angle) * self.SPRING_MOUNT_RADIUS,
+            math.cos(angle) * self.SPRING_MOUNT_RADIUS,
+            self.SPRING_OFFSET_Z + math.sin(angle) * self.SPRING_MOUNT_RADIUS,
         )
-        force = -self.SPRING_CONSTANT * (dist - self.SPRING_RESTING_LENGTH)
+        force = self.SPRING_CONSTANT * (dist - self.SPRING_RESTING_LENGTH)
         torque = force * math.cos(angle) * self.SPRING_MOUNT_RADIUS
         return torque * self.TORQUE_TO_VOLTAGE
 
