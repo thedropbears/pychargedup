@@ -30,11 +30,27 @@ class Gripper:
         self.holding = GamePiece.NONE
 
     def open(self) -> None:
-        self.opened = True
+        """Open both the gripper and the flapper"""
+        self.open_gripper()
+        self.open_flapper()
+
+    def open_gripper(self) -> None:
+        self.opened_gripper = True
+
+    def open_flapper(self) -> None:
+        self.opened_flapper = True
 
     def close(self, on: GamePiece = GamePiece.BOTH) -> None:
-        self.opened = False
+        """Close both the gripper and the flapper"""
+        self.close_gripper(on)
+        self.close_flapper()
+
+    def close_gripper(self, on: GamePiece = GamePiece.BOTH) -> None:
+        self.opened_gripper = False
         self.holding = on
+
+    def close_flapper(self) -> None:
+        self.opened_flapper = False
 
     @feedback
     def get_full_closed(self) -> bool:
@@ -56,19 +72,22 @@ class Gripper:
         return self.opened and not self.get_full_open()
 
     def execute(self) -> None:
-        if self.opened != self.last_opened:
+        if self.opened_gripper != self.last_opened:
             self.change_time = time.monotonic()
-        self.last_opened = self.opened
+        self.last_opened = self.opened_gripper
 
-        if self.opened:
+        if self.opened_gripper:
             self.gripper_solenoid.set(DoubleSolenoid.Value.kReverse)
-            self.flapper_solenoid.set(DoubleSolenoid.Value.kReverse)
         else:
             self.gripper_solenoid.set(DoubleSolenoid.Value.kForward)
+            
+        if self.opened_flapper:
+            self.flapper_solenoid.set(DoubleSolenoid.Value.kReverse)
+        else:
             self.flapper_solenoid.set(DoubleSolenoid.Value.kForward)
 
     def get_current_piece(self) -> GamePiece:
-        if self.opened:
+        if self.opened_gripper:
             return GamePiece.NONE
         return self.holding
 
