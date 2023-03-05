@@ -96,7 +96,7 @@ class Node:
             return GamePiece.CUBE
         else:
             return GamePiece.CONE
-
+        
     def get_id(self) -> int:
         return (self.row.value - 1) * 3 + self.col
 
@@ -142,6 +142,12 @@ def get_closest_node(
         nodes = [Node(row, i) for i in range(9)]
 
     return min(nodes, key=get_node_dist)
+
+def get_closest_node_in_allowed(pos: Translation2d, piece: GamePiece, allowed: list[Node]) -> Node:
+    def get_node_dist(node: Node) -> float:
+        return get_score_location(node)[0].translation().distance(pos)
+    
+    return min(allowed, key=get_node_dist)
 
 
 def get_closest_node_in_allowed(

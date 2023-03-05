@@ -24,7 +24,6 @@ class NodePickStratergy(Enum):
     OVERRIDE = auto()
     BEST = auto()
 
-
 def piece_to_node(piece: GamePiece) -> GridNode:
     if piece == GamePiece.BOTH:
         return GridNode.HYBRID

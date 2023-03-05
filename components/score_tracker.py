@@ -180,3 +180,43 @@ class ScoreTracker:
                 vals[y, x] = val
         m = vals.max()
         return np.argwhere(vals == m)
+
+    @staticmethod
+    def get_best_moves(
+        state: npt.NDArray[bool],
+        type_to_test: GridNode,
+        link_preparation_score: float = 2.5,
+    ) -> npt.NDArray:
+        vals = np.zeros_like(state, dtype=float)
+        run_lengths = ScoreTracker.run_lengths_mod3(state)
+        for y in range(3):
+            for x in range(9):
+                if (
+                    state[y, x]
+                    or (
+                        type_to_test == GridNode.CUBE
+                        and not ScoreTracker.CUBE_MASK[y, x]
+                    )
+                    or (
+                        type_to_test == GridNode.CONE
+                        and not ScoreTracker.CONE_MASK[y, x]
+                    )
+                ):
+                    continue
+                val = [5.0, 3.0, 2.0][y]
+                # Check link completion
+                if (
+                    ScoreTracker.get_in_row(run_lengths, x - 1, y, 0)
+                    + ScoreTracker.get_in_row(run_lengths, x + 1, y, 0)
+                    >= 2
+                ):
+                    val += 5.0
+                # Otherwise, check link preparation (state where a link can be completed after 1 move)
+                else:
+                    for o in [-2, -1, 1, 2]:
+                        if ScoreTracker.get_in_row(run_lengths, x + o, y, 0) == 1:
+                            val += link_preparation_score
+                            break
+                vals[y, x] = val
+        m = vals.max()
+        return np.argwhere(vals == m)
