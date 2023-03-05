@@ -10,8 +10,9 @@ class Gripper:
     OPEN_TIME_THERESHOLD: float = 0.5
 
     def __init__(self) -> None:
-        self.opened = False
-        self.last_opened = self.opened
+        self.opened_gripper = False
+        self.opened_flapper = False
+        self.last_opened = self.opened_gripper
         self.change_time = time.monotonic()
 
         self.gripper_solenoid = DoubleSolenoid(
@@ -57,19 +58,19 @@ class Gripper:
         # has been in same state for some time, current state is closed and wasn't only just closed
         return (
             (time.monotonic() - self.change_time) >= Gripper.CLOSE_TIME_THERESHOLD
-        ) and self.last_opened is self.opened is False
+        ) and self.last_opened is self.opened_gripper is False
 
     @feedback
     def get_full_open(self) -> bool:
         return (
             (time.monotonic() - self.change_time) >= Gripper.OPEN_TIME_THERESHOLD
-        ) and self.opened is self.last_opened is True
+        ) and self.opened_gripper is self.last_opened is True
 
     def is_closing(self) -> bool:
-        return (not self.opened) and not self.get_full_closed()
+        return (not self.opened_gripper) and not self.get_full_closed()
 
     def is_opening(self) -> bool:
-        return self.opened and not self.get_full_open()
+        return self.opened_gripper and not self.get_full_open()
 
     def execute(self) -> None:
         if self.opened_gripper != self.last_opened:
