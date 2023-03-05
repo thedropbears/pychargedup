@@ -100,6 +100,9 @@ class SwerveModule:
         self.drive.config_kI(0, 0, 10)
         self.drive.config_kD(0, 0, 10)
 
+        self.central_angle = math.atan2(x, y)
+        self.module_locked = False
+
     def get_angle_absolute(self) -> float:
         """Gets steer angle (radians) from absolute encoder"""
         return math.radians(self.encoder.getAbsolutePosition())
@@ -120,6 +123,9 @@ class SwerveModule:
         return self.drive.getSelectedSensorPosition() * self.DRIVE_COUNTS_TO_METRES
 
     def set(self, desired_state: SwerveModuleState):
+        if self.module_locked:
+            desired_state = SwerveModuleState(0, Rotation2d(self.central_angle))
+
         # smooth wheel velocity vector
         if self.do_smooth:
             self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
@@ -127,10 +133,9 @@ class SwerveModule:
             self.state = desired_state
         self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
 
-        if abs(self.state.speed) < 0.01:
+        if abs(self.state.speed) < 0.01 and not self.module_locked:
             self.drive.set(ctre.ControlMode.Velocity, 0)
             self.steer.set(ctre.ControlMode.PercentOutput, 0)
-            return
 
         current_angle = self.get_angle_integrated()
         target_displacement = constrain_angle(
@@ -185,6 +190,7 @@ class Chassis:
     send_modules = magicbot.tunable(False)
     do_fudge = magicbot.tunable(True)
     do_smooth = magicbot.tunable(True)
+    swerve_lock = magicbot.tunable(False)
 
     def setup(self) -> None:
         self.imu = navx.AHRS.create_spi()
@@ -261,6 +267,7 @@ class Chassis:
     def execute(self) -> None:
         # rotate desired velocity to compensate for skew caused by discretization
         # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
+
         if self.do_fudge:
             # in the sim i found using 5 instead of 0.5 did a lot better
             desired_speed_translation = Translation2d(
@@ -276,11 +283,16 @@ class Chassis:
         else:
             desired_speeds = self.chassis_speeds
 
+        if self.swerve_lock:
+            self.do_smooth = False
+
         desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
         desired_states = self.kinematics.desaturateWheelSpeeds(
             desired_states, attainableMaxSpeed=self.max_wheel_speed
         )
+
         for state, module in zip(desired_states, self.modules):
+            module.module_locked = self.swerve_lock
             module.do_smooth = self.do_smooth
             module.set(state)
 
@@ -293,6 +305,12 @@ class Chassis:
     @magicbot.feedback
     def get_imu_speed(self) -> float:
         return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
+
+    def lock_swerve(self) -> None:
+        self.swerve_lock = True
+
+    def unlock_swerve(self) -> None:
+        self.swerve_lock = False
 
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
