@@ -167,7 +167,7 @@ DOUBLE_SUBSTATION_BLUE_GRID = blue_substation_tag - Translation3d(
     0, SUBSTATION_Y_OFFSET, 0
 )
 
-SUBSTATION_PICKUP_X_OFFSET = -1.28
+SUBSTATION_PICKUP_X_OFFSET = -1.15
 
 
 def get_double_substation(red_substation: bool, left_side: bool) -> Translation3d:
