@@ -168,7 +168,6 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             self.movement.toggle_balance()
         elif not self.movement.is_executing:
-            print(f"Finished auto at {tm}")
             self.done()
             return
 
