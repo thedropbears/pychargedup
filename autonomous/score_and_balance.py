@@ -56,17 +56,17 @@ class ScoreAction:
 
 
 @dataclass
-class StationLocation:
+class FieldPose:
     pose: Pose2d
     approach_angle: Rotation2d
     intermediate_waypoints: tuple[Translation2d, ...]
 
-    def with_correct_fipped(self) -> "StationLocation":
+    def with_correct_fipped(self) -> "FieldPose":
         if is_red():
             waypoints = tuple(
                 field_flip_translation2d(x) for x in self.intermediate_waypoints
             )
-            return StationLocation(
+            return FieldPose(
                 field_flip_pose2d(self.pose),
                 field_flip_rotation2d(self.approach_angle),
                 waypoints,
@@ -90,13 +90,13 @@ class AutoBase(AutonomousStateMachine):
     def __init__(self) -> None:
         self.pickup_actions: list[PickupAction] = []
         self.score_actions: list[ScoreAction] = []
-        self.station_location: StationLocation
+        self.station_location: list[FieldPose] = []
         self.progress_idx = 0
-        self.start_pose, _ = get_score_location(self.score_actions[0].node)
+        self.balance_progress_index = 0
 
     def on_enable(self) -> None:
-        self.start_pose, _ = get_score_location(self.score_actions[0].node)
-        self.movement.chassis.set_pose(self.start_pose)
+        start_pose, _ = get_score_location(self.score_actions[0].node)
+        self.movement.chassis.set_pose(start_pose)
         self.progress_idx = 0
         return super().on_enable()
 
@@ -115,16 +115,52 @@ class AutoBase(AutonomousStateMachine):
                 self.score_actions[self.progress_idx].node
             )
         elif not self.score_game_piece.is_executing:
+            self.next_state("move_to_station_y")
+
+    @state
+    def move_to_station_y(self, initial_call: bool) -> None:
+        if initial_call:
+            self.recover.done()
+            path = self.station_location[
+                self.balance_progress_index
+            ].with_correct_fipped()
+            self.movement.set_goal(
+                path.pose,
+                path.approach_angle,
+                path.intermediate_waypoints,
+            )
+        elif self.movement.is_at_goal():
+            self.balance_progress_index += 1
+            self.next_state("move_out_of_community")
+        self.movement.do_autodrive()
+
+    @state
+    def move_out_of_community(self, initial_call: bool) -> None:
+        if initial_call:
+            self.recover.done()
+            path = self.station_location[
+                self.balance_progress_index
+            ].with_correct_fipped()
+            self.movement.set_goal(
+                path.pose,
+                path.approach_angle,
+                path.intermediate_waypoints,
+            )
+        elif self.movement.is_at_goal():
+            self.balance_progress_index += 1
             self.next_state("approach_station")
+        self.movement.do_autodrive()
 
     @state
     def approach_station(self, initial_call: bool) -> None:
         if initial_call:
-            self.recover.done()
+            path = self.station_location[
+                self.balance_progress_index
+            ].with_correct_fipped()
             self.movement.set_goal(
-                self.station_location.pose,
-                self.station_location.approach_angle,
-                self.station_location.intermediate_waypoints,
+                path.pose,
+                path.approach_angle,
+                path.intermediate_waypoints,
             )
         elif self.movement.is_at_goal():
             self.next_state("balance")
@@ -151,10 +187,27 @@ class ScoreAndBalance(AutoBase):
                 (),
             ),
         ]
-        self.station_location = StationLocation(
-            Pose2d(
-                self.start_pose.X() + 2, self.start_pose.Y(), self.start_pose.rotation()
+
+    def on_enable(self) -> None:
+        start_pose, _ = get_score_location(self.score_actions[0].node)
+        if is_red():
+            start_pose = field_flip_pose2d(start_pose)
+        self.station_location = [
+            FieldPose(
+                Pose2d(start_pose.X() + 0.25, 2.748, start_pose.rotation()),
+                Rotation2d.fromDegrees(270),
+                (),
             ),
-            Rotation2d.fromDegrees(180),
-            (),
-        )
+            FieldPose(
+                Pose2d(start_pose.X() + 3.2, 2.748, start_pose.rotation()),
+                Rotation2d.fromDegrees(0) if is_red() else Rotation2d.fromDegrees(180),
+                (),
+            ),
+            FieldPose(
+                Pose2d(start_pose.X() + 2.5, 2.748, start_pose.rotation()),
+                Rotation2d.fromDegrees(180) if is_red() else Rotation2d.fromDegrees(0),
+                (),
+            ),
+        ]
+        print(start_pose, self.station_location[0].pose)
+        return super().on_enable()
