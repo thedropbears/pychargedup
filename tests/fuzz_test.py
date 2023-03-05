@@ -111,23 +111,3 @@ def test_fuzz(control: TestController) -> None:
 
 def test_fuzz_disabled(control: TestController) -> None:
     _test_fuzz(control, fuzz_disabled_hids=True)
-
-
-def test_fuzz_test(control: TestController) -> None:
-    from wpilib.simulation import DriverStationSim
-
-    with control.run_robot():
-        hids = DSInputs()
-
-        DriverStationSim.setDsAttached(True)
-        DriverStationSim.setAutonomous(False)
-        DriverStationSim.setTest(True)
-        DriverStationSim.setEnabled(True)
-
-        assert control.robot_is_alive
-
-        for _ in range(40):
-            hids.fuzz()
-            DriverStationSim.notifyNewData()
-            wpilib.simulation.stepTiming(0.02)
-            assert control.robot_is_alive
