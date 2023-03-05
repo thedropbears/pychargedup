@@ -3,12 +3,10 @@ from wpimath.geometry import Rotation2d, Translation2d, Pose2d
 from dataclasses import dataclass
 from components.arm import Arm
 from components.gripper import Gripper
-from components.intake import Intake
 
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
-from controllers.acquire_cube import AcquireCubeController
 
 from utilities.game import (
     Node,
@@ -17,7 +15,6 @@ from utilities.game import (
     field_flip_translation2d,
     field_flip_pose2d,
     get_score_location,
-    get_staged_pickup,
     is_red,
 )
 
