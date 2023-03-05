@@ -38,8 +38,7 @@ class SwerveModule:
 
     # limit the acceleration of the commanded speeds of the robot to what is actually
     # achiveable without the wheels slipping. This is done to improve odometry
-    # TODO: measure this empirically
-    accel_limit = 5  # m/s^2
+    accel_limit = 10  # m/s^2
 
     def __init__(
         self,

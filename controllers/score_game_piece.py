@@ -32,9 +32,7 @@ class ScoreGamePieceController(StateMachine):
         self.target_node = Node(Rows.HIGH, 0)
 
     @state(first=True, must_finish=True)
-    def driving_to_position(self, initial_call: bool) -> None:
-        if initial_call:
-            self.target_node = self.pick_node()
+    def driving_to_position(self) -> None:
         self.movement.set_goal(*get_score_location(self.target_node))
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
@@ -46,7 +44,7 @@ class ScoreGamePieceController(StateMachine):
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
     @state(must_finish=True)
-    def deploying_arm(self, initial_call: bool) -> None:
+    def deploying_arm(self) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
@@ -60,25 +58,18 @@ class ScoreGamePieceController(StateMachine):
         self.movement.inputs_lock = False
         self.recover.engage()
 
-    def pick_node(self) -> Node:
+    def score_closest_high(self) -> None:
+        self.target_node = self._get_closest(Rows.HIGH)
+        self.engage()
+
+    def score_closest_mid(self) -> None:
+        self.target_node = self._get_closest(Rows.MID)
+        self.engage()
+
+    def _get_closest(self, row: Rows) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
-        if self.node_stratergy is NodePickStratergy.CLOSEST:
-            return get_closest_node(
-                cur_pos, self.gripper.get_current_piece(), self.prefered_row
-            )
-        elif self.node_stratergy is NodePickStratergy.OVERRIDE:
-            return self.override_node
-        elif self.node_stratergy is NodePickStratergy.BEST:
-            return get_closest_node(
-                cur_pos, self.gripper.get_current_piece(), self.prefered_row
-            )
+        return get_closest_node(cur_pos, self.gripper.get_current_piece(), row)
 
-    def prefer_high(self) -> None:
-        self.prefered_row = Rows.HIGH
-
-    def prefer_mid(self) -> None:
-        self.prefered_row = Rows.MID
-
-    def score_without_moving(self, node: Node) -> None:
-        self.target_node = node
-        self.engage("deploying_arm", force=True)
+    def score_best(self) -> None:
+        # placeholder
+        self.score_closest_high()
