@@ -91,7 +91,7 @@ class Gripper:
         if self.opened_gripper:
             return GamePiece.NONE
         return self.holding
-    
+
     @feedback
     def get_current_piece_as_int(self) -> int:
         piece = self.get_current_piece()
