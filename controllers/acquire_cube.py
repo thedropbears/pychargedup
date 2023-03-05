@@ -24,7 +24,7 @@ class AcquireCubeController(StateMachine):
         Deploy the intake.
         Open the gripper.
         """
-        self.intake.deploy()
+        self.intake.deploy_without_running()
         self.status_lights.want_cube()
         self.gripper.open()
         if self.gripper.get_full_open() and self.intake.is_fully_deployed():
@@ -37,7 +37,12 @@ class AcquireCubeController(StateMachine):
         """
         self.arm.go_to_setpoint(Setpoints.HANDOFF)
         if self.arm.at_goal():
-            self.next_state("waiting_for_cube")
+            self.next_state("starting_intake_motors")
+
+    @state(must_finish=True)
+    def starting_intake_motors(self) -> None:
+        self.intake.deploy()
+        self.next_state("waiting_for_cube")
 
     @state(must_finish=True)
     def waiting_for_cube(self) -> None:
@@ -46,6 +51,8 @@ class AcquireCubeController(StateMachine):
         """
         if self.intake.is_game_piece_present():
             self.next_state("waiting_with_cube")
+        if self.gripper.cube_present():
+            self.next_state("grabbing")
 
     @timed_state(must_finish=True, next_state="grabbing", duration=0.5)
     def waiting_with_cube(self) -> None:
