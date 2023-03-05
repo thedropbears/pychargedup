@@ -100,6 +100,8 @@ class SwerveModule:
         self.drive.config_kI(0, 0, 10)
         self.drive.config_kD(0, 0, 10)
 
+        self.central_angle = math.atan2(x, y)
+
     def get_angle_absolute(self) -> float:
         """Gets steer angle (radians) from absolute encoder"""
         return math.radians(self.encoder.getAbsolutePosition())
@@ -126,11 +128,6 @@ class SwerveModule:
         else:
             self.state = desired_state
         self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
-
-        if abs(self.state.speed) < 0.01:
-            self.drive.set(ctre.ControlMode.Velocity, 0)
-            self.steer.set(ctre.ControlMode.PercentOutput, 0)
-            return
 
         current_angle = self.get_angle_integrated()
         target_displacement = constrain_angle(
@@ -281,10 +278,10 @@ class Chassis:
         if self.swerve_lock:
             # Actuating the swerve to face to the center of the robot, not movable
             desired_states = (
-                SwerveModuleState(0, Rotation2d.fromDegrees(135)),
-                SwerveModuleState(0, Rotation2d.fromDegrees(45)),
-                SwerveModuleState(0, Rotation2d.fromDegrees(315)),
-                SwerveModuleState(0, Rotation2d.fromDegrees(225)),
+                SwerveModuleState(0, Rotation2d(self.modules[0].central_angle)),
+                SwerveModuleState(0, Rotation2d(self.modules[1].central_angle)),
+                SwerveModuleState(0, Rotation2d(self.modules[2].central_angle)),
+                SwerveModuleState(0, Rotation2d(self.modules[3].central_angle)),
             )
 
             self.do_smooth = False
@@ -295,6 +292,10 @@ class Chassis:
             )
 
         for state, module in zip(desired_states, self.modules):
+            if abs(state.speed) < 0.01 and not self.swerve_lock:
+                module.drive.set(ctre.ControlMode.Velocity, 0)
+                module.steer.set(ctre.ControlMode.PercentOutput, 0)
+                continue
             module.do_smooth = self.do_smooth
             module.set(state)
 
