@@ -59,3 +59,5 @@ class DioChannels(enum.IntEnum):
     intake_break_beam_sensor = 2
 
     arm_absolute_encoder = 1
+
+    gripper_cube_break_beam = 3
