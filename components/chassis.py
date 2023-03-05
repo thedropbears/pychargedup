@@ -262,19 +262,6 @@ class Chassis:
     def execute(self) -> None:
         # rotate desired velocity to compensate for skew caused by discretization
         # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
-        if self.swerve_lock:
-            # Actuating the swerve to face to the center of the robot, not movable
-            desired_states = (
-                SwerveModuleState(0, Rotation2d(math.radians(135))),
-                SwerveModuleState(0, Rotation2d(math.radians(45))),
-                SwerveModuleState(0, Rotation2d(math.radians(315))),
-                SwerveModuleState(0, Rotation2d(math.radians(225))),
-            )
-            for state, module in zip(desired_states, self.modules):
-                module.set(state)
-
-            self.update_odometry()
-            return
 
         if self.do_fudge:
             # in the sim i found using 5 instead of 0.5 did a lot better
@@ -291,10 +278,22 @@ class Chassis:
         else:
             desired_speeds = self.chassis_speeds
 
-        desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
-        desired_states = self.kinematics.desaturateWheelSpeeds(
-            desired_states, attainableMaxSpeed=self.max_wheel_speed
-        )
+        if self.swerve_lock:
+            # Actuating the swerve to face to the center of the robot, not movable
+            desired_states = (
+                SwerveModuleState(0, Rotation2d(math.radians(135))),
+                SwerveModuleState(0, Rotation2d(math.radians(45))),
+                SwerveModuleState(0, Rotation2d(math.radians(315))),
+                SwerveModuleState(0, Rotation2d(math.radians(225))),
+            )
+
+            self.do_smooth = False
+        else:
+            desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
+            desired_states = self.kinematics.desaturateWheelSpeeds(
+                desired_states, attainableMaxSpeed=self.max_wheel_speed
+            )
+
         for state, module in zip(desired_states, self.modules):
             module.do_smooth = self.do_smooth
             module.set(state)
