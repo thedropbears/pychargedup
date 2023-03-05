@@ -130,17 +130,17 @@ class MyRobot(magicbot.MagicRobot):
             or self.right_trigger_down_full.getAsBoolean()
         ):
             self.acquire_cone.engage()
+            self.long_rumble()
         if self.left_trigger_up.getAsBoolean() or self.right_trigger_up.getAsBoolean():
-            self.short_rumble()
             self.acquire_cone.done()
 
         # Request cone / Set pickup side
         if self.left_trigger_down_half.getAsBoolean():
             self.acquire_cone.target_left()
-            self.long_rumble()
+            self.short_rumble()
         if self.right_trigger_down_half.getAsBoolean():
             self.acquire_cone.target_right()
-            self.long_rumble()
+            self.short_rumble()
 
         # Score, auto pick node
         if self.gamepad.getAButton():

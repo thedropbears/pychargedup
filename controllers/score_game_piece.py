@@ -44,7 +44,7 @@ class ScoreGamePieceController(StateMachine):
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
     @state(must_finish=True)
-    def deploying_arm(self, initial_call: bool) -> None:
+    def deploying_arm(self) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
             self.next_state("dropping")
@@ -55,6 +55,7 @@ class ScoreGamePieceController(StateMachine):
 
     def done(self) -> None:
         super().done()
+        self.movement.inputs_lock = False
         self.recover.engage()
 
     def score_closest_high(self) -> None:
@@ -67,7 +68,7 @@ class ScoreGamePieceController(StateMachine):
 
     def _get_closest(self, row: Rows) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
-        return get_closest_node(cur_pos, self.gripper.get_current_piece(), Rows.MID)
+        return get_closest_node(cur_pos, self.gripper.get_current_piece(), row)
 
     def score_best(self) -> None:
         # placeholder
