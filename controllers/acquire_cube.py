@@ -49,8 +49,8 @@ class AcquireCubeController(StateMachine):
         """
         Keep the intake spinning until the cube breaks the break-beam sensor.
         """
-        if self.intake.is_game_piece_present():
-            self.next_state("waiting_with_cube")
+        # if self.intake.is_game_piece_present():
+        #     self.next_state("waiting_with_cube")
         if self.gripper.cube_present():
             self.next_state("grabbing")
 
