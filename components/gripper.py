@@ -80,7 +80,7 @@ class Gripper:
             self.gripper_solenoid.set(DoubleSolenoid.Value.kReverse)
         else:
             self.gripper_solenoid.set(DoubleSolenoid.Value.kForward)
-            
+
         if self.opened_flapper:
             self.flapper_solenoid.set(DoubleSolenoid.Value.kReverse)
         else:
