@@ -64,7 +64,7 @@ class AcquireCubeController(StateMachine):
         Close the gripper on the cube.
         Recovery controller will take care of moving the arm to stow, and retracting the intake.
         """
-        self.gripper.close(GamePiece.CUBE)
+        self.gripper.close_gripper(GamePiece.CUBE)
         if self.gripper.get_full_closed():
             self.status_lights.cube_onboard()
             self.next_state("raising")
