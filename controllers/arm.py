@@ -46,7 +46,7 @@ class Setpoint:
 
 
 class Setpoints:
-    PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
+    PREPARE_PICKUP_CONE = Setpoint(math.radians(-180), MIN_EXTENSION)
     PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
     HANDOFF = Setpoint(math.radians(50), 0.93)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
