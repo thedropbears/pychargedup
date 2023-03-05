@@ -46,6 +46,12 @@ class Arm:
     EXTEND_GRAVITY_FEEDFORWARD = 0
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
+    SPRING_OFFSET_Z = 0.4
+    SPRING_MOUNT_RADIUS = 0.1
+    SPRING_RESTING_LENGTH = SPRING_OFFSET_Z - SPRING_MOUNT_RADIUS - 0.02
+    SPRING_CONSTANT = 5900
+    TORQUE_TO_VOLTAGE = 0.01
+
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
 
     goal_angle = tunable(0.0)
@@ -207,16 +213,32 @@ class Arm:
         else:
             self.unbrake_rotation()
             self.rotation_motor.setVoltage(pid_output + ff_output)
+            self.rotation_motor.set
 
     def calculate_rotation_feedforwards(self) -> float:
-        """Calculate feedforwards voltage.
-        next_speed: speed in rps"""
+        """Calculate feedforwards voltage."""
         state: TrapezoidProfile.State = self.rotation_controller.getSetpoint()
         accel = (
             state.velocity - self.rotation_last_setpoint_vel
         ) / self.control_loop_wait_time
         self.rotation_last_setpoint_vel = state.velocity
-        return self.rotation_ff.calculate(self.get_angle(), state.velocity, accel)
+        arm_ff_voltage = self.rotation_ff.calculate(
+            self.get_angle(), state.velocity, accel
+        )
+        spring_voltage = self.calculate_rotation_spring_ff()
+        return arm_ff_voltage + spring_voltage
+
+    @feedback
+    def calculate_rotation_spring_ff(self) -> float:
+        # calculate spring torque
+        angle = self.get_angle()
+        dist = math.hypot(
+            math.sin(angle) * self.SPRING_MOUNT_RADIUS,
+            self.SPRING_OFFSET_Z + math.cos(angle) * self.SPRING_MOUNT_RADIUS,
+        )
+        force = -self.SPRING_CONSTANT * (dist - self.SPRING_RESTING_LENGTH)
+        torque = force * math.cos(angle) * self.SPRING_MOUNT_RADIUS
+        return torque * self.TORQUE_TO_VOLTAGE
 
     def calculate_extension_feedforward(self) -> float:
         state: TrapezoidProfile.State = self.extension_controller.getSetpoint()
