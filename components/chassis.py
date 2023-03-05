@@ -123,7 +123,6 @@ class SwerveModule:
         return self.drive.getSelectedSensorPosition() * self.DRIVE_COUNTS_TO_METRES
 
     def set(self, desired_state: SwerveModuleState):
-
         if self.module_locked:
             desired_state = SwerveModuleState(0, Rotation2d(self.central_angle))
 
@@ -286,7 +285,7 @@ class Chassis:
 
         if self.swerve_lock:
             self.do_smooth = False
-        
+
         desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
         desired_states = self.kinematics.desaturateWheelSpeeds(
             desired_states, attainableMaxSpeed=self.max_wheel_speed
