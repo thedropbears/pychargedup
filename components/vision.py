@@ -174,4 +174,13 @@ def choose_pose(
     best_pose: Pose2d, alternate_pose: Pose2d, cur_robot: Pose2d, ambiguity: float
 ):
     """Picks either the best or alternate pose estimate"""
-    return best_pose
+    best_dist = best_pose.translation().distance(cur_robot.translation())
+    best_preferance = 1.2
+    alternate_dist = (
+        alternate_pose.translation().distance(cur_robot.translation()) * best_preferance
+    )
+
+    if best_dist < alternate_dist:
+        return best_pose
+    else:
+        return alternate_pose
