@@ -1,5 +1,5 @@
 from magicbot.state_machine import AutonomousStateMachine, state
-from wpimath.geometry import Rotation2d, Translation2d
+from wpimath.geometry import Rotation2d, Translation2d, Pose2d
 from dataclasses import dataclass
 from components.arm import Arm
 from components.gripper import Gripper
@@ -15,6 +15,7 @@ from utilities.game import (
     Rows,
     field_flip_rotation2d,
     field_flip_translation2d,
+    field_flip_pose2d,
     get_score_location,
     get_staged_pickup,
     is_red,
@@ -54,16 +55,33 @@ class ScoreAction:
         return self
 
 
+@dataclass
+class StationLocation:
+    pose: Pose2d
+    approach_angle: Rotation2d
+    intermediate_waypoints: tuple[Translation2d, ...]
+
+    def with_correct_fipped(self) -> "StationLocation":
+        if is_red():
+            waypoints = tuple(
+                field_flip_translation2d(x) for x in self.intermediate_waypoints
+            )
+            return StationLocation(
+                field_flip_pose2d(self.pose),
+                field_flip_rotation2d(self.approach_angle),
+                waypoints,
+            )
+        return self
+
+
 class AutoBase(AutonomousStateMachine):
     """Alternates between the action in the score and pickup lists"""
 
     movement: Movement
     score_game_piece: ScoreGamePieceController
-    acquire_cube: AcquireCubeController
     recover: RecoverController
     arm_component: Arm
     gripper: Gripper
-    intake: Intake
 
     INTAKE_PRE_TIME = 2.5
     SCORE_PRE_TIME = 2.5
@@ -72,11 +90,13 @@ class AutoBase(AutonomousStateMachine):
     def __init__(self) -> None:
         self.pickup_actions: list[PickupAction] = []
         self.score_actions: list[ScoreAction] = []
+        self.station_location: StationLocation
         self.progress_idx = 0
+        self.start_pose: Pose2d = Pose2d()
 
     def on_enable(self) -> None:
-        start_pose, _ = get_score_location(self.score_actions[0].node)
-        self.movement.chassis.set_pose(start_pose)
+        self.start_pose, _ = get_score_location(self.score_actions[0].node)
+        self.movement.chassis.set_pose(self.start_pose)
         self.progress_idx = 0
         return super().on_enable()
 
@@ -95,65 +115,33 @@ class AutoBase(AutonomousStateMachine):
                 self.score_actions[self.progress_idx].node
             )
         elif not self.score_game_piece.is_executing:
-            self.next_state("approach_cube")
+            self.next_state("approach_station")
 
     @state
-    def approach_cube(self, initial_call: bool) -> None:
-        if initial_call:
-            action = self.pickup_actions[self.progress_idx].with_correct_flipped()
-            self.movement.set_goal(
-                *get_staged_pickup(action.piece_idx, action.approach_direction),
-                action.intermediate_waypoints,
-                slow_dist=0,
-            )
-        elif self.movement.time_to_goal < self.INTAKE_PRE_TIME:
-            self.next_state("pickup_cube")
-        self.movement.do_autodrive()
-
-    @state
-    def pickup_cube(self, initial_call: bool, state_tm: float, tm: float) -> None:
-        if initial_call:
-            self.acquire_cube.engage()
-            self.recover.done()
-        elif not self.acquire_cube.is_executing:
-            self.next_state("approach_grid")
-            self.progress_idx += 1
-            if self.progress_idx >= len(self.score_actions):
-                print(f"Finished auto at {tm}")
-                self.done()
-                return
-
-        self.movement.do_autodrive()
-
-    @state
-    def approach_grid(self, initial_call: bool) -> None:
-        if initial_call:
-            path = self.score_actions[self.progress_idx].with_correct_flipped()
-            self.movement.set_goal(
-                *get_score_location(path.node), path.intermediate_waypoints
-            )
-        self.movement.do_autodrive()
-        if self.movement.time_to_goal < self.SCORE_PRE_TIME:
-            self.next_state("score_cube")
-
-    @state
-    def score_cube(self, initial_call: bool, tm: float) -> None:
+    def approach_station(self, initial_call: bool) -> None:
         if initial_call:
             self.recover.done()
-            self.score_game_piece.score_without_moving(
-                self.score_actions[self.progress_idx].node
+            self.movement.set_goal(
+                self.station_location.pose,
+                self.station_location.approach_angle,
+                self.station_location.intermediate_waypoints,
             )
-        elif not self.score_game_piece.is_executing:
-            if self.progress_idx >= len(self.pickup_actions):
-                print(f"Finished auto at {tm}")
-                self.done()
-                return
-            self.next_state("approach_cube")
-        self.movement.do_autodrive()
+        elif self.movement.is_at_goal():
+            self.next_state("balance")
+
+    @state
+    def balance(self, initial_call: bool, tm: float) -> None:
+        if initial_call:
+            self.movement.toggle_balance()
+        elif not self.movement.is_executing:
+            print(f"Finished auto at {tm}")
+            self.done()
+            return
 
 
-class LoadingSide3(AutoBase):
-    MODE_NAME = "Loading side 3 piece"
+class ScoreAndBalance(AutoBase):
+    MODE_NAME = "Score cone and balance on station"
+    DEFAULT = True
 
     def setup(self) -> None:
         self.score_actions = [
@@ -161,15 +149,11 @@ class LoadingSide3(AutoBase):
                 Node(Rows.HIGH, 8),
                 (),
             ),
-            ScoreAction(
-                Node(Rows.HIGH, 7),
-                (Translation2d(3.5, 4.7),),
-            ),
         ]
-        self.pickup_actions = [
-            PickupAction(
-                3,
-                Rotation2d.fromDegrees(0),
-                (),
+        self.station_location = StationLocation(
+            Pose2d(
+                self.start_pose.X() + 2, self.start_pose.Y(), self.start_pose.rotation()
             ),
-        ]
+            Rotation2d.fromDegrees(180),
+            (),
+        )
