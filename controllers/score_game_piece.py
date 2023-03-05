@@ -26,6 +26,7 @@ class ScoreGamePieceController(StateMachine):
     movement: Movement
     recover: RecoverController
     HARD_UP_SPEED = 0.3
+    ARM_PRE_TIME = 2.0
 
     def __init__(self) -> None:
         self.node_stratergy = NodePickStratergy.CLOSEST
@@ -39,6 +40,9 @@ class ScoreGamePieceController(StateMachine):
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("hard_up")
+
+        if self.movement.time_to_goal < self.ARM_PRE_TIME:
+            self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
 
     @timed_state(next_state="back_off", duration=0.3, must_finish=True)
     def hard_up(self) -> None:
