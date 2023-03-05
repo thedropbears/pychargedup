@@ -101,6 +101,7 @@ class SwerveModule:
         self.drive.config_kD(0, 0, 10)
 
         self.central_angle = math.atan2(x, y)
+        self.module_locked = False
 
     def get_angle_absolute(self) -> float:
         """Gets steer angle (radians) from absolute encoder"""
@@ -122,12 +123,20 @@ class SwerveModule:
         return self.drive.getSelectedSensorPosition() * self.DRIVE_COUNTS_TO_METRES
 
     def set(self, desired_state: SwerveModuleState):
+
+        if self.module_locked:
+            desired_state = SwerveModuleState(0, Rotation2d(self.central_angle))
+
         # smooth wheel velocity vector
         if self.do_smooth:
             self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
         else:
             self.state = desired_state
         self.state = SwerveModuleState.optimize(self.state, self.get_rotation())
+
+        if abs(self.state.speed) < 0.01 and not self.module_locked:
+            self.drive.set(ctre.ControlMode.Velocity, 0)
+            self.steer.set(ctre.ControlMode.PercentOutput, 0)
 
         current_angle = self.get_angle_integrated()
         target_displacement = constrain_angle(
@@ -276,26 +285,15 @@ class Chassis:
             desired_speeds = self.chassis_speeds
 
         if self.swerve_lock:
-            # Actuating the swerve to face to the center of the robot, not movable
-            desired_states = (
-                SwerveModuleState(0, Rotation2d(self.modules[0].central_angle)),
-                SwerveModuleState(0, Rotation2d(self.modules[1].central_angle)),
-                SwerveModuleState(0, Rotation2d(self.modules[2].central_angle)),
-                SwerveModuleState(0, Rotation2d(self.modules[3].central_angle)),
-            )
-
             self.do_smooth = False
-        else:
-            desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
-            desired_states = self.kinematics.desaturateWheelSpeeds(
-                desired_states, attainableMaxSpeed=self.max_wheel_speed
-            )
+        
+        desired_states = self.kinematics.toSwerveModuleStates(desired_speeds)
+        desired_states = self.kinematics.desaturateWheelSpeeds(
+            desired_states, attainableMaxSpeed=self.max_wheel_speed
+        )
 
         for state, module in zip(desired_states, self.modules):
-            if abs(state.speed) < 0.01 and not self.swerve_lock:
-                module.drive.set(ctre.ControlMode.Velocity, 0)
-                module.steer.set(ctre.ControlMode.PercentOutput, 0)
-                continue
+            module.module_locked = self.swerve_lock
             module.do_smooth = self.do_smooth
             module.set(state)
 
