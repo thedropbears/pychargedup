@@ -277,6 +277,8 @@ class Chassis:
             )
             for state, module in zip(desired_states, self.modules):
                 module.set(state)
+            
+            self.update_odometry()
             return
 
         if self.do_fudge:
