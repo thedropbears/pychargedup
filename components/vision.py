@@ -10,6 +10,8 @@ from wpimath.geometry import Pose2d, Rotation3d, Transform3d, Translation3d
 
 from components.chassis import Chassis
 from utilities.game import apriltag_layout
+from utilities.scalers import scale_value
+from utilities.functions import clamp
 
 
 class VisualLocalizer:
@@ -70,6 +72,7 @@ class VisualLocalizer:
 
         for target in results.getTargets():
             poses = estimate_poses_from_apriltag(self.camera_to_robot, target)
+            distance_to_tag = target.getBestCameraToTarget().translation().norm()
             if poses is None:
                 # tag doesn't exist
                 continue
@@ -95,10 +98,13 @@ class VisualLocalizer:
                 self.rejected_in_row //= 2
 
             if self.add_to_estimator:
+                std_apriltag = clamp(
+                    scale_value(distance_to_tag, 3.0, 6.0, 1.0, 3.0), 1, 3
+                )
                 self.chassis.estimator.addVisionMeasurement(
                     pose,
                     timestamp,
-                    (3.0, 3.0, 1.0),
+                    (std_apriltag, std_apriltag, std_apriltag / 3),
                 )
 
             if self.should_log:
