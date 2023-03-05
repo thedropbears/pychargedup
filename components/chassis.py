@@ -185,6 +185,7 @@ class Chassis:
     send_modules = magicbot.tunable(False)
     do_fudge = magicbot.tunable(True)
     do_smooth = magicbot.tunable(True)
+    swerve_lock = magicbot.tunable(False)
 
     def setup(self) -> None:
         self.imu = navx.AHRS.create_spi()
@@ -261,6 +262,23 @@ class Chassis:
     def execute(self) -> None:
         # rotate desired velocity to compensate for skew caused by discretization
         # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
+        if self.swerve_lock:
+            # Actuating the swerve to face to the center of the robot, not movable
+            desired_states: tuple[
+                SwerveModuleState,
+                SwerveModuleState,
+                SwerveModuleState,
+                SwerveModuleState,
+            ] = [
+                SwerveModuleState(0, Rotation2d(math.radians(135))),
+                SwerveModuleState(0, Rotation2d(math.radians(45))),
+                SwerveModuleState(0, Rotation2d(math.radians(315))),
+                SwerveModuleState(0, Rotation2d(math.radians(225))),
+            ]
+            for state, module in zip(desired_states, self.modules):
+                module.set(state)
+            return
+
         if self.do_fudge:
             # in the sim i found using 5 instead of 0.5 did a lot better
             desired_speed_translation = Translation2d(
@@ -293,6 +311,14 @@ class Chassis:
     @magicbot.feedback
     def get_imu_speed(self) -> float:
         return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
+
+    def lock_swerve(self) -> None:
+        if not self.swerve_lock:
+            self.swerve_lock = True
+
+    def unlock_swerve(self) -> None:
+        if self.swerve_lock:
+            self.swerve_lock = False
 
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
