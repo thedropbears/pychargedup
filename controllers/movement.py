@@ -174,11 +174,13 @@ class Movement(StateMachine):
             self.next_state("autodrive")
 
     def is_at_goal(self) -> bool:
-        return (
+        real_at_goal = (
             self.goal.translation() - self.chassis.get_pose().translation()
         ).norm() < self.POSITION_TOLERANCE and abs(
             (self.goal.rotation() - self.chassis.get_rotation()).radians()
         ) < self.ANGLE_TOLERANCE
+        hitting_wall = self.time_to_goal < -0.1 and self.chassis.may_be_stalled()
+        return real_at_goal or hitting_wall
 
     # will execute if no other states are executing
     @default_state
