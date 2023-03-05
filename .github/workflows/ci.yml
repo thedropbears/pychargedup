@@ -22,6 +22,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          pip install coverage pytest-github-actions-annotate-failures
-      - run: python robot.py coverage test -- -v
+          pip install coverage pytest-forked pytest-github-actions-annotate-failures
+      - run: python robot.py coverage test -- -v --forked
       - uses: codecov/codecov-action@v3
