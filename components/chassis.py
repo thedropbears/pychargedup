@@ -310,12 +310,10 @@ class Chassis:
         return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
 
     def lock_swerve(self) -> None:
-        if not self.swerve_lock:
-            self.swerve_lock = True
+        self.swerve_lock = True
 
     def unlock_swerve(self) -> None:
-        if self.swerve_lock:
-            self.swerve_lock = False
+        self.swerve_lock = False
 
     def get_velocity(self) -> ChassisSpeeds:
         self.local_speed = self.kinematics.toChassisSpeeds(
