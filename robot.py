@@ -99,6 +99,7 @@ class MyRobot(magicbot.MagicRobot):
                 -0.01886390522122383,
             )
         )
+        self.last_dpad = -1
 
     def rumble_for(self, intensity: float, duration: float):
         self.rumble_duration = duration
@@ -143,7 +144,7 @@ class MyRobot(magicbot.MagicRobot):
             self.short_rumble()
 
         # Score, auto pick node
-        if self.gamepad.getAButton():
+        if self.gamepad.getAButtonPressed():
             self.score_game_piece.score_best()
 
         # Intake
@@ -166,12 +167,14 @@ class MyRobot(magicbot.MagicRobot):
             self.movement.toggle_balance()
 
         dpad_angle = self.gamepad.getPOV()
-        # Up, score closest high
-        if dpad_angle == 0:
-            self.score_game_piece.score_closest_high()
-        # Down, score closest mid
-        elif dpad_angle == 180:
-            self.score_game_piece.score_closest_mid()
+        if dpad_angle != self.last_dpad:
+            # Up, score closest high
+            if dpad_angle == 0:
+                self.score_game_piece.score_closest_high()
+            # Down, score closest mid
+            elif dpad_angle == 180:
+                self.score_game_piece.score_closest_mid()
+        self.last_dpad = dpad_angle
 
         # Manual overrides
         # Claw

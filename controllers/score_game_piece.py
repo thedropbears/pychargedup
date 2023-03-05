@@ -38,7 +38,7 @@ class ScoreGamePieceController(StateMachine):
         if self.movement.is_at_goal():
             self.next_state("hard_up")
 
-    @timed_state(next_state="deploying_arm", duration=0.3)
+    @timed_state(next_state="deploying_arm", duration=0.3, must_finish=True)
     def hard_up(self) -> None:
         self.movement.inputs_lock = True
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
