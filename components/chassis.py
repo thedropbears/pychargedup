@@ -136,6 +136,7 @@ class SwerveModule:
         if abs(self.state.speed) < 0.01 and not self.module_locked:
             self.drive.set(ctre.ControlMode.Velocity, 0)
             self.steer.set(ctre.ControlMode.PercentOutput, 0)
+            return
 
         current_angle = self.get_angle_integrated()
         target_displacement = constrain_angle(
