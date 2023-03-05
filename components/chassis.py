@@ -264,17 +264,17 @@ class Chassis:
         # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
         if self.swerve_lock:
             # Actuating the swerve to face to the center of the robot, not movable
-            desired_states: tuple[
+            desired_states: tuple(
                 SwerveModuleState,
                 SwerveModuleState,
                 SwerveModuleState,
                 SwerveModuleState,
-            ] = [
+            ) = (
                 SwerveModuleState(0, Rotation2d(math.radians(135))),
                 SwerveModuleState(0, Rotation2d(math.radians(45))),
                 SwerveModuleState(0, Rotation2d(math.radians(315))),
                 SwerveModuleState(0, Rotation2d(math.radians(225))),
-            ]
+            )
             for state, module in zip(desired_states, self.modules):
                 module.set(state)
             return
