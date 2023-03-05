@@ -281,10 +281,10 @@ class Chassis:
         if self.swerve_lock:
             # Actuating the swerve to face to the center of the robot, not movable
             desired_states = (
-                SwerveModuleState(0, Rotation2d(math.radians(135))),
-                SwerveModuleState(0, Rotation2d(math.radians(45))),
-                SwerveModuleState(0, Rotation2d(math.radians(315))),
-                SwerveModuleState(0, Rotation2d(math.radians(225))),
+                SwerveModuleState(0, Rotation2d.fromDegrees(135)),
+                SwerveModuleState(0, Rotation2d.fromDegrees(45)),
+                SwerveModuleState(0, Rotation2d.fromDegrees(315)),
+                SwerveModuleState(0, Rotation2d.fromDegrees(225)),
             )
 
             self.do_smooth = False
