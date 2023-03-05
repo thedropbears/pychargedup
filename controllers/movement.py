@@ -239,9 +239,6 @@ class Movement(StateMachine):
         local: drive reletive to robot frame rather than global frame
         override: override driver lockout
         """
-        if is_red():
-            vx = -vx
-            vy = -vy
         if not self.inputs_lock or override:
             if is_red():
                 vx = -vx
@@ -258,4 +255,3 @@ class Movement(StateMachine):
             self.done()
         else:
             self.engage("balance")
-        self.engage()
