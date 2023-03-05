@@ -313,6 +313,7 @@ class Chassis:
         self.swerve_lock = False
 
     def get_velocity(self) -> ChassisSpeeds:
+        """Gets field relative measured robot ChassisSpeeds"""
         self.local_speed = self.kinematics.toChassisSpeeds(
             self.modules[0].get(),
             self.modules[1].get(),

@@ -9,6 +9,8 @@ from magicbot import state, timed_state, StateMachine
 from enum import Enum, auto
 from utilities.game import Node, get_closest_node, get_score_location, Rows
 
+from wpimath.geometry import Translation2d
+
 
 class NodePickStratergy(Enum):
     CLOSEST = auto()
@@ -68,8 +70,17 @@ class ScoreGamePieceController(StateMachine):
 
     def _get_closest(self, row: Rows) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
-        return get_closest_node(cur_pos, self.gripper.get_current_piece(), row)
+        cur_vel = self.movement.chassis.get_velocity()
+        lookahead_time = 1.0
+        effective_pos = cur_pos + Translation2d(
+            cur_vel.vx * lookahead_time, cur_vel.vy * lookahead_time
+        )
+        return get_closest_node(effective_pos, self.gripper.get_current_piece(), row)
 
     def score_best(self) -> None:
         # placeholder
         self.score_closest_high()
+
+    def score_without_moving(self, node: Node) -> None:
+        self.target_node = node
+        self.engage("deploying_arm", force=True)
