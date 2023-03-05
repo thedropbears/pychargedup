@@ -92,7 +92,7 @@ class AutoBase(AutonomousStateMachine):
         self.score_actions: list[ScoreAction] = []
         self.station_location: StationLocation
         self.progress_idx = 0
-        self.start_pose: Pose2d = Pose2d()
+        self.start_pose, _ = get_score_location(self.score_actions[0].node)
 
     def on_enable(self) -> None:
         self.start_pose, _ = get_score_location(self.score_actions[0].node)
@@ -128,6 +128,7 @@ class AutoBase(AutonomousStateMachine):
             )
         elif self.movement.is_at_goal():
             self.next_state("balance")
+        self.movement.do_autodrive()
 
     @state
     def balance(self, initial_call: bool, tm: float) -> None:
