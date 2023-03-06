@@ -41,18 +41,21 @@ class ScoreTracker:
         self.state_blue = np.zeros((3, 9), dtype=bool)
         self.did_states_change = magicbot.will_reset_to(False)
         self.inst = NetworkTableInstance.getDefault()
-        nt = self.inst.getTable("left_camera")
+        nt = self.inst.getTable("left_cam")
         self.nodes = nt.getEntry("nodes")
 
 
     def execute(self) -> None:
+        if not self.nodes.exists():
+            print("skipping")
+            return
         _data = self.nodes.getStringArray([])
         data = self.nt_data_to_node_data(_data)
         for node in data:
             side = wpilib.DriverStation.Alliance.kBlue if node[0] >= 27 else wpilib.DriverStation.Alliance.kRed
             col = node[0] % 9
             row = (node[0] % 27) // 9
-            self.add_vision_data(side=side, pos=np.array([row, col]), confidence=(1. if node[1] else -1.))
+            self.add_vision_data(side=side, pos=np.array([row, col]), confidence=(1. if node[1] else -0.5))
 
     def nt_data_to_node_data(self, data: list[str]) -> list[tuple[int, bool]]:
         nodes: list[tuple[int, bool]] = []
