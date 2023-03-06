@@ -177,7 +177,7 @@ class Chassis:
     # size including bumpers
     LENGTH = 1.0105
     WIDTH = 0.8705
-
+    DRIVE_CURRENT_THRESHOLD = 35
     # maxiumum speed for any wheel
     max_wheel_speed = FALCON_FREE_RPS * SwerveModule.DRIVE_MOTOR_REV_TO_METRES
 
@@ -313,6 +313,7 @@ class Chassis:
         self.swerve_lock = False
 
     def get_velocity(self) -> ChassisSpeeds:
+        """Gets field relative measured robot ChassisSpeeds"""
         self.local_speed = self.kinematics.toChassisSpeeds(
             self.modules[0].get(),
             self.modules[1].get(),
@@ -388,3 +389,11 @@ class Chassis:
     @feedback
     def get_tilt_rate(self) -> float:
         return math.radians(self.imu.getRawGyroY())
+
+    @feedback
+    def get_drive_current(self) -> float:
+        return sum(abs(x.drive.getStatorCurrent()) for x in self.modules)
+
+    @feedback
+    def may_be_stalled(self) -> bool:
+        return self.get_drive_current() > self.DRIVE_CURRENT_THRESHOLD
