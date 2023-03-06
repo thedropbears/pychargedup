@@ -254,8 +254,15 @@ class Movement(StateMachine):
     def do_autodrive(self) -> None:
         self.engage("autodrive")
 
+    # for testing
     def toggle_balance(self) -> None:
         if self.is_executing:
-            self.done()
+            self.start_balance()
         else:
-            self.engage("balance")
+            self.stop_balance()
+
+    def start_balance(self) -> None:
+        self.engage("balance", force=True)
+
+    def stop_balance(self) -> None:
+        self.done()

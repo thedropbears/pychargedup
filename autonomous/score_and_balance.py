@@ -84,15 +84,15 @@ class AutoBase(AutonomousStateMachine):
     SCORE_PRE_TIME = 2.5
     MANUAL_CUBE_TIME = 0.5
 
-    def __init__(self) -> None:
-        self.pickup_actions: list[PickupAction] = []
-        self.score_actions: list[ScoreAction] = []
-        self.station_location: list[FieldPose] = []
-        self.progress_idx = 0
-        self.balance_progress_index = 0
+    def __init__(
+        self, score_action: ScoreAction, leave_pose: FieldPose, balance_pose: FieldPose
+    ) -> None:
+        self.score_action = score_action
+        self.leave_pose = leave_pose
+        self.balance_pose = balance_pose
 
     def on_enable(self) -> None:
-        start_pose, _ = get_score_location(self.score_actions[0].node)
+        start_pose, _ = get_score_location(self.score_action.node)
         self.movement.chassis.set_pose(start_pose)
         self.progress_idx = 0
         return super().on_enable()
@@ -108,52 +108,28 @@ class AutoBase(AutonomousStateMachine):
     @state
     def score_cone(self, initial_call: bool) -> None:
         if initial_call:
-            self.score_game_piece.score_without_moving(
-                self.score_actions[self.progress_idx].node
-            )
+            self.score_game_piece.score_without_moving(self.score_action.node)
         elif not self.score_game_piece.is_executing:
-            self.next_state("move_to_station_y")
+            self.next_state("leave_community")
 
     @state
-    def move_to_station_y(self, initial_call: bool) -> None:
+    def leave_community(self, initial_call: bool) -> None:
         if initial_call:
             self.recover.done()
-            path = self.station_location[
-                self.balance_progress_index
-            ].with_correct_fipped()
+            path = self.leave_pose.with_correct_fipped()
             self.movement.set_goal(
                 path.pose,
                 path.approach_angle,
                 path.intermediate_waypoints,
             )
         elif self.movement.is_at_goal():
-            self.balance_progress_index += 1
-            self.next_state("move_out_of_community")
-        self.movement.do_autodrive()
-
-    @state
-    def move_out_of_community(self, initial_call: bool) -> None:
-        if initial_call:
-            self.recover.done()
-            path = self.station_location[
-                self.balance_progress_index
-            ].with_correct_fipped()
-            self.movement.set_goal(
-                path.pose,
-                path.approach_angle,
-                path.intermediate_waypoints,
-            )
-        elif self.movement.is_at_goal():
-            self.balance_progress_index += 1
             self.next_state("approach_station")
         self.movement.do_autodrive()
 
     @state
     def approach_station(self, initial_call: bool) -> None:
         if initial_call:
-            path = self.station_location[
-                self.balance_progress_index
-            ].with_correct_fipped()
+            path = self.balance_pose.with_correct_fipped()
             self.movement.set_goal(
                 path.pose,
                 path.approach_angle,
@@ -166,7 +142,7 @@ class AutoBase(AutonomousStateMachine):
     @state
     def balance(self, initial_call: bool, tm: float) -> None:
         if initial_call:
-            self.movement.toggle_balance()
+            self.movement.start_balance()
         elif not self.movement.is_executing:
             self.done()
             return
@@ -176,34 +152,17 @@ class ScoreAndBalance(AutoBase):
     MODE_NAME = "Score cone and balance on station"
     DEFAULT = True
 
-    def setup(self) -> None:
-        self.score_actions = [
-            ScoreAction(
-                Node(Rows.HIGH, 8),
-                (),
-            ),
-        ]
-
-    def on_enable(self) -> None:
-        start_pose, _ = get_score_location(self.score_actions[0].node)
-        if is_red():
-            start_pose = field_flip_pose2d(start_pose)
-        self.station_location = [
+    def __init__(self) -> None:
+        super().__init__(
+            ScoreAction(Node(Rows.HIGH, 3), ()),
             FieldPose(
-                Pose2d(start_pose.X() + 0.25, 2.748, start_pose.rotation()),
-                Rotation2d.fromDegrees(270),
+                Pose2d(6.0, 2.5, Rotation2d.fromDegrees(0)),
+                Rotation2d.fromDegrees(0),
                 (),
             ),
             FieldPose(
-                Pose2d(start_pose.X() + 3.2, 2.748, start_pose.rotation()),
-                Rotation2d.fromDegrees(0) if is_red() else Rotation2d.fromDegrees(180),
+                Pose2d(4.75, 2.5, Rotation2d.fromDegrees(0)),
+                Rotation2d.fromDegrees(180),
                 (),
             ),
-            FieldPose(
-                Pose2d(start_pose.X() + 2.5, 2.748, start_pose.rotation()),
-                Rotation2d.fromDegrees(180) if is_red() else Rotation2d.fromDegrees(0),
-                (),
-            ),
-        ]
-        print(start_pose, self.station_location[0].pose)
-        return super().on_enable()
+        )
