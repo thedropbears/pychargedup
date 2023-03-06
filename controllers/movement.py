@@ -47,7 +47,7 @@ class Movement(StateMachine):
     inputs_lock = will_reset_to(False)
 
     BALANCE_MAX_SPEED = 0.5
-    BALANCE_GAIN = 1.5
+    BALANCE_GAIN = 1.0
     BALANCE_RATE_GAIN = (
         -0.2
     )  # Needs to be negative to counteract increasing pitch when the charge station shifts

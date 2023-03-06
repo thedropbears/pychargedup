@@ -80,9 +80,10 @@ class AutoBase(AutonomousStateMachine):
     arm_component: Arm
     gripper: Gripper
 
-    INTAKE_PRE_TIME = 2.5
     SCORE_PRE_TIME = 2.5
-    MANUAL_CUBE_TIME = 0.5
+
+    MAX_VEL = 1.0
+    MAX_ACCEl = 2.0
 
     def __init__(
         self, score_action: ScoreAction, leave_pose: FieldPose, balance_pose: FieldPose
@@ -121,6 +122,8 @@ class AutoBase(AutonomousStateMachine):
                 path.pose,
                 path.approach_angle,
                 path.intermediate_waypoints,
+                max_vel=self.MAX_VEL,
+                max_accel=self.MAX_ACCEl,
             )
         elif self.movement.is_at_goal():
             self.next_state("approach_station")
@@ -134,6 +137,8 @@ class AutoBase(AutonomousStateMachine):
                 path.pose,
                 path.approach_angle,
                 path.intermediate_waypoints,
+                max_vel=self.MAX_VEL,
+                max_accel=self.MAX_ACCEl,
             )
         elif self.movement.is_at_goal():
             self.next_state("balance")
@@ -156,12 +161,12 @@ class ScoreAndBalance(AutoBase):
         super().__init__(
             ScoreAction(Node(Rows.HIGH, 3), ()),
             FieldPose(
-                Pose2d(6.0, 2.5, Rotation2d.fromDegrees(0)),
+                Pose2d(6.3, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(0),
                 (),
             ),
             FieldPose(
-                Pose2d(4.75, 2.5, Rotation2d.fromDegrees(0)),
+                Pose2d(5.0, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(180),
                 (),
             ),
