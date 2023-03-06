@@ -154,8 +154,8 @@ class AutoBase(AutonomousStateMachine):
         self.movement.do_autodrive()
 
 
-class LoadingSide3(AutoBase):
-    MODE_NAME = "Loading side 3 piece"
+class LoadingSide2(AutoBase):
+    MODE_NAME = "Loading side 2 piece"
     DEFAULT = True
 
     def setup(self) -> None:
@@ -172,6 +172,29 @@ class LoadingSide3(AutoBase):
         self.pickup_actions = [
             PickupAction(
                 3,
+                Rotation2d.fromDegrees(0),
+                (),
+            ),
+        ]
+
+
+class BumpSide2(AutoBase):
+    MODE_NAME = "Bump side 2 piece"
+
+    def setup(self) -> None:
+        self.score_actions = [
+            ScoreAction(
+                Node(Rows.HIGH, 0),
+                (),
+            ),
+            ScoreAction(
+                Node(Rows.HIGH, 1),
+                (Translation2d(3.5, 0.7),),
+            ),
+        ]
+        self.pickup_actions = [
+            PickupAction(
+                0,
                 Rotation2d.fromDegrees(0),
                 (),
             ),
