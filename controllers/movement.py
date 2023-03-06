@@ -146,9 +146,9 @@ class Movement(StateMachine):
         goal: Pose2d,
         approach_direction: Rotation2d,
         waypoints: tuple[Translation2d, ...] = (),
-        slow_dist=0.5,
-        max_accel=0.5,
-        max_vel=1,
+        slow_dist: float = 0.5,
+        max_accel: float = 0.5,
+        max_vel: float = 1,
     ) -> None:
         if (
             goal == self.goal
