@@ -58,7 +58,7 @@ class ScoreGamePieceController(StateMachine):
         if self.arm.at_goal():
             self.next_state("open_flapper")
 
-    @timed_state(next_state="dropping", duration=0.2, must_finish=True)
+    @timed_state(next_state="dropping", duration=0.1, must_finish=True)
     def open_flapper(self) -> None:
         self.gripper.open_flapper()
 
