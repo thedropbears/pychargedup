@@ -5,7 +5,7 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 
-from magicbot import state, StateMachine, feedback
+from magicbot import state, StateMachine, feedback, timed_state
 from enum import Enum, auto
 from utilities.game import (
     Node,
