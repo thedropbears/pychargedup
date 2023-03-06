@@ -164,7 +164,6 @@ class AutoBase(AutonomousStateMachine):
 
 class LoadingSide2(AutoBase):
     MODE_NAME = "Loading side 2 piece"
-    DEFAULT = True
 
     def setup(self) -> None:
         self.score_actions = [

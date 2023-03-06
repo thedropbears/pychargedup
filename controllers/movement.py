@@ -47,7 +47,7 @@ class Movement(StateMachine):
     inputs_lock = will_reset_to(False)
 
     BALANCE_MAX_SPEED = 0.5
-    BALANCE_GAIN = 1.5
+    BALANCE_GAIN = 1.0
     BALANCE_RATE_GAIN = (
         -0.2
     )  # Needs to be negative to counteract increasing pitch when the charge station shifts
@@ -254,8 +254,15 @@ class Movement(StateMachine):
     def do_autodrive(self) -> None:
         self.engage("autodrive")
 
+    # for testing
     def toggle_balance(self) -> None:
         if self.is_executing:
-            self.done()
+            self.start_balance()
         else:
-            self.engage("balance")
+            self.stop_balance()
+
+    def start_balance(self) -> None:
+        self.engage("balance", force=True)
+
+    def stop_balance(self) -> None:
+        self.done()
