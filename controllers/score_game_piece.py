@@ -26,7 +26,7 @@ class ScoreGamePieceController(StateMachine):
     movement: Movement
     recover: RecoverController
     HARD_UP_SPEED = 0.3
-    ARM_PRE_TIME = 2.0
+    ARM_PRE_TIME = 1.5
 
     def __init__(self) -> None:
         self.node_stratergy = NodePickStratergy.CLOSEST
@@ -49,7 +49,7 @@ class ScoreGamePieceController(StateMachine):
         self.movement.inputs_lock = True
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
 
-    @timed_state(next_state="deploying_arm", duration=0.4, must_finish=True)
+    @timed_state(next_state="deploying_arm", duration=0.5, must_finish=True)
     def back_off(self):
         if self.target_node.row is not Rows.MID:
             self.next_state("deploying_arm")
