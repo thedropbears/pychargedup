@@ -40,7 +40,7 @@ class ScoreGamePieceController(StateMachine):
         if self.movement.is_at_goal():
             self.next_state("hard_up")
 
-    @timed_state(next_state="back_off", duration=0.3, must_finish=True)
+    @timed_state(next_state="back_off", duration=0.2, must_finish=True)
     def hard_up(self) -> None:
         self.movement.inputs_lock = True
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
@@ -58,7 +58,7 @@ class ScoreGamePieceController(StateMachine):
         if self.arm.at_goal():
             self.next_state("open_flapper")
 
-    @timed_state(next_state="dropping", duration=0.2, must_finish=True)
+    @timed_state(next_state="dropping", duration=0.1, must_finish=True)
     def open_flapper(self) -> None:
         self.gripper.open_flapper()
 
