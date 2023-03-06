@@ -126,7 +126,7 @@ def get_score_location(node: Node) -> tuple[Pose2d, Rotation2d]:
     return goal, approach
 
 
-def get_closest_node(pos: Translation2d, piece: GamePiece, row: Rows, impossible: list[int]) -> Node:
+def get_closest_node(pos: Translation2d, piece: GamePiece, row: Rows, impossible: set[int]) -> Node:
     def get_node_dist(node: Node) -> float:
         if node.get_id() in impossible: 
             return 999999
