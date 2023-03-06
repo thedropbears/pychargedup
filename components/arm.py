@@ -79,7 +79,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=4
         )
         self.rotation_controller = ProfiledPIDController(
-            27, 0, 1.5, rotation_constraints
+            25, 0, 1.0, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=1, kA=0.1)
@@ -101,7 +101,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            50, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
+            70, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
@@ -172,7 +172,7 @@ class Arm:
 
     def execute(self) -> None:
         self.update_display()
-        if self.is_retracted() and self.use_voltage:
+        if self.is_retracted():
             self.set_at_min_extension()
             self.use_voltage = False
 
