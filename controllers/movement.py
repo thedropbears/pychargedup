@@ -146,7 +146,9 @@ class Movement(StateMachine):
         goal: Pose2d,
         approach_direction: Rotation2d,
         waypoints: tuple[Translation2d, ...] = (),
-        slow_dist=0.5,
+        slow_dist: float = 0.5,
+        max_accel: float = 0.5,
+        max_vel: float = 1,
     ) -> None:
         if (
             goal == self.goal
@@ -157,7 +159,7 @@ class Movement(StateMachine):
         self.goal = goal
         self.goal_approach_dir = approach_direction
 
-        self.config = TrajectoryConfig(maxVelocity=1, maxAcceleration=0.5)
+        self.config = TrajectoryConfig(maxVelocity=max_vel, maxAcceleration=max_accel)
         self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
         topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
         bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
