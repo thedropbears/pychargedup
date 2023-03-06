@@ -65,9 +65,9 @@ class AutoBase(AutonomousStateMachine):
     gripper: Gripper
     intake: Intake
 
-    INTAKE_PRE_TIME = 2.5
-    SCORE_PRE_TIME = 2.5
-    MANUAL_CUBE_TIME = 0.5
+    INTAKE_PRE_TIME = 3.5
+    SCORE_PRE_TIME = 3.0
+    MANUAL_CUBE_TIME = 0.75
 
     MAX_VEL = 2.0
     MAX_ACCEl = 2.0
