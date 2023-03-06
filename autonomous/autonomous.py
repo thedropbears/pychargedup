@@ -69,6 +69,9 @@ class AutoBase(AutonomousStateMachine):
     SCORE_PRE_TIME = 2.5
     MANUAL_CUBE_TIME = 0.5
 
+    MAX_VEL = 2.0
+    MAX_ACCEl = 2.0
+
     def __init__(self) -> None:
         self.pickup_actions: list[PickupAction] = []
         self.score_actions: list[ScoreAction] = []
@@ -105,6 +108,8 @@ class AutoBase(AutonomousStateMachine):
                 *get_staged_pickup(action.piece_idx, action.approach_direction),
                 action.intermediate_waypoints,
                 slow_dist=0,
+                max_accel=self.MAX_ACCEl,
+                max_vel=self.MAX_VEL,
             )
         elif self.movement.time_to_goal < self.INTAKE_PRE_TIME:
             self.next_state("pickup_cube")
@@ -132,7 +137,10 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             path = self.score_actions[self.progress_idx].with_correct_flipped()
             self.movement.set_goal(
-                *get_score_location(path.node), path.intermediate_waypoints
+                *get_score_location(path.node),
+                path.intermediate_waypoints,
+                max_accel=self.MAX_ACCEl,
+                max_vel=self.MAX_VEL,
             )
         self.movement.do_autodrive()
         if self.movement.time_to_goal < self.SCORE_PRE_TIME:
