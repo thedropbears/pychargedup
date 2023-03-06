@@ -56,10 +56,10 @@ class ScoreGamePieceController(StateMachine):
     def deploying_arm(self) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
-            self.next_state("dropping")
+            self.next_state("open_flapper")
 
-    @timed_state(duration=0.4, must_finish=True)
-    def open_flipper(self) -> None:
+    @timed_state(next_state="dropping", duration=0.2, must_finish=True)
+    def open_flapper(self) -> None:
         self.gripper.open_flapper()
 
     @timed_state(duration=0.5, must_finish=True)
