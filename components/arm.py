@@ -101,7 +101,7 @@ class Arm:
         # assume retracted starting position
         self.extension_encoder.setPosition(MIN_EXTENSION)
         self.extension_controller = ProfiledPIDController(
-            70, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
+            80, 0, 1, TrapezoidProfile.Constraints(maxVelocity=1.0, maxAcceleration=4.0)
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
