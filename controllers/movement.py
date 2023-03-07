@@ -194,7 +194,7 @@ class Movement(StateMachine):
         # if we arent trying to move and almost at end of a match
         if (
             wpilib.DriverStation.getMatchTime() < 5
-            and sum(abs(x) for x in self.driver_inputs) < 0.01
+            and sum(map(abs, self.driver_inputs)) < 0.01
         ):
             self.chassis.lock_swerve()
             return
