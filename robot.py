@@ -171,6 +171,12 @@ class MyRobot(magicbot.MagicRobot):
             # Down, score closest mid
             elif dpad_angle == 180:
                 self.score_game_piece.score_closest_mid()
+            # Right, arm to score high position
+            if dpad_angle == 90:
+                self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
+            # Left, arm to score mid postion
+            if dpad_angle == 270:
+                self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
         self.last_dpad = dpad_angle
 
         # Manual overrides
