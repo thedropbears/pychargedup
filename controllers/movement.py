@@ -5,6 +5,7 @@ from magicbot import (
     tunable,
     will_reset_to,
 )
+import wpilib
 from components.chassis import Chassis
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.trajectory import (
@@ -189,6 +190,15 @@ class Movement(StateMachine):
     def manualdrive(self) -> None:
         if self.debug_trajectory:
             self.generate_trajectory()
+
+        # if we arent trying to move and almost at end of a match
+        if (
+            wpilib.DriverStation.getMatchTime() < 5
+            and sum(abs(x) for x in self.driver_inputs) < 0.01
+        ):
+            self.chassis.lock_swerve()
+            return
+
         if self.drive_local:
             self.chassis.drive_local(*self.driver_inputs)
         else:

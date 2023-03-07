@@ -190,7 +190,7 @@ class Chassis:
     send_modules = magicbot.tunable(False)
     do_fudge = magicbot.tunable(True)
     do_smooth = magicbot.tunable(True)
-    swerve_lock = magicbot.tunable(False)
+    swerve_lock = magicbot.will_reset_to(False)
 
     def setup(self) -> None:
         self.imu = navx.AHRS.create_spi()
@@ -308,9 +308,6 @@ class Chassis:
 
     def lock_swerve(self) -> None:
         self.swerve_lock = True
-
-    def unlock_swerve(self) -> None:
-        self.swerve_lock = False
 
     def get_velocity(self) -> ChassisSpeeds:
         """Gets field relative measured robot ChassisSpeeds"""
