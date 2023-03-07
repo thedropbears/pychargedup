@@ -96,7 +96,7 @@ class Movement(StateMachine):
         if distance_to_goal <= 0.01:
             return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
-        if chassis_speed < 0.2:
+        if chassis_speed < 0.5:
             # If the robot is stationary, instead of accounting for the momentum of the robot,
             # this section of code will point the control vector at the goal to avoid the robot
             # taking unnecessary turns before moving towards the goal.
@@ -110,8 +110,8 @@ class Movement(StateMachine):
             # the robot doesn't make a sudden stop to reverse.
             # In most cases, this will generate a smooth curve that works better than simply reversing
             # the robot.
-            kvx = 3
-            kvy = 3
+            kvx = 1.5
+            kvy = 1.5
 
             spline_start_momentum_x = chassis_velocity.vx * kvx
             spline_start_momentum_y = chassis_velocity.vy * kvy

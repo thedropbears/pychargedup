@@ -86,7 +86,7 @@ class ScoreGamePieceController(StateMachine):
     def _get_closest(self, row: Rows) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
         cur_vel = self.movement.chassis.get_velocity()
-        lookahead_time = 1.0
+        lookahead_time = 0.5
         effective_pos = cur_pos + Translation2d(
             cur_vel.vx * lookahead_time, cur_vel.vy * lookahead_time
         )
