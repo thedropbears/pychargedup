@@ -15,6 +15,7 @@ class Intake:
         self._last_deployed = False
         self.change_time = time.monotonic()
         self.running = False
+        self.backwards = False
         self.break_beam = DigitalInput(ids.DioChannels.intake_break_beam_sensor)
         self.motor = CANSparkMax(
             ids.SparkMaxIds.intake_motor, CANSparkMax.MotorType.kBrushless
@@ -35,6 +36,7 @@ class Intake:
     def deploy(self) -> None:
         self.deployed = True
         self.running = True
+        self.backwards = False
 
     def deploy_without_running(self):
         self.deployed = True
@@ -43,6 +45,11 @@ class Intake:
     def retract(self) -> None:
         self.running = False
         self.deployed = False
+
+    def deploy_running_backwards(self) -> None:
+        self.backwards = True
+        self.running = True
+        self.deployed = True
 
     @feedback
     def is_fully_retracted(self) -> bool:
@@ -64,8 +71,9 @@ class Intake:
             self.change_time = time.monotonic()
         self._last_deployed = self.deployed
 
+        speed = -self.intake_speed if self.backwards else self.intake_speed
         if self.running:
-            self.motor.set(self.intake_speed)
+            self.motor.set(speed)
         else:
             self.motor.set(0.0)
 
