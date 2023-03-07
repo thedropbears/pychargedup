@@ -160,11 +160,8 @@ class MyRobot(magicbot.MagicRobot):
         # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
+            self.arm_component.use_voltage = True
             self.cancel_controllers()
-
-        # Do auto balance
-        if self.gamepad.getAButtonPressed():
-            self.movement.toggle_balance()
 
         dpad_angle = self.gamepad.getPOV()
         if dpad_angle != self.last_dpad:

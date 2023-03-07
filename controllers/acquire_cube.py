@@ -77,6 +77,7 @@ class AcquireCubeController(StateMachine):
         if self.arm.at_goal():
             self.done()
             self.intake.deploy_without_running()
+            self.gripper.close_flapper()
 
     def done(self) -> None:
         super().done()
