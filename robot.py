@@ -55,14 +55,28 @@ class MyRobot(magicbot.MagicRobot):
         self.joystick = wpilib.Joystick(1)
 
         self.event_loop = wpilib.event.EventLoop()
-        self.right_trigger_down = self.gamepad.rightTrigger(
-            0.3, self.event_loop
+        # Right trigger events
+        self.right_trigger_down_full = self.gamepad.rightTrigger(
+            0.95, self.event_loop
         ).rising()
+        self.right_trigger_down_half = self.gamepad.rightTrigger(0.05, self.event_loop)
         self.right_trigger_up = self.gamepad.rightTrigger(
-            0.3, self.event_loop
+            0.95, self.event_loop
         ).falling()
-        self.left_trigger_down = self.gamepad.leftTrigger(0.3, self.event_loop).rising()
-        self.left_trigger_up = self.gamepad.leftTrigger(0.3, self.event_loop).falling()
+
+        # Left trigger events
+        self.left_trigger_down_full = self.gamepad.leftTrigger(
+            0.95, self.event_loop
+        ).rising()
+        self.left_trigger_down_half = self.gamepad.leftTrigger(
+            0.05, self.event_loop
+        ).rising()
+        self.left_trigger_up = self.gamepad.leftTrigger(0.95, self.event_loop).falling()
+
+        self.rumble_timer = wpilib.Timer()
+        self.rumble_timer.start()
+        self.rumble_duration = 0.0
+
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
 
@@ -87,6 +101,18 @@ class MyRobot(magicbot.MagicRobot):
                 -0.01886390522122383,
             )
         )
+        self.last_dpad = -1
+
+    def rumble_for(self, intensity: float, duration: float):
+        self.rumble_duration = duration
+        self.rumble_timer.reset()
+        self.gamepad.setRumble(wpilib.XboxController.RumbleType.kBothRumble, intensity)
+
+    def short_rumble(self):
+        self.rumble_for(0.4, 0.1)
+
+    def long_rumble(self):
+        self.rumble_for(0.8, 0.3)
 
     def teleopInit(self) -> None:
         self.recover.engage()
@@ -102,57 +128,52 @@ class MyRobot(magicbot.MagicRobot):
         self.movement.set_input(vx=drive_x, vy=drive_y, vz=drive_z, local=local_driving)
 
         # Cone Pickup
-        if self.left_trigger_down.getAsBoolean() and not self.recover.is_executing:
+        if (
+            self.left_trigger_down_full.getAsBoolean()
+            or self.right_trigger_down_full.getAsBoolean()
+        ):
             self.acquire_cone.engage()
-        if self.left_trigger_up.getAsBoolean():
+            self.long_rumble()
+        if self.left_trigger_up.getAsBoolean() or self.right_trigger_up.getAsBoolean():
             self.acquire_cone.done()
 
-        # Score
-        if self.right_trigger_down.getAsBoolean() and not self.recover.is_executing:
-            self.score_game_piece.engage()
-        if self.right_trigger_up.getAsBoolean():
-            self.score_game_piece.done()
+        # Request cone / Set pickup side
+        if self.left_trigger_down_half.getAsBoolean():
+            self.acquire_cone.target_left()
+            self.short_rumble()
+        if self.right_trigger_down_half.getAsBoolean():
+            self.acquire_cone.target_right()
+            self.short_rumble()
+
+        # Score, auto pick node
+        if self.gamepad.getAButtonPressed():
+            self.score_game_piece.score_best()
 
         # Intake
-        if self.gamepad.getRightBumperPressed() and not self.recover.is_executing:
+        if self.gamepad.getRightBumperPressed():
             self.acquire_cube.engage()
-            self.status_lights.want_cube()
         if self.gamepad.getLeftBumperPressed():
             self.acquire_cube.done()
 
-        # Request / Set to score cube
+        # Request cube
         if self.gamepad.getXButtonPressed():
             self.status_lights.want_cube()
 
-        # Request / Set to score cone
-        if self.gamepad.getYButtonPressed():
-            if self.acquire_cone.targeting_left:
-                self.status_lights.want_cone_left()
-            else:
-                self.status_lights.want_cone_left()
-
+        # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
-
-        # Do auto balance
-        if self.gamepad.getAButtonPressed():
-            self.movement.toggle_balance()
+            self.arm_component.use_voltage = True
+            self.cancel_controllers()
 
         dpad_angle = self.gamepad.getPOV()
-        # up
-        if dpad_angle == 0:
-            self.score_game_piece.prefer_high()
-        # down
-        elif dpad_angle == 180:
-            self.score_game_piece.prefer_mid()
-        # right
-        elif dpad_angle == 90:
-            self.acquire_cone.target_right()
-            self.status_lights.want_cone_right()
-        # left
-        elif dpad_angle == 270:
-            self.acquire_cone.target_left()
-            self.status_lights.want_cone_left()
+        if dpad_angle != self.last_dpad:
+            # Up, score closest high
+            if dpad_angle == 0:
+                self.score_game_piece.score_closest_high()
+            # Down, score closest mid
+            elif dpad_angle == 180:
+                self.score_game_piece.score_closest_mid()
+        self.last_dpad = dpad_angle
 
         # Manual overrides
         # Claw
@@ -160,6 +181,10 @@ class MyRobot(magicbot.MagicRobot):
             self.gripper.close()
         if self.gamepad.getBackButtonPressed():
             self.gripper.open()
+
+        # stop rumble after time
+        if self.rumble_timer.hasElapsed(self.rumble_duration):
+            self.gamepad.setRumble(wpilib.XboxController.RumbleType.kBothRumble, 0)
 
     def testInit(self) -> None:
         self.arm_component.on_enable()

@@ -1,4 +1,4 @@
-from magicbot import state, StateMachine, tunable
+from magicbot import state, StateMachine
 
 from components.gripper import Gripper
 from components.intake import Intake
@@ -23,7 +23,7 @@ class AcquireConeController(StateMachine):
     movement: Movement
     recover: RecoverController
 
-    EXTEND_VOLTAGE = tunable(3)
+    ARM_PRE_TIME = 1
 
     def __init__(self) -> None:
         self.targeting_left: bool = False
@@ -41,6 +41,9 @@ class AcquireConeController(StateMachine):
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
 
+        if self.movement.time_to_goal < self.ARM_PRE_TIME:
+            self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
+
     @state(must_finish=True)
     def deploying_arm(self) -> None:
         """
@@ -48,7 +51,6 @@ class AcquireConeController(StateMachine):
         Open the gripper
         """
 
-        # TODO Test if gripper opening interfere with the arm moving from HANDOFF
         self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
         self.gripper.open()
         if self.gripper.get_full_open() and self.arm.at_goal():

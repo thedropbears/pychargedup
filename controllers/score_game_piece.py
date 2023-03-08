@@ -10,6 +10,8 @@ from enum import Enum, auto
 from utilities.game import Node, get_closest_node, get_score_location, Rows, is_red, GamePiece, get_closest_node_in_allowed
 from components.score_tracker import GridNode, ScoreTracker
 
+from wpimath.geometry import Translation2d
+
 
 class NodePickStratergy(Enum):
     CLOSEST = auto()
@@ -35,6 +37,9 @@ class ScoreGamePieceController(StateMachine):
 
     score_tracker: ScoreTracker
 
+    HARD_UP_SPEED = 0.3
+    ARM_PRE_TIME = 1.5
+
     def __init__(self) -> None:
         self.node_stratergy = NodePickStratergy.BEST
         self.override_node = Node(Rows.HIGH, 0)
@@ -42,22 +47,39 @@ class ScoreGamePieceController(StateMachine):
         self.target_node = Node(Rows.HIGH, 0)
 
     @state(first=True, must_finish=True)
-    def driving_to_position(self, initial_call):
-        if initial_call:
-            self.target_node = self.pick_node()
+    def driving_to_position(self) -> None:
         self.movement.set_goal(*get_score_location(self.target_node))
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
+            self.next_state("hard_up")
+
+        if self.movement.time_to_goal < self.ARM_PRE_TIME:
+            self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
+
+    @timed_state(next_state="back_off", duration=0.3, must_finish=True)
+    def hard_up(self) -> None:
+        self.movement.inputs_lock = True
+        self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)
+
+    @timed_state(next_state="deploying_arm", duration=0.5, must_finish=True)
+    def back_off(self):
+        if self.target_node.row is not Rows.MID:
             self.next_state("deploying_arm")
+        self.movement.inputs_lock = True
+        self.movement.set_input(self.HARD_UP_SPEED, 0, 0, False, override=True)
 
     @state(must_finish=True)
-    def deploying_arm(self):
+    def deploying_arm(self) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
-            self.next_state("dropping")
+            self.next_state("open_flapper")
 
-    @state(must_finish=True)
-    def dropping(self):
+    @timed_state(next_state="dropping", duration=0.1, must_finish=True)
+    def open_flapper(self) -> None:
+        self.gripper.open_flapper()
+
+    @timed_state(duration=0.5, must_finish=True)
+    def dropping(self) -> None:
         self.gripper.open()
         if self.gripper.get_full_open():
             self.done()
@@ -65,7 +87,7 @@ class ScoreGamePieceController(StateMachine):
     def done(self) -> None:
         super().done()
         self.recover.engage()
-
+        
     def pick_node(self) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
         if self.node_stratergy is NodePickStratergy.CLOSEST:

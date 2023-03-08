@@ -5,7 +5,7 @@ from components.leds import StatusLights
 
 from controllers.recover import RecoverController
 
-from magicbot import state, StateMachine, timed_state
+from magicbot import state, StateMachine, timed_state, will_reset_to
 
 from utilities.game import GamePiece
 
@@ -17,6 +17,8 @@ class AcquireCubeController(StateMachine):
     status_lights: StatusLights
 
     recover: RecoverController
+
+    override_cube_present = will_reset_to(False)
 
     @state(first=True, must_finish=True)
     def intaking(self) -> None:
@@ -49,9 +51,9 @@ class AcquireCubeController(StateMachine):
         """
         Keep the intake spinning until the cube breaks the break-beam sensor.
         """
-        if self.intake.is_game_piece_present():
-            self.next_state("waiting_with_cube")
-        if self.gripper.cube_present():
+        # if self.intake.is_game_piece_present():
+        #     self.next_state("waiting_with_cube")
+        if self.gripper.cube_present() or self.override_cube_present:
             self.next_state("grabbing")
 
     @timed_state(must_finish=True, next_state="grabbing", duration=0.5)
@@ -75,6 +77,7 @@ class AcquireCubeController(StateMachine):
         if self.arm.at_goal():
             self.done()
             self.intake.deploy_without_running()
+            self.gripper.close_flapper()
 
     def done(self) -> None:
         super().done()

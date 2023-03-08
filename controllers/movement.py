@@ -47,7 +47,7 @@ class Movement(StateMachine):
     inputs_lock = will_reset_to(False)
 
     BALANCE_MAX_SPEED = 0.5
-    BALANCE_GAIN = 1.5
+    BALANCE_GAIN = 1.0
     BALANCE_RATE_GAIN = (
         -0.2
     )  # Needs to be negative to counteract increasing pitch when the charge station shifts
@@ -146,7 +146,9 @@ class Movement(StateMachine):
         goal: Pose2d,
         approach_direction: Rotation2d,
         waypoints: tuple[Translation2d, ...] = (),
-        slow_dist=0.5,
+        slow_dist: float = 0.5,
+        max_accel: float = 0.5,
+        max_vel: float = 1,
     ) -> None:
         if (
             goal == self.goal
@@ -157,7 +159,7 @@ class Movement(StateMachine):
         self.goal = goal
         self.goal_approach_dir = approach_direction
 
-        self.config = TrajectoryConfig(maxVelocity=1, maxAcceleration=0.5)
+        self.config = TrajectoryConfig(maxVelocity=max_vel, maxAcceleration=max_accel)
         self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
         topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
         bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
@@ -174,11 +176,13 @@ class Movement(StateMachine):
             self.next_state("autodrive")
 
     def is_at_goal(self) -> bool:
-        return (
+        real_at_goal = (
             self.goal.translation() - self.chassis.get_pose().translation()
         ).norm() < self.POSITION_TOLERANCE and abs(
             (self.goal.rotation() - self.chassis.get_rotation()).radians()
         ) < self.ANGLE_TOLERANCE
+        hitting_wall = self.time_to_goal < -0.1 and self.chassis.may_be_stalled()
+        return real_at_goal or hitting_wall
 
     # will execute if no other states are executing
     @default_state
@@ -250,8 +254,15 @@ class Movement(StateMachine):
     def do_autodrive(self) -> None:
         self.engage("autodrive")
 
+    # for testing
     def toggle_balance(self) -> None:
         if self.is_executing:
-            self.done()
+            self.start_balance()
         else:
-            self.engage("balance")
+            self.stop_balance()
+
+    def start_balance(self) -> None:
+        self.engage("balance", force=True)
+
+    def stop_balance(self) -> None:
+        self.done()
