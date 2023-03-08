@@ -24,16 +24,6 @@ class NodePickStratergy(Enum):
     OVERRIDE = auto()
     BEST = auto()
 
-
-def piece_to_node(piece: GamePiece) -> GridNode:
-    if piece == GamePiece.BOTH:
-        return GridNode.HYBRID
-    if piece == GamePiece.CONE:
-        return GridNode.CONE
-    if piece == GamePiece.CUBE:
-        return GridNode.CUBE
-
-
 class ScoreGamePieceController(StateMachine):
     gripper: Gripper
     intake: Intake
@@ -110,7 +100,7 @@ class ScoreGamePieceController(StateMachine):
                 else self.score_tracker.state_red
             )
             best = self.score_tracker.get_best_moves(
-                state, piece_to_node(self.gripper.holding)
+                state, self.gripper.holding
             )
             nodes: list[Node] = []
             for i in range(len(best)):
