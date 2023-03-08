@@ -3,13 +3,14 @@ import numpy as np
 import numpy.typing as npt
 import wpilib
 import magicbot
-from utilities.game import Node
 from ntcore import NetworkTableInstance
+
 
 class GridNode(Enum):
     CUBE = 0
     CONE = 1
     HYBRID = 2
+
 
 class ScoreTracker:
     CUBE_MASK = np.array(
@@ -44,7 +45,6 @@ class ScoreTracker:
         nt = self.inst.getTable("left_cam")
         self.nodes = nt.getEntry("nodes")
 
-
     def execute(self) -> None:
         if not self.nodes.exists():
             print("skipping")
@@ -52,10 +52,18 @@ class ScoreTracker:
         _data = self.nodes.getStringArray([])
         data = self.nt_data_to_node_data(_data)
         for node in data:
-            side = wpilib.DriverStation.Alliance.kBlue if node[0] >= 27 else wpilib.DriverStation.Alliance.kRed
+            side = (
+                wpilib.DriverStation.Alliance.kBlue
+                if node[0] >= 27
+                else wpilib.DriverStation.Alliance.kRed
+            )
             col = node[0] % 9
             row = (node[0] % 27) // 9
-            self.add_vision_data(side=side, pos=np.array([row, col]), confidence=(1. if node[1] else -0.5))
+            self.add_vision_data(
+                side=side,
+                pos=np.array([row, col]),
+                confidence=(1.0 if node[1] else -0.5),
+            )
 
     def nt_data_to_node_data(self, data: list[str]) -> list[tuple[int, bool]]:
         nodes: list[tuple[int, bool]] = []

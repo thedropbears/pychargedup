@@ -7,16 +7,23 @@ from controllers.recover import RecoverController
 
 from magicbot import state, StateMachine, feedback
 from enum import Enum, auto
-from utilities.game import Node, get_closest_node, get_score_location, Rows, is_red, GamePiece, get_closest_node_in_allowed
+from utilities.game import (
+    Node,
+    get_closest_node,
+    get_score_location,
+    Rows,
+    is_red,
+    GamePiece,
+    get_closest_node_in_allowed,
+)
 from components.score_tracker import GridNode, ScoreTracker
-
-from wpimath.geometry import Translation2d
 
 
 class NodePickStratergy(Enum):
     CLOSEST = auto()
     OVERRIDE = auto()
     BEST = auto()
+
 
 def piece_to_node(piece: GamePiece) -> GridNode:
     if piece == GamePiece.BOTH:
@@ -87,7 +94,7 @@ class ScoreGamePieceController(StateMachine):
     def done(self) -> None:
         super().done()
         self.recover.engage()
-        
+
     def pick_node(self) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
         if self.node_stratergy is NodePickStratergy.CLOSEST:
@@ -97,8 +104,14 @@ class ScoreGamePieceController(StateMachine):
         elif self.node_stratergy is NodePickStratergy.OVERRIDE:
             return self.override_node
         elif self.node_stratergy is NodePickStratergy.BEST:
-            state = self.score_tracker.state_blue if is_red() else self.score_tracker.state_red
-            best = self.score_tracker.get_best_moves(state, piece_to_node(self.gripper.holding))
+            state = (
+                self.score_tracker.state_blue
+                if is_red()
+                else self.score_tracker.state_red
+            )
+            best = self.score_tracker.get_best_moves(
+                state, piece_to_node(self.gripper.holding)
+            )
             nodes: list[Node] = []
             for i in range(len(best)):
                 as_tuple = tuple(best[i])
@@ -108,7 +121,7 @@ class ScoreGamePieceController(StateMachine):
             return get_closest_node_in_allowed(
                 cur_pos, self.gripper.get_current_piece(), nodes
             )
-        
+
     @feedback
     def state_red(self) -> list[bool]:
         state: list[bool] = []
@@ -116,7 +129,7 @@ class ScoreGamePieceController(StateMachine):
             for j in i:
                 state.append(j)
         return state
-    
+
     @feedback
     def state_blue(self) -> list[bool]:
         state: list[bool] = []
