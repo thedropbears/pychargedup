@@ -6,16 +6,9 @@ from controllers.movement import Movement
 from controllers.recover import RecoverController
 
 from magicbot import state, timed_state, StateMachine
-from enum import Enum, auto
 from utilities.game import Node, get_closest_node, get_score_location, Rows
 
 from wpimath.geometry import Translation2d
-
-
-class NodePickStratergy(Enum):
-    CLOSEST = auto()
-    OVERRIDE = auto()
-    BEST = auto()
 
 
 class ScoreGamePieceController(StateMachine):
@@ -29,14 +22,15 @@ class ScoreGamePieceController(StateMachine):
     ARM_PRE_TIME = 1.5
 
     def __init__(self) -> None:
-        self.node_stratergy = NodePickStratergy.CLOSEST
         self.override_node = Node(Rows.HIGH, 0)
         self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
 
     @state(first=True, must_finish=True)
     def driving_to_position(self) -> None:
-        self.movement.set_goal(*get_score_location(self.target_node))
+        self.movement.set_goal(
+            *get_score_location(self.target_node), max_accel=1.0, max_vel=2.0
+        )
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("hard_up")
@@ -75,26 +69,24 @@ class ScoreGamePieceController(StateMachine):
         self.movement.inputs_lock = False
         self.recover.engage()
 
-    def score_closest_high(self) -> None:
-        self.target_node = self._get_closest(Rows.HIGH)
-        self.engage()
+    def set_score_high(self) -> None:
+        self.prefered_row = Rows.HIGH
 
-    def score_closest_mid(self) -> None:
-        self.target_node = self._get_closest(Rows.MID)
-        self.engage()
+    def set_score_mid(self) -> None:
+        self.prefered_row = Rows.MID
 
     def _get_closest(self, row: Rows) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
         cur_vel = self.movement.chassis.get_velocity()
-        lookahead_time = 0.5
+        lookahead_time = 0.25
         effective_pos = cur_pos + Translation2d(
             cur_vel.vx * lookahead_time, cur_vel.vy * lookahead_time
         )
         return get_closest_node(effective_pos, self.gripper.get_current_piece(), row)
 
-    def score_best(self) -> None:
-        # placeholder
-        self.score_closest_high()
+    def score(self) -> None:
+        self.target_node = self._get_closest(self.prefered_row)
+        self.engage()
 
     def score_without_moving(self, node: Node) -> None:
         self.target_node = node

@@ -35,7 +35,9 @@ class AcquireConeController(StateMachine):
         Requires that the state has had the goal position injected into it.
         """
         self.movement.set_goal(
-            *get_cone_pickup(self.movement.chassis.get_pose(), self.targeting_left)
+            *get_cone_pickup(self.movement.chassis.get_pose(), self.targeting_left),
+            max_accel=1.0,
+            max_vel=2.0
         )
         self.movement.do_autodrive()
         if self.movement.is_at_goal():

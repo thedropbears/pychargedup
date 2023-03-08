@@ -56,6 +56,9 @@ class VisualLocalizer:
         self.add_to_estimator = True
 
     def execute(self) -> None:
+        # stop warnings in simulation
+        if wpilib.RobotBase.isSimulation():
+            return
         # if results didn't see any targets
         if not (results := self.camera.getLatestResult()).hasTargets():
             return
