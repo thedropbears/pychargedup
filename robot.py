@@ -19,6 +19,7 @@ from components.vision import VisualLocalizer
 from components.arm import Arm
 from components.gripper import Gripper
 from components.leds import StatusLights, DisplayType, LedColors
+from components.score_tracker import ScoreTracker
 from utilities.scalers import rescale_js
 from utilities.game import is_red
 
@@ -40,6 +41,7 @@ class MyRobot(magicbot.MagicRobot):
     intake: Intake
     status_lights: StatusLights
     gripper: Gripper
+    score_tracker: ScoreTracker
 
     port_localizer: VisualLocalizer
     starboard_localizer: VisualLocalizer
@@ -258,6 +260,7 @@ class MyRobot(magicbot.MagicRobot):
         self.port_localizer.execute()
         self.starboard_localizer.execute()
         self.status_lights.execute()
+        self.score_tracker.execute()
 
     def cancel_controllers(self):
         self.acquire_cone.done()

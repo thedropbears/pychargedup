@@ -5,11 +5,17 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 
-from magicbot import state, timed_state, StateMachine
+from magicbot import state, StateMachine, feedback, timed_state
 from enum import Enum, auto
-from utilities.game import Node, get_closest_node, get_score_location, Rows
-
-from wpimath.geometry import Translation2d
+from utilities.game import (
+    Node,
+    get_closest_node,
+    get_score_location,
+    Rows,
+    is_red,
+    get_closest_node_in_allowed,
+)
+from components.score_tracker import ScoreTracker
 
 
 class NodePickStratergy(Enum):
@@ -25,11 +31,14 @@ class ScoreGamePieceController(StateMachine):
 
     movement: Movement
     recover: RecoverController
+
+    score_tracker: ScoreTracker
+
     HARD_UP_SPEED = 0.3
     ARM_PRE_TIME = 1.5
 
     def __init__(self) -> None:
-        self.node_stratergy = NodePickStratergy.CLOSEST
+        self.node_stratergy = NodePickStratergy.BEST
         self.override_node = Node(Rows.HIGH, 0)
         self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
@@ -69,32 +78,76 @@ class ScoreGamePieceController(StateMachine):
     @timed_state(duration=0.5, must_finish=True)
     def dropping(self) -> None:
         self.gripper.open()
+        if self.gripper.get_full_open():
+            self.done()
 
     def done(self) -> None:
         super().done()
-        self.movement.inputs_lock = False
         self.recover.engage()
 
+    def score_best(self) -> None:
+        self.node_stratergy = NodePickStratergy.BEST
+
     def score_closest_high(self) -> None:
-        self.target_node = self._get_closest(Rows.HIGH)
-        self.engage()
+        self.node_stratergy = NodePickStratergy.CLOSEST
+        self.prefer_high()
 
     def score_closest_mid(self) -> None:
-        self.target_node = self._get_closest(Rows.MID)
-        self.engage()
+        self.node_stratergy = NodePickStratergy.CLOSEST
+        self.prefer_high()
 
-    def _get_closest(self, row: Rows) -> Node:
+    def pick_node(self) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
-        cur_vel = self.movement.chassis.get_velocity()
-        lookahead_time = 1.0
-        effective_pos = cur_pos + Translation2d(
-            cur_vel.vx * lookahead_time, cur_vel.vy * lookahead_time
-        )
-        return get_closest_node(effective_pos, self.gripper.get_current_piece(), row)
+        if self.node_stratergy is NodePickStratergy.CLOSEST:
+            return get_closest_node(
+                cur_pos, self.gripper.get_current_piece(), self.prefered_row, set()
+            )
+        elif self.node_stratergy is NodePickStratergy.OVERRIDE:
+            return self.override_node
+        elif self.node_stratergy is NodePickStratergy.BEST:
+            state = (
+                self.score_tracker.state_blue
+                if is_red()
+                else self.score_tracker.state_red
+            )
+            best = self.score_tracker.get_best_moves(state, self.gripper.holding)
+            nodes: list[Node] = []
+            for i in range(len(best)):
+                as_tuple = tuple(best[i])
+                node = Node(Rows(int(as_tuple[0])), as_tuple[1])
+                nodes.append(node)
 
-    def score_best(self) -> None:
-        # placeholder
-        self.score_closest_high()
+            return get_closest_node_in_allowed(
+                cur_pos, self.gripper.get_current_piece(), nodes
+            )
+
+    @feedback
+    def state_red(self) -> list[bool]:
+        state: list[bool] = []
+        for i in self.score_tracker.state_blue.tolist():
+            for j in i:
+                state.append(j)
+        return state
+
+    @feedback
+    def state_blue(self) -> list[bool]:
+        state: list[bool] = []
+        for i in self.score_tracker.state_blue.tolist():
+            for j in i:
+                state.append(j)
+        return state
+
+    @feedback
+    def pick_node_as_int(self) -> int:
+        # node = self.pick_node()
+        node = Node(Rows.HIGH, 0)
+        return (node.row.value - 1) * 3 + node.col
+
+    def prefer_high(self) -> None:
+        self.prefered_row = Rows.HIGH
+
+    def prefer_mid(self) -> None:
+        self.prefered_row = Rows.MID
 
     def score_without_moving(self, node: Node) -> None:
         self.target_node = node
