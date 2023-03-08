@@ -20,7 +20,7 @@ from components.arm import Arm
 from components.gripper import Gripper
 from components.leds import StatusLights, DisplayType, LedColors
 from utilities.scalers import rescale_js
-from utilities.game import is_red, Rows, get_node_location
+from utilities.game import is_red, get_node_location
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -145,7 +145,7 @@ class MyRobot(magicbot.MagicRobot):
             self.short_rumble()
 
         # Score, auto pick node
-        if self.gamepad.getAButtonPressed():
+        if self.gamepad.getAButtonPressed() and not self.recover.is_executing:
             self.score_game_piece.score()
 
         # Intake
@@ -191,7 +191,10 @@ class MyRobot(magicbot.MagicRobot):
         if self.rumble_timer.hasElapsed(self.rumble_duration):
             self.gamepad.setRumble(wpilib.XboxController.RumbleType.kBothRumble, 0)
 
-        n = get_node_location(self.score_game_piece._get_closest(Rows.HIGH))
+        # Show node to be scored at on dashbaord
+        n = get_node_location(
+            self.score_game_piece._get_closest(self.score_game_piece.prefered_row)
+        )
         self.target_node.setPose(Pose2d(n.toTranslation2d(), Rotation2d()))
 
     def testInit(self) -> None:

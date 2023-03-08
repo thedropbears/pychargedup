@@ -133,10 +133,12 @@ class Movement(StateMachine):
         )
 
         self.config.setStartVelocity(chassis_speed)
-
-        trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, list(self.waypoints), goal_spline, self.config
-        )
+        try:
+            trajectory = TrajectoryGenerator.generateTrajectory(
+                start_point_spline, list(self.waypoints), goal_spline, self.config
+            )
+        except RuntimeError:
+            return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
         self.robot_object.setTrajectory(trajectory)
         return trajectory
