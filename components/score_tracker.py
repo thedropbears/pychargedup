@@ -1,10 +1,10 @@
-from enum import Enum
 import numpy as np
 import numpy.typing as npt
 import wpilib
 import magicbot
 from ntcore import NetworkTableInstance
 from utilities.game import GamePiece
+
 
 class ScoreTracker:
     CUBE_MASK = np.array(

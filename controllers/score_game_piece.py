@@ -13,16 +13,16 @@ from utilities.game import (
     get_score_location,
     Rows,
     is_red,
-    GamePiece,
     get_closest_node_in_allowed,
 )
-from components.score_tracker import GridNode, ScoreTracker
+from components.score_tracker import ScoreTracker
 
 
 class NodePickStratergy(Enum):
     CLOSEST = auto()
     OVERRIDE = auto()
     BEST = auto()
+
 
 class ScoreGamePieceController(StateMachine):
     gripper: Gripper
@@ -99,9 +99,7 @@ class ScoreGamePieceController(StateMachine):
                 if is_red()
                 else self.score_tracker.state_red
             )
-            best = self.score_tracker.get_best_moves(
-                state, self.gripper.holding
-            )
+            best = self.score_tracker.get_best_moves(state, self.gripper.holding)
             nodes: list[Node] = []
             for i in range(len(best)):
                 as_tuple = tuple(best[i])
