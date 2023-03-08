@@ -84,11 +84,11 @@ class ScoreTracker:
             state[pos] = confidence > 0.0
 
     @staticmethod
-    def count_links(r: npt.NDArray[bool]) -> int:
+    def count_links(r: npt.NDArray[np.bool_]) -> int:
         i = 0
         n = 0
-        l = len(r)
-        while i < l - 2:
+        length = len(r)
+        while i < length - 2:
             if r[i] and r[i + 1] and r[i + 2]:
                 n += 1
                 i += 3
@@ -97,7 +97,7 @@ class ScoreTracker:
         return n
 
     @staticmethod
-    def evaluate_state(a: npt.NDArray[bool]) -> int:
+    def evaluate_state(a: npt.NDArray[np.bool_]) -> int:
         return (
             sum(ScoreTracker.count_links(r) for r in a) * 5
             + a[0].sum() * 5
@@ -106,7 +106,7 @@ class ScoreTracker:
         )
 
     @staticmethod
-    def run_lengths_mod3(state: npt.NDArray[bool]) -> npt.NDArray[int]:
+    def run_lengths_mod3(state: npt.NDArray[np.bool_]) -> npt.NDArray[np.int_]:
         """
         Returns an array where corresponding in shape to the input, where
         every value is replaced by the length of the longest uninterrupted
@@ -137,7 +137,7 @@ class ScoreTracker:
 
     @staticmethod
     def get_best_moves(
-        state: npt.NDArray[bool],
+        state: npt.NDArray[np.bool_],
         type_to_test: GamePiece,
         link_preparation_score: float = 2.5,
     ) -> npt.NDArray:

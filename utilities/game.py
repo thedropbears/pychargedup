@@ -153,15 +153,6 @@ def get_closest_node_in_allowed(
     return min(allowed, key=get_node_dist)
 
 
-def get_closest_node_in_allowed(
-    pos: Translation2d, piece: GamePiece, allowed: list[Node]
-) -> Node:
-    def get_node_dist(node: Node) -> float:
-        return get_score_location(node)[0].translation().distance(pos)
-
-    return min(allowed, key=get_node_dist)
-
-
 # tag in blue loading bay, on red side of field 16=x
 tag_4 = apriltag_layout.getTagPose(4)
 assert tag_4 is not None

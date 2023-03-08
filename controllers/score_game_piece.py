@@ -85,11 +85,22 @@ class ScoreGamePieceController(StateMachine):
         super().done()
         self.recover.engage()
 
+    def score_best(self) -> None:
+        self.node_stratergy = NodePickStratergy.BEST
+
+    def score_closest_high(self) -> None:
+        self.node_stratergy = NodePickStratergy.CLOSEST
+        self.prefer_high()
+
+    def score_closest_mid(self) -> None:
+        self.node_stratergy = NodePickStratergy.CLOSEST
+        self.prefer_high()
+
     def pick_node(self) -> Node:
         cur_pos = self.movement.chassis.get_pose().translation()
         if self.node_stratergy is NodePickStratergy.CLOSEST:
             return get_closest_node(
-                cur_pos, self.gripper.get_current_piece(), self.prefered_row, []
+                cur_pos, self.gripper.get_current_piece(), self.prefered_row, set()
             )
         elif self.node_stratergy is NodePickStratergy.OVERRIDE:
             return self.override_node
@@ -137,3 +148,7 @@ class ScoreGamePieceController(StateMachine):
 
     def prefer_mid(self) -> None:
         self.prefered_row = Rows.MID
+
+    def score_without_moving(self, node: Node) -> None:
+        self.target_node = node
+        self.engage("deploying_arm", force=True)
