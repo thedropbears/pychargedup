@@ -2,7 +2,6 @@ import math
 import wpilib
 import time
 from enum import Enum, auto
-from utilities.scalers import scale_value
 import random
 from ids import PwmChannels
 
@@ -26,14 +25,11 @@ class LedColors(Enum):
 
 
 class DisplayType(Enum):
-    PACMAN = auto()
     RAINBOW = auto()
     SOLID = auto()
     PULSE = auto()
     FLASH = auto()
-    ALTERNATING = auto()
     MORSE = auto()
-    WOLFRAM_AUTOMATA = auto()
 
 
 # creates a list of LEDData's from a List of (hsv col, repetitions)
@@ -48,107 +44,10 @@ def make_pattern(
     return pattern_data
 
 
-# Runs Wolfram cellular automata, randomly transitioning between rules
-class WolframAutomata:
-    def __init__(self, n: int) -> None:
-        self.rule = 4
-        self.n = n
-        self.m = n // 2
-
-        self.world = [False] * n
-        self.world[self.m] = True
-        self.old_world = self.world[:]
-        self.ages = [0] * n
-
-        self.leds_data = [wpilib.AddressableLED.LEDData(0, 0, 0) for _ in range(n)]
-
-        self.gen = 0
-        self.gen_rule = 0
-        self.genspan_min = 8
-        self.genspan_max = 32
-        self.genspan = self.genspan_min  # How much will the current rule last
-
-        self.length_thresh = (
-            8  # Prevent changes of at least this many cells in a row over 1 generation
-        )
-        self.age_hue_mul = 0.5
-
-        self.mutation_chance = 0.0625
-
-    def reset_rule(self) -> None:
-        self.gen_rule = 0
-        self.genspan = random.randint(self.genspan_min, self.genspan_max)
-        self.rule = random.randint(0, 255)
-        if random.random() < self.mutation_chance:
-            i = random.randrange(0, self.n)
-            self.world[i] = not self.world[i]
-
-    def step(self) -> None:
-        new_world = [False] * self.n
-        for i in range(self.n):
-            r = (
-                (self.world[(i + 1) % self.n] << 0)
-                + (self.world[i] << 1)
-                + (self.world[(i - 1) % self.n] << 2)
-            )
-            new_world[i] = (self.rule >> r) & 1 != 0
-        if self.gen_rule > self.genspan:
-            if (
-                new_world == self.world
-                or new_world == self.old_world
-                or all(
-                    self.world[i] == new_world[(i - 1) % self.n] for i in range(self.n)
-                )
-                or all(
-                    self.world[i] == new_world[(i + 1) % self.n] for i in range(self.n)
-                )
-            ):
-                self.reset_rule()  # Reset rule if nothing interesting happened
-            if random.random() < (self.gen_rule - self.genspan) * 0.001:
-                self.reset_rule()
-        change = [a ^ b for a, b in zip(self.world, new_world)]
-        for i in range(self.n):
-            if all(change[(i + j) % self.n] for j in range(self.length_thresh)):
-                new_world = self.old_world[:]
-                self.world = self.old_world[:]
-                self.reset_rule()
-                break
-
-        if all(new_world) or not any(new_world):
-            new_world = self.old_world[:]
-            self.reset_rule()
-        self.old_world = self.world[:]
-        self.world = new_world[:]
-        for i in range(self.n):
-            if self.world[i]:
-                self.ages[i] += 1
-            else:
-                self.ages[i] = 0
-        self.gen += 1
-        self.gen_rule += 1
-
-    def age_to_hsv(self, a: int) -> tuple[int, int, int]:
-        return (
-            (self.gen + int(a * self.genspan * self.age_hue_mul)) % 180,
-            255,
-            int(MAX_BRIGHTNESS * DISABLED_MULTIPLIER),
-        )
-
-    def set_leds_data(self) -> None:
-        for i in range(self.n):
-            if self.world[i]:
-                self.leds_data[i].setHSV(*self.age_to_hsv(self.ages[i]))
-            else:
-                self.leds_data[i].setRGB(0, 0, 0)
-
-
 class StatusLights:
     FLASH_FREQUENCY = 5
     PULSE_PERIOD = 1
-    PACMAN_PERIOD = 60
     RAINBOW_PERIOD = 15
-    ALTERNATING_PERIOD = 1
-    WOLFRAM_PERIOD = 0.1
 
     def __init__(self) -> None:
         self.leds = wpilib.AddressableLED(PwmChannels.leds)
@@ -171,8 +70,6 @@ class StatusLights:
         self._morse_message = ""
         self.pattern_start_time = time.monotonic()
         self.last_triggered = time.monotonic()
-
-        self.wolfram = WolframAutomata(self.led_length)
 
         self.choose_morse_message()
         self.left_led_data.setHSV(*self.left_color)
@@ -241,119 +138,11 @@ class StatusLights:
         hue = round(180 * (elapsed_time / loop_time % 1))
         return (hue, 255, MAX_BRIGHTNESS)
 
-    def calc_pacman(self):
-        elapsed_time = time.monotonic() - self.start_time
-        # find the pattern of leds and its position
-        if elapsed_time % self.PACMAN_PERIOD < self.PACMAN_PERIOD / 2:
-            pattern = make_pattern(
-                [
-                    (LedColors.ORANGE, 2),
-                    (LedColors.OFF, 2),
-                    (LedColors.PINK, 2),
-                    (LedColors.OFF, 2),
-                    (LedColors.CYAN, 2),
-                    (LedColors.OFF, 2),
-                    (LedColors.RED, 2),
-                    (LedColors.OFF, 5),
-                    (LedColors.YELLOW, 3),
-                ]
-            )
-            pacman_position = scale_value(
-                elapsed_time % self.PACMAN_PERIOD,
-                0,
-                self.PACMAN_PERIOD / 2,
-                -len(pattern),
-                self.led_length,
-            )
-        else:
-            pattern = make_pattern(
-                [
-                    (LedColors.BLUE, 2),
-                    (LedColors.OFF, 2),
-                    (LedColors.BLUE, 2),
-                    (LedColors.OFF, 2),
-                    (LedColors.BLUE, 2),
-                    (LedColors.OFF, 2),
-                    (LedColors.BLUE, 2),
-                    (LedColors.OFF, 5),
-                    (LedColors.YELLOW, 3),
-                ]
-            )
-            pacman_position = scale_value(
-                elapsed_time % self.PACMAN_PERIOD,
-                self.PACMAN_PERIOD / 2,
-                self.PACMAN_PERIOD,
-                self.led_length,
-                -len(pattern),
-            )
-        pacman_position = round(pacman_position)
-        # create a list of LEDData's with the pattern surrounded by off led's
-        led_data = []
-        if pacman_position > 0:
-            led_data.extend(
-                [wpilib.AddressableLED.LEDData(0, 0, 0)] * math.floor(pacman_position)
-            )
-            led_data.extend(pattern)
-        else:
-            led_data.extend(pattern[-pacman_position:-1])
-        leds_left = self.led_length - len(led_data)
-        if leds_left > 0:
-            led_data.extend([wpilib.AddressableLED.LEDData(0, 0, 0)] * leds_left)
-        self.leds.setData(led_data[: self.led_length])
-
     def calc_pulse(self) -> tuple[Hsv, Hsv]:
         """Fade in and out over time."""
         elapsed_time = time.monotonic() - self.start_time
         brightness = math.cos(elapsed_time * math.pi) / 2 + 0.5
         return self.calc_with_brightness(brightness)
-
-    def calc_alternating(self):
-        elapsed_time = time.monotonic() - self.start_time
-        # flash, but only every second led
-        # then, the other leds flash
-        # and so on?
-
-        # make patter is redundant here but its easier to just keep it here
-        pattern = make_pattern([(LedColors.BLUE, 1), (LedColors.OFF, 1)])
-        position = round(
-            scale_value(
-                elapsed_time % self.ALTERNATING_PERIOD,
-                0,
-                self.ALTERNATING_PERIOD,
-                self.led_length,
-                -len(pattern),
-            )
-        )
-        led_data = []
-        if position > 0:
-            led_data.extend(
-                [
-                    wpilib.AddressableLED.LEDData(
-                        LedColors.BLUE.value[0],
-                        LedColors.BLUE.value[1],
-                        LedColors.BLUE.value[2],
-                    ),
-                    wpilib.AddressableLED.LEDData(0, 0, 0),
-                ]
-                * (position // 2)
-            )
-            led_data.extend(pattern)
-        else:
-            led_data.extend(pattern[-position:-1])
-        leds_left = self.led_length - len(led_data)
-        if leds_left > 0:
-            led_data.extend(
-                [
-                    wpilib.AddressableLED.LEDData(0, 0, 0),
-                    wpilib.AddressableLED.LEDData(
-                        LedColors.BLUE.value[0],
-                        LedColors.BLUE.value[1],
-                        LedColors.BLUE.value[2],
-                    ),
-                ]
-                * (leds_left // 2)
-            )
-        self.leds.setData(led_data[: self.led_length])
 
     @property
     def _morse_length(self) -> int:
@@ -448,14 +237,6 @@ class StatusLights:
         # Add more space at the end
         self._morse_message += "  "
 
-    def calc_wolfram(self) -> None:
-        now = time.monotonic()
-        if now - self.last_triggered > self.WOLFRAM_PERIOD:
-            self.last_triggered = now
-            self.wolfram.step()
-            self.wolfram.set_leds_data()
-            self.leds.setData(self.wolfram.leds_data)
-
     def execute(self) -> None:
         if self.pattern == DisplayType.FLASH:
             left, right = self.calc_flash()
@@ -466,13 +247,6 @@ class StatusLights:
             left = right = self.calc_rainbow()
         elif self.pattern == DisplayType.MORSE:
             left = right = self.calc_morse()
-        # These set data directly
-        elif self.pattern == DisplayType.PACMAN:
-            self.calc_pacman()
-            return
-        elif self.pattern == DisplayType.WOLFRAM_AUTOMATA:
-            self.calc_wolfram()
-            return
         else:
             # Fallback to solid
             left, right = self.left_color, self.right_color
