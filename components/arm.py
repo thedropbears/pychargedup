@@ -61,6 +61,15 @@ class Arm:
         self.rotation_motor.restoreFactoryDefaults()
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setInverted(True)
+        # setup second motor to follow first
+        self._rotation_motor_follower = rev.CANSparkMax(
+            SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
+        )
+        self._rotation_motor_follower.restoreFactoryDefaults()
+        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
+        self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        self._rotation_motor_follower.setInverted(True)
+
         self.relative_encoder = self.rotation_motor.getEncoder()
         self.relative_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
         self.relative_encoder.setVelocityConversionFactor(
@@ -79,7 +88,7 @@ class Arm:
             maxVelocity=3, maxAcceleration=4
         )
         self.rotation_controller = ProfiledPIDController(
-            25, 0, 1.0, rotation_constraints
+            10, 0, 1.0, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=1, kA=0.1)
