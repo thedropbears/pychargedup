@@ -7,6 +7,7 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
+from components.intake import Intake
 
 from utilities.game import (
     Node,
@@ -77,6 +78,7 @@ class AutoBase(AutonomousStateMachine):
     movement: Movement
     score_game_piece: ScoreGamePieceController
     recover: RecoverController
+    intake: Intake
     arm_component: Arm
     gripper: Gripper
 
@@ -103,6 +105,7 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             self.gripper.close()
             self.recover.engage()
+            self.intake.deploy_without_running()
         elif not self.recover.is_executing:
             self.next_state("score_cone")
 
@@ -110,6 +113,7 @@ class AutoBase(AutonomousStateMachine):
     def score_cone(self, initial_call: bool) -> None:
         if initial_call:
             self.score_game_piece.score_without_moving(self.score_action.node)
+            self.intake.retract()
         elif not self.score_game_piece.is_executing:
             self.next_state("leave_community")
 

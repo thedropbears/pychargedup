@@ -1,5 +1,4 @@
 from controllers.arm import ArmController, get_setpoint_from_node
-from components.intake import Intake
 from components.gripper import Gripper
 
 from controllers.movement import Movement
@@ -13,7 +12,6 @@ from wpimath.geometry import Translation2d
 
 class ScoreGamePieceController(StateMachine):
     gripper: Gripper
-    intake: Intake
     arm: ArmController
 
     movement: Movement
