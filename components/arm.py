@@ -1,3 +1,4 @@
+import time
 from magicbot import feedback, tunable
 import wpilib
 from ids import SparkMaxIds, PhChannels, DioChannels
@@ -47,6 +48,8 @@ class Arm:
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
+    # time for the arm encoder to start working
+    ARM_STARTUP_TIME = 5
 
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
@@ -80,6 +83,7 @@ class Arm:
         self.absolute_encoder.setDistancePerRotation(math.tau)
         self.absolute_encoder.setPositionOffset(self.ARM_ENCODER_ANGLE_OFFSET)
         self.runtime_offset = 0.0
+        self.startup_time = time.monotonic()
 
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
@@ -181,6 +185,9 @@ class Arm:
 
     def execute(self) -> None:
         self.update_display()
+        if time.monotonic() - self.startup_time < self.ARM_STARTUP_TIME:
+            return
+
         if self.is_retracted() and self.use_voltage:
             self.set_at_min_extension()
             self.use_voltage = False
