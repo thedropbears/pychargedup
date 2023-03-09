@@ -36,6 +36,8 @@ class SwerveModule:
     STEER_COUNTS_TO_RAD = STEER_MOTOR_REV_TO_RAD / FALCON_CPR
     STEER_RAD_TO_COUNTS = FALCON_CPR / STEER_MOTOR_REV_TO_RAD
 
+    MAX_DRIVE_VOLTS = 11.5
+
     # limit the acceleration of the commanded speeds of the robot to what is actually
     # achiveable without the wheels slipping. This is done to improve odometry
     accel_limit = 10  # m/s^2
@@ -88,7 +90,7 @@ class SwerveModule:
         # Configure drive motor
         self.drive.setNeutralMode(ctre.NeutralMode.Brake)
         self.drive.setInverted(drive_reversed)
-        self.drive.configVoltageCompSaturation(11.5, timeoutMs=10)
+        self.drive.configVoltageCompSaturation(self.MAX_DRIVE_VOLTS, timeoutMs=10)
         self.drive.enableVoltageCompensation(True)
         self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.18877, kV=2.7713, kA=0.18824)
         self.drive.configVelocityMeasurementPeriod(
@@ -153,7 +155,7 @@ class SwerveModule:
             ctre.ControlMode.Velocity,
             target_speed * self.METRES_TO_DRIVE_COUNTS / 10,
             ctre.DemandType.ArbitraryFeedForward,
-            speed_volt / 12,
+            speed_volt / self.MAX_DRIVE_VOLTS,
         )
 
     def sync_steer_encoders(self) -> None:
