@@ -4,6 +4,7 @@ from magicbot import (
     default_state,
     tunable,
     will_reset_to,
+    feedback,
 )
 import wpilib
 from components.chassis import Chassis
@@ -54,6 +55,9 @@ class Movement(StateMachine):
     )  # Needs to be negative to counteract increasing pitch when the charge station shifts
     BALANCE_TILT_ANGLE_THRESHOLD = math.radians(2)
     BALANCE_TILT_RATE_THRESHOLD = math.radians(2)
+
+    # time to end of match where will start locking wheels
+    END_MATCH_TIME = 10
 
     def __init__(self) -> None:
         self.drive_local = False
@@ -193,9 +197,7 @@ class Movement(StateMachine):
 
         # if we aren't trying to move and almost at end of a match
         if (
-            wpilib.DriverStation.getMatchTime() < 5
-            and wpilib.DriverStation.getMatchType()
-            != wpilib.DriverStation.MatchType.kNone
+            0 < wpilib.DriverStation.getMatchTime() < self.END_MATCH_TIME
             and sum(map(abs, self.driver_inputs)) < 0.01
         ):
             self.chassis.lock_swerve()
@@ -205,6 +207,10 @@ class Movement(StateMachine):
             self.chassis.drive_local(*self.driver_inputs)
         else:
             self.chassis.drive_field(*self.driver_inputs)
+
+    @feedback
+    def get_match_time(self) -> float:
+        return wpilib.DriverStation.getMatchTime()
 
     @state(first=True)
     def autodrive(self, state_tm: float, initial_call: bool) -> None:
