@@ -158,6 +158,10 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButtonPressed():
             self.status_lights.want_cube()
 
+        # Run autobalance in teleop, for tuning gains in practice
+        if self.gamepad.getYButtonPressed():
+            self.movement.toggle_balance()
+
         # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
@@ -278,6 +282,7 @@ class MyRobot(magicbot.MagicRobot):
         self.score_game_piece.done()
         self.status_lights.off()
         self.recover.engage()
+        self.movement.done()
 
     def disabledInit(self) -> None:
         self.status_lights.set_display_pattern(DisplayType.PULSE)
