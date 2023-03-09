@@ -5,8 +5,7 @@ from enum import Enum, auto
 import random
 from ids import PwmChannels
 
-MAX_BRIGHTNESS = 100  # Between 0-255 of Value on HSV scale
-DISABLED_MULTIPLIER = 0.2
+MAX_BRIGHTNESS = 75  # Between 0-255 of Value on HSV scale
 
 Hsv = tuple[int, int, int]
 
@@ -22,6 +21,9 @@ class LedColors(Enum):
     GREEN = (60, 255, MAX_BRIGHTNESS)
     WHITE = (0, 0, MAX_BRIGHTNESS)
     OFF = (0, 0, 0)
+
+    DIM_BLUE = (120, 255, 40)
+    DIM_RED = (0, 255, 40)
 
 
 class DisplayType(Enum):

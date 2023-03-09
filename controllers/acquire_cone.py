@@ -29,7 +29,7 @@ class AcquireConeController(StateMachine):
         self.targeting_left: bool = False
 
     @state(first=True, must_finish=True)
-    def driving_to_position(self) -> None:
+    def driving_to_position(self, initial_call) -> None:
         """
         Get the chassis to the correct position to start moving towards cone.
         Requires that the state has had the goal position injected into it.
@@ -37,13 +37,13 @@ class AcquireConeController(StateMachine):
         self.movement.set_goal(
             *get_cone_pickup(self.movement.chassis.get_pose(), self.targeting_left),
             max_accel=1.0,
-            max_vel=2.0
+            max_vel=2.0,
         )
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("deploying_arm")
 
-        if self.movement.time_to_goal < self.ARM_PRE_TIME:
+        if not initial_call and self.movement.time_to_goal < self.ARM_PRE_TIME:
             self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)
 
     @state(must_finish=True)
