@@ -93,6 +93,17 @@ class Gripper:
         return self.holding
 
     @feedback
+    def get_current_piece_as_int(self) -> int:
+        piece = self.get_current_piece()
+        if piece == GamePiece.NONE:
+            return 0
+        if piece == GamePiece.CONE:
+            return 1
+        if piece == GamePiece.CUBE:
+            return 2
+        return -1
+
+    @feedback
     def cube_present(self) -> bool:
         return self.get_full_open() and self.cube_break_beam_broken()
 
