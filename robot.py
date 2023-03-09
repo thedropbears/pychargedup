@@ -152,6 +152,15 @@ class MyRobot(magicbot.MagicRobot):
             self.acquire_cube.engage()
         if self.gamepad.getLeftBumperPressed():
             self.acquire_cube.done()
+        # Intake manual grab
+        if self.gamepad.getLeftStickButtonPressed():
+            self.acquire_cube.override_cube_present = True
+        # Intake clear, deploy intake and run backwards
+        if self.gamepad.getRightStickButtonPressed():
+            self.intake.deploy_running_backwards()
+        # stop intake running backwards
+        if self.gamepad.getRightStickButtonReleased():
+            self.intake.deploy_without_running()
 
         # Request cube
         if self.gamepad.getXButtonPressed():
