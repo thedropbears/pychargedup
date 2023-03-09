@@ -90,7 +90,8 @@ class Arm:
             10, 0, 1.0, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
-        self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=1, kA=0.1)
+        # From recalc
+        self.rotation_ff = ArmFeedforward(kS=0, kG=0, kV=0.76, kA=0.1)
         self.rotation_last_setpoint_vel = 0
 
         # Create extension things

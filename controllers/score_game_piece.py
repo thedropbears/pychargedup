@@ -27,7 +27,7 @@ class ScoreGamePieceController(StateMachine):
         self.target_node = Node(Rows.HIGH, 0)
 
     @state(first=True, must_finish=True)
-    def driving_to_position(self) -> None:
+    def driving_to_position(self, initial_call) -> None:
         self.movement.set_goal(
             *get_score_location(self.target_node), max_accel=1.0, max_vel=2.0
         )
@@ -35,7 +35,7 @@ class ScoreGamePieceController(StateMachine):
         if self.movement.is_at_goal():
             self.next_state("hard_up")
 
-        if self.movement.time_to_goal < self.ARM_PRE_TIME:
+        if not initial_call and self.movement.time_to_goal < self.ARM_PRE_TIME:
             self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
 
     @timed_state(next_state="back_off", duration=0.3, must_finish=True)

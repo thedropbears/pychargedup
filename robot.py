@@ -158,7 +158,7 @@ class MyRobot(magicbot.MagicRobot):
             self.acquire_cube.override_cube_present = True
         # Intake clear, deploy intake and run backwards
         if self.gamepad.getRightStickButtonPressed():
-            self.intake.deploy_running_backwards()
+            self.intake.run_backwards()
         # stop intake running backwards
         if self.gamepad.getRightStickButtonReleased():
             self.intake.deploy_without_running()
@@ -169,7 +169,7 @@ class MyRobot(magicbot.MagicRobot):
 
         # Run autobalance in teleop, for tuning gains in practice
         if self.gamepad.getYButtonPressed():
-            self.movement.toggle_balance()
+            self.movement.start_balance()
 
         # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
@@ -300,9 +300,9 @@ class MyRobot(magicbot.MagicRobot):
         self.chassis.update_odometry()
         # This could be set in init, but it is more responsive if we do it here
         if is_red():
-            self.status_lights.set_color(LedColors.RED)
+            self.status_lights.set_color(LedColors.DIM_RED)
         else:
-            self.status_lights.set_color(LedColors.BLUE)
+            self.status_lights.set_color(LedColors.DIM_BLUE)
 
         self.status_lights.execute()
         self.port_localizer.execute()

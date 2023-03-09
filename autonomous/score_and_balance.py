@@ -82,7 +82,7 @@ class AutoBase(AutonomousStateMachine):
 
     SCORE_PRE_TIME = 2.5
 
-    MAX_VEL = 1.0
+    MAX_VEL = 1.5
     MAX_ACCEl = 2.0
 
     def __init__(
@@ -157,7 +157,7 @@ class AutoBase(AutonomousStateMachine):
 
 
 class ScoreAndBalance(AutoBase):
-    MODE_NAME = "Score cone and balance on station"
+    MODE_NAME = "Score and Balance"
     DEFAULT = True
 
     def __init__(self) -> None:
