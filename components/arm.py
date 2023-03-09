@@ -30,8 +30,8 @@ class Arm:
     PIVOT_HEIGHT = 0.990924
     PIVOT_X = -0.283562
 
-    ANGLE_ERROR_TOLERANCE = math.radians(3)
-    ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(4)
+    ANGLE_ERROR_TOLERANCE = math.radians(2)
+    ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(5)
     EXTENSION_ERROR_TOLERANCE = 0.01
     EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
 
@@ -81,11 +81,10 @@ class Arm:
         self.absolute_encoder.setPositionOffset(self.ARM_ENCODER_ANGLE_OFFSET)
         self.runtime_offset = 0.0
 
-        # TODO: get pid and feedforward values for arm and extension from sysid
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=3, maxAcceleration=4
+            maxVelocity=3, maxAcceleration=5
         )
         self.rotation_controller = ProfiledPIDController(
             10, 0, 1.0, rotation_constraints
