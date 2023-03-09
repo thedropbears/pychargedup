@@ -27,6 +27,8 @@ class CancoderIds(enum.IntEnum):
 @enum.unique
 class SparkMaxIds(enum.IntEnum):
     arm_rotation_main = 14
+    arm_rotation_follower = 13
+
     arm_extension = 15
 
     intake_motor = 3

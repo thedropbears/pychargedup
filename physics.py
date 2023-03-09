@@ -95,7 +95,7 @@ class PhysicsEngine:
             arm_len,
             -arm.MAX_ANGLE - math.radians(10),
             -arm.MIN_ANGLE,
-            simulateGravity=True,
+            simulateGravity=False,
             measurementStdDevs=[math.radians(0.01)],
         )
         extension_motors_sim = DCMotor.NEO550(1)
