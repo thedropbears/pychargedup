@@ -49,8 +49,8 @@ class Movement(StateMachine):
     inputs_lock = will_reset_to(False)
 
     BALANCE_MAX_SPEED = 0.5
-    BALANCE_GAIN = 1.0
-    BALANCE_RATE_GAIN = (
+    BALANCE_GAIN = tunable(1.0)
+    BALANCE_RATE_GAIN = tunable(
         -0.2
     )  # Needs to be negative to counteract increasing pitch when the charge station shifts
     BALANCE_TILT_ANGLE_THRESHOLD = math.radians(2)
@@ -101,7 +101,7 @@ class Movement(StateMachine):
         if distance_to_goal <= 0.01:
             return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
-        if chassis_speed < 0.2:
+        if chassis_speed < 0.5:
             # If the robot is stationary, instead of accounting for the momentum of the robot,
             # this section of code will point the control vector at the goal to avoid the robot
             # taking unnecessary turns before moving towards the goal.
@@ -115,8 +115,8 @@ class Movement(StateMachine):
             # the robot doesn't make a sudden stop to reverse.
             # In most cases, this will generate a smooth curve that works better than simply reversing
             # the robot.
-            kvx = 3
-            kvy = 3
+            kvx = 1.5
+            kvy = 1.5
 
             spline_start_momentum_x = chassis_velocity.vx * kvx
             spline_start_momentum_y = chassis_velocity.vy * kvy
@@ -138,10 +138,12 @@ class Movement(StateMachine):
         )
 
         self.config.setStartVelocity(chassis_speed)
-
-        trajectory = TrajectoryGenerator.generateTrajectory(
-            start_point_spline, list(self.waypoints), goal_spline, self.config
-        )
+        try:
+            trajectory = TrajectoryGenerator.generateTrajectory(
+                start_point_spline, list(self.waypoints), goal_spline, self.config
+            )
+        except RuntimeError:
+            return Trajectory([Trajectory.State(0, 0, 0, pose)])
 
         self.robot_object.setTrajectory(trajectory)
         return trajectory
@@ -165,7 +167,7 @@ class Movement(StateMachine):
         self.goal_approach_dir = approach_direction
 
         self.config = TrajectoryConfig(maxVelocity=max_vel, maxAcceleration=max_accel)
-        self.config.addConstraint(CentripetalAccelerationConstraint(2.5))
+        self.config.addConstraint(CentripetalAccelerationConstraint(5.0))
         topRight = Translation2d(self.goal.X() + slow_dist, self.goal.Y() + slow_dist)
         bottomLeft = Translation2d(self.goal.X() - slow_dist, self.goal.Y() - slow_dist)
         self.config.addConstraint(

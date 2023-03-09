@@ -3,7 +3,7 @@
 import wpilib
 import wpilib.event
 import magicbot
-from wpimath.geometry import Quaternion, Rotation3d, Translation3d
+from wpimath.geometry import Quaternion, Rotation3d, Translation3d, Pose2d, Rotation2d
 
 from controllers.movement import Movement
 from controllers.arm import ArmController, Setpoints
@@ -20,7 +20,7 @@ from components.arm import Arm
 from components.gripper import Gripper
 from components.leds import StatusLights, DisplayType, LedColors
 from utilities.scalers import rescale_js
-from utilities.game import is_red
+from utilities.game import is_red, get_node_location
 
 
 class MyRobot(magicbot.MagicRobot):
@@ -77,6 +77,7 @@ class MyRobot(magicbot.MagicRobot):
 
         self.field = wpilib.Field2d()
         wpilib.SmartDashboard.putData(self.field)
+        self.target_node = self.field.getObject("target_node")
 
         self.port_localizer_name = "cam_port"
         self.port_localizer_pos = Translation3d(-0.35001, 0.06583, 0.25)
@@ -144,8 +145,8 @@ class MyRobot(magicbot.MagicRobot):
             self.short_rumble()
 
         # Score, auto pick node
-        if self.gamepad.getAButtonPressed():
-            self.score_game_piece.score_best()
+        if self.gamepad.getAButtonPressed() and not self.recover.is_executing:
+            self.score_game_piece.score()
 
         # Intake
         if self.gamepad.getRightBumperPressed():
@@ -166,6 +167,10 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getXButtonPressed():
             self.status_lights.want_cube()
 
+        # Run autobalance in teleop, for tuning gains in practice
+        if self.gamepad.getYButtonPressed():
+            self.movement.toggle_balance()
+
         # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():
             self.status_lights.off()
@@ -176,10 +181,16 @@ class MyRobot(magicbot.MagicRobot):
         if dpad_angle != self.last_dpad:
             # Up, score closest high
             if dpad_angle == 0:
-                self.score_game_piece.score_closest_high()
+                self.score_game_piece.set_score_high()
             # Down, score closest mid
             elif dpad_angle == 180:
-                self.score_game_piece.score_closest_mid()
+                self.score_game_piece.set_score_mid()
+            # Right, manual arm to score high position
+            if dpad_angle == 90:
+                self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
+            # Left, manual arm to score mid postion
+            if dpad_angle == 270:
+                self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
         self.last_dpad = dpad_angle
 
         # Manual overrides
@@ -192,6 +203,12 @@ class MyRobot(magicbot.MagicRobot):
         # stop rumble after time
         if self.rumble_timer.hasElapsed(self.rumble_duration):
             self.gamepad.setRumble(wpilib.XboxController.RumbleType.kBothRumble, 0)
+
+        # Show node to be scored at on dashbaord
+        n = get_node_location(
+            self.score_game_piece._get_closest(self.score_game_piece.prefered_row)
+        )
+        self.target_node.setPose(Pose2d(n.toTranslation2d(), Rotation2d()))
 
     def testInit(self) -> None:
         self.arm_component.on_enable()
@@ -274,6 +291,7 @@ class MyRobot(magicbot.MagicRobot):
         self.score_game_piece.done()
         self.status_lights.off()
         self.recover.engage()
+        self.movement.done()
 
     def disabledInit(self) -> None:
         self.status_lights.set_display_pattern(DisplayType.PULSE)
