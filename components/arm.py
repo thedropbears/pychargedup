@@ -70,7 +70,7 @@ class Arm:
             SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_follower.restoreFactoryDefaults()
-        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
+        #self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self._rotation_motor_follower.setInverted(True)
 
@@ -85,6 +85,11 @@ class Arm:
         self.absolute_encoder.setPositionOffset(self.ARM_ENCODER_ANGLE_OFFSET)
         self.runtime_offset = 0.0
         self.startup_time = time.monotonic()
+
+        self.rel_enc_pos = self.relative_encoder.getPosition()
+        self.rel_enc_pos_old = self.rel_enc_pos
+        self.abs_enc_pos = self.absolute_encoder.getDistance()
+        self.abs_enc_pos_old = self.abs_enc_pos
 
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
@@ -169,6 +174,8 @@ class Arm:
         self.use_voltage = True
         self.voltage = 0.0
 
+        self.rotation_voltage = 0.0
+
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
     def setup(self) -> None:
@@ -221,9 +228,17 @@ class Arm:
         if self.at_goal_angle() and self.is_angle_still():
             self.brake_rotation()
             self.rotation_motor.setVoltage(0)
+            self._rotation_motor_follower.setVoltage(0)
         else:
             self.unbrake_rotation()
-            self.rotation_motor.setVoltage(pid_output + ff_output)
+            self.rotation_voltage = clamp(pid_output + ff_output, -12, 12)
+            self.rotation_motor.setVoltage(self.rotation_voltage)
+            self._rotation_motor_follower.setVoltage(self.rotation_voltage)
+
+        self.rel_enc_pos_old = self.rel_enc_pos
+        self.rel_enc_pos = self.relative_encoder.getPosition()
+        self.abs_enc_pos_old = self.abs_enc_pos
+        self.abs_enc_pos = self.absolute_encoder.getDistance()
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -389,8 +404,24 @@ class Arm:
 
     @feedback
     def get_rotation_output(self) -> float:
-        return self.rotation_motor.getAppliedOutput()
+        return self.rotation_motor.getOutputCurrent()
+
+    @feedback
+    def get_rotation_output_follower(self) -> float:
+        return self._rotation_motor_follower.getOutputCurrent()
 
     @feedback
     def get_extension_output(self) -> float:
         return self.extension_motor.getAppliedOutput()
+
+    @feedback
+    def discrete_speed_rel(self) -> float:
+        return self.rel_enc_pos - self.rel_enc_pos_old
+
+    @feedback
+    def discrete_speed_abs(self) -> float:
+        return self.abs_enc_pos - self.abs_enc_pos_old
+
+    @feedback
+    def get_rotation_voltage(self) -> float:
+        return self.rotation_voltage
