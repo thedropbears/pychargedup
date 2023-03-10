@@ -158,7 +158,7 @@ class MyRobot(magicbot.MagicRobot):
             self.acquire_cube.override_cube_present = True
         # Intake clear, deploy intake and run backwards
         if self.gamepad.getRightStickButtonPressed():
-            self.intake.run_backwards()
+            self.intake.eject()
         # stop intake running backwards
         if self.gamepad.getRightStickButtonReleased():
             self.intake.deploy_without_running()
