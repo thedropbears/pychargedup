@@ -41,14 +41,16 @@ class Intake:
     def deploy_without_running(self):
         self.deployed = True
         self.running = False
+        self.backwards = False
 
     def retract(self) -> None:
         self.running = False
         self.deployed = False
 
-    def run_backwards(self) -> None:
+    def eject(self) -> None:
         self.backwards = True
         self.running = True
+        self.deployed = False
 
     @feedback
     def is_fully_retracted(self) -> bool:
