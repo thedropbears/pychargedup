@@ -168,12 +168,12 @@ class ScoreAndBalance(AutoBase):
         super().__init__(
             ScoreAction(Node(Rows.HIGH, 3), ()),
             FieldPose(
-                Pose2d(6.3, 2.3, Rotation2d.fromDegrees(0)),
+                Pose2d(6.5, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(0),
                 (),
             ),
             FieldPose(
-                Pose2d(5.0, 2.3, Rotation2d.fromDegrees(0)),
+                Pose2d(4.8, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(180),
                 (),
             ),
