@@ -84,7 +84,7 @@ class AutoBase(AutonomousStateMachine):
 
     SCORE_PRE_TIME = 2.5
 
-    MAX_VEL = 1.5
+    MAX_VEL = 2.0
     MAX_ACCEl = 2.0
 
     def __init__(
