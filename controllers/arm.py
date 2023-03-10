@@ -48,11 +48,11 @@ class Setpoint:
 class Setpoints:
     PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
     PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
-    HANDOFF = Setpoint(math.radians(45), 0.93)
+    HANDOFF = Setpoint(math.radians(49), 0.94)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
-    SCORE_CONE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
+    SCORE_CONE_MID = Setpoint(math.radians(-165), MIN_EXTENSION)
     SCORE_CUBE_MID = Setpoint(math.radians(-180), MIN_EXTENSION)
-    SCORE_CONE_HIGH = Setpoint(math.radians(-160), 1.18)
+    SCORE_CONE_HIGH = Setpoint(math.radians(-153), 1.18)
     SCORE_CUBE_HIGH = Setpoint(math.radians(-160), 1.18)
 
     UPRIGHT = Setpoint(-math.pi / 2, MIN_EXTENSION + 0.1)
@@ -127,6 +127,7 @@ class ArmController(StateMachine):
     @state(first=True, must_finish=True)
     def retracting_arm(self) -> None:
         self._about_to_run = False
+        self.arm_component.set_angle(self.arm_component.get_angle())
         if self.arm_component.use_voltage:
             self.arm_component.set_voltage(-2.0)
         self.arm_component.set_length(MIN_EXTENSION)
@@ -153,3 +154,6 @@ class ArmController(StateMachine):
 
     def on_enable(self) -> None:
         self.stop()
+
+    def is_overloaded(self) -> bool:
+        return self.arm_component.get_filtered_current() > 85.0

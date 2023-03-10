@@ -40,7 +40,7 @@ class Arm:
     STILL_ROTATION_SPEED_TOLERANCE = 0.1
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
-    ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
+    ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (36 / 22)
     SPOOL_CIRCUMFERENCE = 42 * 0.005  # 42t x 5mm
     EXTEND_GEAR_RATIO = (7 / 1) * (4 / 1) * (34 / 18)
     # converts from motor rotations to meters
@@ -48,9 +48,10 @@ class Arm:
     EXTEND_GRAVITY_FEEDFORWARD = 0
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
-    ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
+    ARM_ENCODER_ANGLE_OFFSET = math.tau - 0.672  # radians
 
     DISCRETE_VEL_EXP_ALPHA = 0.8
+    CURRENT_EXP_ALPHA = 0.8
 
     # time for the arm encoder to start working
     ARM_STARTUP_TIME = 5
@@ -68,6 +69,7 @@ class Arm:
         self.rotation_motor.restoreFactoryDefaults()
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setInverted(True)
+        self.rotation_motor.setSmartCurrentLimit(80)
         # setup second motor to follow first
         self._rotation_motor_follower = rev.CANSparkMax(
             SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
@@ -76,6 +78,7 @@ class Arm:
         # self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self._rotation_motor_follower.setInverted(True)
+        self._rotation_motor_follower.setSmartCurrentLimit(80)
 
         self.relative_encoder = self.rotation_motor.getEncoder()
         self.relative_encoder.setPositionConversionFactor(
@@ -93,7 +96,7 @@ class Arm:
 
         self.rel_enc_pos = self.relative_encoder.getPosition()
         self.rel_enc_pos_old = self.rel_enc_pos
-        self.abs_enc_pos = self.absolute_encoder.getDistance()
+        self.abs_enc_pos = -self.absolute_encoder.getDistance()
         self.abs_enc_pos_old = self.abs_enc_pos
 
         self.discrete_vel_rel = 0.0
@@ -102,7 +105,7 @@ class Arm:
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=3, maxAcceleration=5
+            maxVelocity=2, maxAcceleration=3
         )
         self.rotation_controller = ProfiledPIDController(
             10, 0, 1.0, rotation_constraints
@@ -184,7 +187,7 @@ class Arm:
         self.use_voltage = True
         self.voltage = 0.0
 
-        self.rotation_voltage = 0.0
+        self.filtered_current = 0.0
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
@@ -241,9 +244,9 @@ class Arm:
             self._rotation_motor_follower.setVoltage(0)
         else:
             self.unbrake_rotation()
-            self.rotation_voltage = clamp(pid_output + ff_output, -12, 12)
-            self.rotation_motor.setVoltage(self.rotation_voltage)
-            self._rotation_motor_follower.setVoltage(self.rotation_voltage)
+            rotation_voltage = clamp(pid_output + ff_output, -12, 12)
+            self.rotation_motor.setVoltage(rotation_voltage)
+            self._rotation_motor_follower.setVoltage(rotation_voltage)
 
         self.discrete_vel_rel = self.discrete_vel_rel * self.DISCRETE_VEL_EXP_ALPHA + (
             self.rel_enc_pos - self.rel_enc_pos_old
@@ -255,7 +258,9 @@ class Arm:
         self.rel_enc_pos_old = self.rel_enc_pos
         self.rel_enc_pos = self.relative_encoder.getPosition()
         self.abs_enc_pos_old = self.abs_enc_pos
-        self.abs_enc_pos = self.absolute_encoder.getDistance()
+        self.abs_enc_pos = -self.absolute_encoder.getDistance()
+
+        self.filtered_current = self.filtered_current * self.CURRENT_EXP_ALPHA + self.rotation_motor.getOutputCurrent() * (1.0 - self.CURRENT_EXP_ALPHA)
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -280,7 +285,7 @@ class Arm:
     @feedback
     def get_angle(self) -> float:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
-        return self.absolute_encoder.getDistance() + self.runtime_offset
+        return -self.absolute_encoder.getDistance() + self.runtime_offset
 
     @feedback
     def get_angle_deg(self) -> float:
@@ -400,8 +405,10 @@ class Arm:
         return not self.extension_brake_solenoid.get()
 
     def on_enable(self) -> None:
-        if self.get_angle() > math.pi / 2:
-            self.runtime_offset = -math.tau
+        while self.get_angle() < -math.pi:
+            self.runtime_offset += math.tau
+        while self.get_angle() > math.pi:
+            self.runtime_offset -= math.tau
         self.use_voltage = True
         self.reset_controllers()
         self.set_length(self.get_extension())
@@ -440,5 +447,5 @@ class Arm:
         return self.discrete_vel_abs
 
     @feedback
-    def get_rotation_voltage(self) -> float:
-        return self.rotation_voltage
+    def get_filtered_current(self) -> float:
+        return self.filtered_current

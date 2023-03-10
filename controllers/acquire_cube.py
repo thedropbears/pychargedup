@@ -73,7 +73,9 @@ class AcquireCubeController(StateMachine):
 
     @state(must_finish=True)
     def raising(self):
-        self.arm.go_to_setpoint(Setpoints.STOW, do_retract=False)
+        self.arm.go_to_setpoint(Setpoints.STOW)
+        if self.arm.is_overloaded():
+            self.done()
         if self.arm.at_goal():
             self.done()
             self.intake.deploy_without_running()
