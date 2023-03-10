@@ -49,6 +49,9 @@ class Arm:
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
     ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
+
+    DISCRETE_VEL_EXP_ALPHA = 0.8
+
     # time for the arm encoder to start working
     ARM_STARTUP_TIME = 5
 
@@ -75,7 +78,7 @@ class Arm:
         self._rotation_motor_follower.setInverted(True)
 
         self.relative_encoder = self.rotation_motor.getEncoder()
-        self.relative_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
+        self.relative_encoder.setPositionConversionFactor(math.tau / self.ROTATE_GEAR_RATIO)
         self.relative_encoder.setVelocityConversionFactor(
             1 / self.ROTATE_GEAR_RATIO / 60
         )
@@ -90,6 +93,9 @@ class Arm:
         self.rel_enc_pos_old = self.rel_enc_pos
         self.abs_enc_pos = self.absolute_encoder.getDistance()
         self.abs_enc_pos_old = self.abs_enc_pos
+
+        self.discrete_vel_rel = 0.0
+        self.discrete_vel_abs = 0.0
 
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
@@ -234,6 +240,9 @@ class Arm:
             self.rotation_voltage = clamp(pid_output + ff_output, -12, 12)
             self.rotation_motor.setVoltage(self.rotation_voltage)
             self._rotation_motor_follower.setVoltage(self.rotation_voltage)
+
+        self.discrete_vel_rel = self.discrete_vel_rel * self.DISCRETE_VEL_EXP_ALPHA + (self.rel_enc_pos - self.rel_enc_pos_old) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
+        self.discrete_vel_abs = self.discrete_vel_abs * self.DISCRETE_VEL_EXP_ALPHA + (self.abs_enc_pos - self.abs_enc_pos_old) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
 
         self.rel_enc_pos_old = self.rel_enc_pos
         self.rel_enc_pos = self.relative_encoder.getPosition()
@@ -415,12 +424,12 @@ class Arm:
         return self.extension_motor.getAppliedOutput()
 
     @feedback
-    def discrete_speed_rel(self) -> float:
-        return self.rel_enc_pos - self.rel_enc_pos_old
+    def get_discrete_vel_rel(self) -> float:
+        return self.discrete_vel_rel
 
     @feedback
-    def discrete_speed_abs(self) -> float:
-        return self.abs_enc_pos - self.abs_enc_pos_old
+    def get_discrete_vel_abs(self) -> float:
+        return self.discrete_vel_abs
 
     @feedback
     def get_rotation_voltage(self) -> float:
