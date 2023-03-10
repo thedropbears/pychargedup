@@ -73,12 +73,14 @@ class Arm:
             SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_follower.restoreFactoryDefaults()
-        #self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
+        # self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self._rotation_motor_follower.setInverted(True)
 
         self.relative_encoder = self.rotation_motor.getEncoder()
-        self.relative_encoder.setPositionConversionFactor(math.tau / self.ROTATE_GEAR_RATIO)
+        self.relative_encoder.setPositionConversionFactor(
+            math.tau / self.ROTATE_GEAR_RATIO
+        )
         self.relative_encoder.setVelocityConversionFactor(
             1 / self.ROTATE_GEAR_RATIO / 60
         )
@@ -133,7 +135,9 @@ class Arm:
         self.extension_last_setpoint_vel = 0
 
         self.rotation_brake_solenoid = DoubleSolenoid(
-            PneumaticsModuleType.REVPH, PhChannels.arm_brake_fwd, PhChannels.arm_brake_rev
+            PneumaticsModuleType.REVPH,
+            PhChannels.arm_brake_fwd,
+            PhChannels.arm_brake_rev,
         )
         self.extension_brake_solenoid = Solenoid(
             PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
@@ -241,8 +245,12 @@ class Arm:
             self.rotation_motor.setVoltage(self.rotation_voltage)
             self._rotation_motor_follower.setVoltage(self.rotation_voltage)
 
-        self.discrete_vel_rel = self.discrete_vel_rel * self.DISCRETE_VEL_EXP_ALPHA + (self.rel_enc_pos - self.rel_enc_pos_old) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
-        self.discrete_vel_abs = self.discrete_vel_abs * self.DISCRETE_VEL_EXP_ALPHA + (self.abs_enc_pos - self.abs_enc_pos_old) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
+        self.discrete_vel_rel = self.discrete_vel_rel * self.DISCRETE_VEL_EXP_ALPHA + (
+            self.rel_enc_pos - self.rel_enc_pos_old
+        ) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
+        self.discrete_vel_abs = self.discrete_vel_abs * self.DISCRETE_VEL_EXP_ALPHA + (
+            self.abs_enc_pos - self.abs_enc_pos_old
+        ) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
 
         self.rel_enc_pos_old = self.rel_enc_pos
         self.rel_enc_pos = self.relative_encoder.getPosition()
