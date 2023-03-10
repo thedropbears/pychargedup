@@ -117,9 +117,7 @@ class PhysicsEngine:
         # Get arm objects
         self.arm_abs_encoder = DutyCycleEncoderSim(DioChannels.arm_absolute_encoder)
         self.arm_rotation_brake = DoubleSolenoidSim(
-            wpilib.PneumaticsModuleType.REVPH,
-            PhChannels.arm_brake_fwd,
-            PhChannels.arm_brake_rev,
+            wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake_fwd, PhChannels.arm_brake_rev
         )
         self.arm_extension_brake = SolenoidSim(
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
