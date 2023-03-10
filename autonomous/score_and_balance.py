@@ -1,4 +1,4 @@
-from magicbot.state_machine import AutonomousStateMachine, state
+from magicbot.state_machine import AutonomousStateMachine, state, timed_state
 from wpimath.geometry import Rotation2d, Translation2d, Pose2d
 from dataclasses import dataclass
 from components.arm import Arm
@@ -115,7 +115,11 @@ class AutoBase(AutonomousStateMachine):
             self.score_game_piece.score_without_moving(self.score_action.node)
             self.intake.retract()
         elif not self.score_game_piece.is_executing:
-            self.next_state("leave_community")
+            self.next_state("wait_for_arm_to_fold")
+
+    @timed_state(next_state="leave_community", duration=0.5, must_finish=True)
+    def wait_for_arm_to_fold(self, initial_call: bool) -> None:
+        self.recover.engage()
 
     @state
     def leave_community(self, initial_call: bool) -> None:
