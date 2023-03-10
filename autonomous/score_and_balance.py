@@ -152,12 +152,9 @@ class AutoBase(AutonomousStateMachine):
     def balance(self, initial_call: bool, tm: float) -> None:
         if initial_call:
             self.movement.start_balance()
-        elif not self.movement.is_executing or tm > 14.5:
-            self.next_state("lock_wheels")
-
-    @state
-    def lock_wheels(self) -> None:
-        self.movement.chassis.lock_swerve()
+        elif not self.movement.is_executing:
+            self.done()
+            return
 
 
 class ScoreAndBalance(AutoBase):
