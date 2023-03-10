@@ -6,7 +6,7 @@ import time
 
 
 class Intake:
-    intake_speed = tunable(0.8)
+    intake_speed = tunable(1.0)
     CLOSE_TIME_THRESHOLD: float = 0.5
     OPEN_TIME_THRESHOLD: float = 0.5
 
@@ -21,7 +21,7 @@ class Intake:
             ids.SparkMaxIds.intake_motor, CANSparkMax.MotorType.kBrushless
         )
         self.motor.restoreFactoryDefaults()
-        self.motor.setSmartCurrentLimit(20)
+        self.motor.setSmartCurrentLimit(30)
         self.motor.setInverted(True)
         self.piston = DoubleSolenoid(
             PneumaticsModuleType.REVPH,
