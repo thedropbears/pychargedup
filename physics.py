@@ -13,6 +13,7 @@ from wpilib.simulation import (
     SimDeviceSim,
     DutyCycleEncoderSim,
     SolenoidSim,
+    DoubleSolenoidSim,
 )
 from pyfrc.physics.core import PhysicsInterface
 from wpimath.kinematics import SwerveDrive4Kinematics
@@ -115,8 +116,8 @@ class PhysicsEngine:
 
         # Get arm objects
         self.arm_abs_encoder = DutyCycleEncoderSim(DioChannels.arm_absolute_encoder)
-        self.arm_rotation_brake = SolenoidSim(
-            wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake
+        self.arm_rotation_brake = DoubleSolenoidSim(
+            wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_brake_fwd, PhChannels.arm_brake_rev
         )
         self.arm_extension_brake = SolenoidSim(
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
@@ -139,7 +140,7 @@ class PhysicsEngine:
     def update_sim(self, now: float, tm_diff: float) -> None:
         # Update rotation sim
         self.arm_sim.setInputVoltage(-self.arm_motor_output.get())
-        if self.arm_rotation_brake.getOutput():
+        if self.arm_rotation_brake.get() == wpilib.DoubleSolenoid.Value.kReverse:
             self.arm_sim.update(tm_diff)
         self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
         self.arm_motor_vel.set(-self.arm_sim.getVelocity())

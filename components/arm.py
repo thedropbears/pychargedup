@@ -3,6 +3,7 @@ from magicbot import feedback, tunable
 import wpilib
 from ids import SparkMaxIds, PhChannels, DioChannels
 from wpilib import (
+    DoubleSolenoid,
     Solenoid,
     PneumaticsModuleType,
     DutyCycleEncoder,
@@ -120,8 +121,8 @@ class Arm:
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
 
-        self.rotation_brake_solenoid = Solenoid(
-            PneumaticsModuleType.REVPH, PhChannels.arm_brake
+        self.rotation_brake_solenoid = DoubleSolenoid(
+            PneumaticsModuleType.REVPH, PhChannels.arm_brake_fwd, PhChannels.arm_brake_rev
         )
         self.extension_brake_solenoid = Solenoid(
             PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
@@ -349,10 +350,10 @@ class Arm:
         )
 
     def brake_rotation(self) -> None:
-        self.rotation_brake_solenoid.set(False)
+        self.rotation_brake_solenoid.set(DoubleSolenoid.Value.kForward)
 
     def unbrake_rotation(self) -> None:
-        self.rotation_brake_solenoid.set(True)
+        self.rotation_brake_solenoid.set(DoubleSolenoid.Value.kReverse)
 
     def brake_extension(self) -> None:
         self.extension_brake_solenoid.set(False)
@@ -361,7 +362,7 @@ class Arm:
         self.extension_brake_solenoid.set(True)
 
     def is_braking_rotation(self) -> bool:
-        return not self.rotation_brake_solenoid.get()
+        return self.rotation_brake_solenoid.get() == DoubleSolenoid.Value.kForward
 
     def is_braking_extension(self) -> bool:
         return not self.extension_brake_solenoid.get()
