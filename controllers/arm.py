@@ -4,7 +4,7 @@ import math
 
 from utilities.game import Node, GamePiece, Rows
 
-from magicbot import StateMachine, state, feedback, timed_state
+from magicbot import StateMachine, state, feedback
 
 from utilities.functions import clamp
 
@@ -131,7 +131,7 @@ class ArmController(StateMachine):
         if self.arm_component.use_voltage:
             self.arm_component.set_voltage(-2.0)
         self.arm_component.set_length(MIN_EXTENSION)
-        if self.arm_component.at_goal_extension():
+        if self.arm_component.at_goal_extension() or self.arm_component.is_retracted():
             self.next_state("rotating_arm")
 
     @state(must_finish=True)
