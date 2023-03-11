@@ -216,7 +216,7 @@ class MyRobot(magicbot.MagicRobot):
         self.arm_component.on_enable()
         self.port_localizer.add_to_estimator = True
         self.starboard_localizer.add_to_estimator = True
-        while self.armget_angle() < -math.pi:
+        while self.arm.get_angle() < -math.pi:
             self.arm.runtime_offset += math.tau
         while self.arm.get_angle() > math.pi:
             self.arm.runtime_offset -= math.tau
@@ -318,7 +318,7 @@ class MyRobot(magicbot.MagicRobot):
     def autonomousInit(self) -> None:
         self.port_localizer.add_to_estimator = True
         self.starboard_localizer.add_to_estimator = True
-        while self.armget_angle() < -math.pi:
+        while self.arm.get_angle() < -math.pi:
             self.arm.runtime_offset += math.tau
         while self.arm.get_angle() > math.pi:
             self.arm.runtime_offset -= math.tau
