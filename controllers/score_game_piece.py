@@ -27,22 +27,18 @@ class ScoreGamePieceController(StateMachine):
         self.override_node = Node(Rows.HIGH, 0)
         self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
-    
+
     def setup(self) -> None:
-        self.pose_entry = wpiutil.log.DoubleArrayLogEntry(self.data_log, "score_piece_pose")
+        self.pose_entry = wpiutil.log.DoubleArrayLogEntry(
+            self.data_log, "score_piece_pose"
+        )
 
     @state(first=True, must_finish=True)
     def driving_to_position(self, initial_call) -> None:
         if initial_call:
             goal, approach = get_score_location(self.target_node)
-            self.movement.set_goal(
-                goal, approach, max_accel=1.0, max_vel=2.0
-            )
-            self.pose_entry.append([
-                goal.x,
-                goal.y,
-                float(goal.rotation().radians())
-            ])
+            self.movement.set_goal(goal, approach, max_accel=1.0, max_vel=2.0)
+            self.pose_entry.append([goal.x, goal.y, float(goal.rotation().radians())])
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("hard_up")
