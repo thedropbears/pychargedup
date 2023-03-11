@@ -448,3 +448,11 @@ class Arm:
     @feedback
     def get_filtered_current(self) -> float:
         return self.filtered_current
+
+    def attempt_angle_wrap(self) -> None:
+        if self.get_angle() < -math.pi:
+            self.runtime_offset = math.tau
+        if self.get_angle() > math.pi:
+            self.runtime_offset = -math.tau
+        self.set_angle(self.get_angle())
+        self.rotation_controller.reset(self.get_angle())

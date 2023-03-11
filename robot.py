@@ -299,6 +299,7 @@ class MyRobot(magicbot.MagicRobot):
 
     def disabledPeriodic(self) -> None:
         self.chassis.update_odometry()
+        self.arm_component.attempt_angle_wrap()
         # This could be set in init, but it is more responsive if we do it here
         if is_red():
             self.status_lights.set_color(LedColors.DIM_RED)
