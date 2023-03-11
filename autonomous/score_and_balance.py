@@ -179,3 +179,70 @@ class ScoreAndBalanceCone(AutoBase):
                 (),
             ),
         )
+
+
+class JustBalance(AutonomousStateMachine):
+    MODE_NAME = "Balance"
+    DEFAULT = False
+
+    movement: Movement
+
+    SCORE_PRE_TIME = 2.5
+
+    MAX_VEL = 2.0
+    MAX_ACCEl = 2.0
+
+    def __init__(self) -> None:
+        self.leave_pose = FieldPose(
+            Pose2d(6.5, 2.3, Rotation2d.fromDegrees(0)),
+            Rotation2d.fromDegrees(0),
+            (),
+        )
+        self.balance_pose = FieldPose(
+            Pose2d(4.8, 2.3, Rotation2d.fromDegrees(0)),
+            Rotation2d.fromDegrees(180),
+            (),
+        )
+
+    def on_enable(self) -> None:
+        start_pose, _ = get_score_location(Node(Rows.HIGH, 3))
+        self.movement.chassis.set_pose(start_pose)
+        return super().on_enable()
+
+    @state(first=True)
+    def leave_community(self, initial_call: bool) -> None:
+        if initial_call:
+            path = self.leave_pose.with_correct_fipped()
+            self.movement.set_goal(
+                path.pose,
+                path.approach_angle,
+                path.intermediate_waypoints,
+                max_vel=self.MAX_VEL,
+                max_accel=self.MAX_ACCEl,
+            )
+        elif self.movement.is_at_goal():
+            self.next_state("approach_station")
+        self.movement.do_autodrive()
+
+    @state
+    def approach_station(self, initial_call: bool) -> None:
+        if initial_call:
+            path = self.balance_pose.with_correct_fipped()
+            self.movement.set_goal(
+                path.pose,
+                path.approach_angle,
+                path.intermediate_waypoints,
+                max_vel=self.MAX_VEL,
+                max_accel=self.MAX_ACCEl,
+            )
+        elif self.movement.is_at_goal():
+            self.next_state("balance")
+        self.movement.do_autodrive()
+
+    @state
+    def balance(self, initial_call: bool, tm: float) -> None:
+        if initial_call:
+            self.movement.start_balance()
+        elif not self.movement.is_executing:
+            self.done()
+            return
