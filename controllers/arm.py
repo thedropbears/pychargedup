@@ -134,14 +134,14 @@ class ArmController(StateMachine):
         if self.arm_component.at_goal_extension():
             self.next_state("rotating_arm")
 
-    @timed_state(next_state="extending_arm", duration=4.0, must_finish=True)
+    @state(must_finish=True)
     def rotating_arm(self, initial_call) -> None:
         self._about_to_run = False
         self.arm_component.set_angle(self._target_setpoint.angle)
         if self.arm_component.at_goal_angle() and not initial_call:
             self.next_state("extending_arm")
 
-    @timed_state(duration=1.0, must_finish=True)
+    @state(must_finish=True)
     def extending_arm(self) -> None:
         self._about_to_run = False
         self.arm_component.set_length(self._target_setpoint.extension)
