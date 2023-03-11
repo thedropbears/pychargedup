@@ -62,7 +62,7 @@ class ScoreGamePieceController(StateMachine):
         self.movement.inputs_lock = True
         self.movement.set_input(self.HARD_UP_SPEED, 0, 0, False, override=True)
 
-    @state(must_finish=True)
+    @timed_state(next_state="open_flapper", duration=5.0, must_finish=True)
     def deploying_arm(self) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
