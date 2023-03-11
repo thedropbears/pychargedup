@@ -108,7 +108,7 @@ class Arm:
             maxVelocity=4.0, maxAcceleration=4.0
         )
         self.rotation_controller = ProfiledPIDController(
-            10, 0, 1.0, rotation_constraints
+            12, 0, 1.0, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         # From recalc
