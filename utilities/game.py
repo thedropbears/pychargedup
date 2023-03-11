@@ -195,7 +195,7 @@ def get_single_substation(alliance: wpilib.DriverStation.Alliance) -> Translatio
         return SINGLE_SUBSTATION_RED
 
 
-STAGED_PIECES_Y_OFFSET = 0.920
+STAGED_PIECES_Y_OFFSET = 0.920 * 0.7
 STAGED_PIECES_Y_BETWEEN = 1.219
 STAGED_PIECES_X = 7.067
 
