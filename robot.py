@@ -3,7 +3,6 @@
 import wpilib
 import wpilib.event
 import magicbot
-import math
 
 from wpimath.geometry import Quaternion, Rotation3d, Translation3d, Pose2d, Rotation2d
 
@@ -216,10 +215,6 @@ class MyRobot(magicbot.MagicRobot):
         self.arm_component.on_enable()
         self.port_localizer.add_to_estimator = True
         self.starboard_localizer.add_to_estimator = True
-        while self.arm_component.get_angle() < -math.pi:
-            self.arm_component.runtime_offset += math.tau
-        while self.arm_component.get_angle() > math.pi:
-            self.arm_component.runtime_offset -= math.tau
 
     def testPeriodic(self) -> None:
         dpad_angle = self.gamepad.getPOV()
@@ -318,10 +313,6 @@ class MyRobot(magicbot.MagicRobot):
     def autonomousInit(self) -> None:
         self.port_localizer.add_to_estimator = True
         self.starboard_localizer.add_to_estimator = True
-        while self.arm_component.get_angle() < -math.pi:
-            self.arm_component.runtime_offset += math.tau
-        while self.arm_component.get_angle() > math.pi:
-            self.arm_component.runtime_offset -= math.tau
 
 
 if __name__ == "__main__":
