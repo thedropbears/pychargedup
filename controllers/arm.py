@@ -4,7 +4,7 @@ import math
 
 from utilities.game import Node, GamePiece, Rows
 
-from magicbot import StateMachine, state, feedback
+from magicbot import StateMachine, state, feedback, timed_state
 
 from utilities.functions import clamp
 
@@ -46,8 +46,8 @@ class Setpoint:
 
 
 class Setpoints:
-    PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
-    PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
+    PREPARE_PICKUP_CONE = Setpoint(math.radians(-177), MIN_EXTENSION)
+    PICKUP_CONE = Setpoint(math.radians(-177), MIN_EXTENSION + 0.15)
     HANDOFF = Setpoint(math.radians(49), 0.94)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-165), MIN_EXTENSION)
@@ -134,14 +134,14 @@ class ArmController(StateMachine):
         if self.arm_component.at_goal_extension():
             self.next_state("rotating_arm")
 
-    @state(must_finish=True)
+    @timed_state(next_state="extending_arm", duration=4.0, must_finish=True)
     def rotating_arm(self, initial_call) -> None:
         self._about_to_run = False
         self.arm_component.set_angle(self._target_setpoint.angle)
         if self.arm_component.at_goal_angle() and not initial_call:
             self.next_state("extending_arm")
 
-    @state(must_finish=True)
+    @timed_state(duration=1.0, must_finish=True)
     def extending_arm(self) -> None:
         self._about_to_run = False
         self.arm_component.set_length(self._target_setpoint.extension)
