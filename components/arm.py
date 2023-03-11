@@ -364,10 +364,6 @@ class Arm:
     @feedback
     def at_goal_extension(self) -> bool:
         return self.at_extension(self.goal_extension)
-    
-    @feedback
-    def get_absolute_position(self) -> float:
-        return self.absolute_encoder.getAbsolutePosition()
 
     def at_extension(self, extension: float) -> bool:
         tolerance = (
