@@ -88,21 +88,21 @@ class VisualLocalizer:
             )
 
             # filter out likely bad targets
-            if target.getPoseAmbiguity() > 0.25 or target.getYaw() > 20:
+            if target.getPoseAmbiguity() > 0.25:
                 continue
 
             self.field_pos_obj.setPose(pose)
             change = self.chassis.get_pose().translation().distance(pose.translation())
             if change > 1.0:
                 self.rejected_in_row += 1
-                if self.rejected_in_row < 20:
+                if self.rejected_in_row < 10:
                     continue
             else:
                 self.rejected_in_row //= 2
 
             if self.add_to_estimator:
                 std_apriltag = clamp(
-                    scale_value(distance_to_tag, 3.0, 6.0, 1.0, 3.0), 1, 3
+                    scale_value(distance_to_tag, 3.0, 6.0, 0.5, 3.0), 0.5, 3
                 )
                 self.chassis.estimator.addVisionMeasurement(
                     pose,
