@@ -64,3 +64,5 @@ class DioChannels(enum.IntEnum):
     arm_absolute_encoder = 1
 
     gripper_cube_break_beam = 3
+    
+    extension_switch_reverse = 4

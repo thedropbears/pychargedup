@@ -177,12 +177,9 @@ class Arm:
         self.extension_wall_switch_forward = wpilib.DigitalInput(
             DioChannels.arm_wall_pickup_switch
         )
-        self.extension_limit_switch_reverse = (
-            self.extension_motor.getReverseLimitSwitch(
-                rev.SparkMaxLimitSwitch.Type.kNormallyOpen
-            )
+        self.extension_switch_reverse = wpilib.DigitalInput(
+            DioChannels.extension_switch_reverse
         )
-        self.extension_limit_switch_reverse.enableLimitSwitch(True)
 
         self.use_voltage = True
         self.voltage = 0.0
@@ -326,7 +323,7 @@ class Arm:
 
     @feedback
     def is_retracted(self) -> bool:
-        return self.extension_limit_switch_reverse.get()
+        return self.extension_switch_reverse.get()
 
     def get_voltage(self) -> float:
         """Get the current voltage for the extension motor"""
