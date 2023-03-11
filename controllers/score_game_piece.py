@@ -33,11 +33,11 @@ class ScoreGamePieceController(StateMachine):
 
     @state(first=True, must_finish=True)
     def driving_to_position(self, initial_call) -> None:
-        goal, approach = get_score_location(self.target_node)
-        self.movement.set_goal(
-            goal, approach, max_accel=1.0, max_vel=2.0
-        )
         if initial_call:
+            goal, approach = get_score_location(self.target_node)
+            self.movement.set_goal(
+                goal, approach, max_accel=1.0, max_vel=2.0
+            )
             self.pose_entry.append([
                 goal.x,
                 goal.y,
