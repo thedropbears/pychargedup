@@ -405,10 +405,6 @@ class Arm:
         return not self.extension_brake_solenoid.get()
 
     def on_enable(self) -> None:
-        while self.get_angle() < -math.pi:
-            self.runtime_offset += math.tau
-        while self.get_angle() > math.pi:
-            self.runtime_offset -= math.tau
         self.use_voltage = True
         self.reset_controllers()
         self.set_length(self.get_extension())

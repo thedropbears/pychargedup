@@ -162,31 +162,12 @@ class AutoBase(AutonomousStateMachine):
 
 
 class ScoreAndBalanceCone(AutoBase):
-    MODE_NAME = "Score and Balance Cone"
+    MODE_NAME = "Cone Score and Balance"
     DEFAULT = True
 
     def __init__(self) -> None:
         super().__init__(
             ScoreAction(Node(Rows.HIGH, 3), ()),
-            FieldPose(
-                Pose2d(6.5, 2.3, Rotation2d.fromDegrees(0)),
-                Rotation2d.fromDegrees(0),
-                (),
-            ),
-            FieldPose(
-                Pose2d(4.8, 2.3, Rotation2d.fromDegrees(0)),
-                Rotation2d.fromDegrees(180),
-                (),
-            ),
-        )
-
-class ScoreAndBalanceCube(AutoBase):
-    MODE_NAME = "Score and Balance Cube"
-    DEFAULT = False
-
-    def __init__(self) -> None:
-        super().__init__(
-            ScoreAction(Node(Rows.HIGH, 4), ()),
             FieldPose(
                 Pose2d(6.5, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(0),
