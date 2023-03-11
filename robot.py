@@ -169,7 +169,7 @@ class MyRobot(magicbot.MagicRobot):
 
         # Run autobalance in teleop, for tuning gains in practice
         if self.gamepad.getYButtonPressed():
-            self.movement.start_balance()
+            self.arm.go_to_setpoint(Setpoints.PICKUP_CONE)
 
         # Stop controllers / Clear request
         if self.gamepad.getBButtonPressed():

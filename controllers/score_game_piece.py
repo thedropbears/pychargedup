@@ -1,6 +1,8 @@
 from controllers.arm import ArmController, get_setpoint_from_node
 from components.gripper import Gripper
 
+import wpiutil.log
+
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 
@@ -19,16 +21,28 @@ class ScoreGamePieceController(StateMachine):
     HARD_UP_SPEED = 0.3
     ARM_PRE_TIME = 1.5
 
+    data_log: wpiutil.log.DataLog
+
     def __init__(self) -> None:
         self.override_node = Node(Rows.HIGH, 0)
         self.prefered_row = Rows.HIGH
         self.target_node = Node(Rows.HIGH, 0)
+    
+    def setup(self) -> None:
+        self.pose_entry = wpiutil.log.DoubleArrayLogEntry(self.data_log, "score_piece_pose")
 
     @state(first=True, must_finish=True)
     def driving_to_position(self, initial_call) -> None:
+        goal, approach = get_score_location(self.target_node)
         self.movement.set_goal(
-            *get_score_location(self.target_node), max_accel=1.0, max_vel=2.0
+            goal, approach, max_accel=1.0, max_vel=2.0
         )
+        if initial_call:
+            self.pose_entry.append([
+                goal.x,
+                goal.y,
+                float(goal.rotation().radians())
+            ])
         self.movement.do_autodrive()
         if self.movement.is_at_goal():
             self.next_state("hard_up")
@@ -48,7 +62,7 @@ class ScoreGamePieceController(StateMachine):
         self.movement.inputs_lock = True
         self.movement.set_input(self.HARD_UP_SPEED, 0, 0, False, override=True)
 
-    @timed_state(next_state="open_flapper", duration=5.0, must_finish=True)
+    @state(must_finish=True)
     def deploying_arm(self) -> None:
         self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
         if self.arm.at_goal():
