@@ -260,7 +260,10 @@ class Arm:
         self.abs_enc_pos_old = self.abs_enc_pos
         self.abs_enc_pos = -self.absolute_encoder.getDistance()
 
-        self.filtered_current = self.filtered_current * self.CURRENT_EXP_ALPHA + self.rotation_motor.getOutputCurrent() * (1.0 - self.CURRENT_EXP_ALPHA)
+        self.filtered_current = (
+            self.filtered_current * self.CURRENT_EXP_ALPHA
+            + self.rotation_motor.getOutputCurrent() * (1.0 - self.CURRENT_EXP_ALPHA)
+        )
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
