@@ -105,7 +105,7 @@ class Arm:
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=2, maxAcceleration=3
+            maxVelocity=4.0, maxAcceleration=4.0
         )
         self.rotation_controller = ProfiledPIDController(
             10, 0, 1.0, rotation_constraints
