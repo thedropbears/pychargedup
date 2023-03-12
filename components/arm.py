@@ -57,6 +57,8 @@ class Arm:
     # time for the arm encoder to start working
     ARM_STARTUP_TIME = 5
 
+    BRAKE_TO_MOTOR_DELAY = 0.5
+
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
 
@@ -81,6 +83,8 @@ class Arm:
         self.absolute_encoder.setPositionOffset(self.ARM_ENCODER_ANGLE_OFFSET)
         self.runtime_offset = 0.0
         self.startup_time = time.monotonic()
+        self.braking_time = 0.0
+        self.did_brake = False
 
         self.rel_enc_pos = 0.0
         self.rel_enc_pos_old = self.rel_enc_pos
@@ -225,9 +229,18 @@ class Arm:
         # Rotation
         if self.at_goal_angle() and self.is_angle_still():
             self.brake_rotation()
-            self.rotation_motor.setVoltage(0)
-            self.rotation_motor_follower.setVoltage(0)
+            if not self.did_brake:
+                self.did_brake = True
+                self.braking_time = time.monotonic()
+            if time.monotonic() - self.braking_time > self.BRAKE_TO_MOTOR_DELAY:
+                self.rotation_motor.setVoltage(0)
+                self.rotation_motor_follower.setVoltage(0)
+            else:
+                rotation_voltage = clamp(pid_output + ff_output, -12, 12)
+                self.rotation_motor.setVoltage(rotation_voltage)
+                self.rotation_motor_follower.setVoltage(rotation_voltage)
         else:
+            self.did_brake = False
             self.unbrake_rotation()
             rotation_voltage = clamp(pid_output + ff_output, -12, 12)
             self.rotation_motor.setVoltage(rotation_voltage)
