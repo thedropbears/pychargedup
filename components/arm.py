@@ -1,7 +1,8 @@
 import time
 from magicbot import feedback, tunable
 import wpilib
-from ids import SparkMaxIds, PhChannels, DioChannels
+import ctre
+from ids import SparkMaxIds, PhChannels, DioChannels, TalonIds
 from wpilib import (
     DoubleSolenoid,
     Solenoid,
@@ -33,11 +34,11 @@ class Arm:
     PIVOT_X = -0.283562
 
     ANGLE_ERROR_TOLERANCE = math.radians(2)
-    ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(5)
+    ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(8)
     EXTENSION_ERROR_TOLERANCE = 0.01
     EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
 
-    STILL_ROTATION_SPEED_TOLERANCE = 0.1
+    STILL_ROTATION_SPEED_TOLERANCE = 0.00005
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (36 / 22)
@@ -63,30 +64,17 @@ class Arm:
 
     def __init__(self) -> None:
         # Create rotation things
-        self.rotation_motor = rev.CANSparkMax(
-            SparkMaxIds.arm_rotation_main, rev.CANSparkMax.MotorType.kBrushless
-        )
-        self.rotation_motor.restoreFactoryDefaults()
-        self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        current_limit = ctre.StatorCurrentLimitConfiguration(True, 45, 45, 0.1)
+        self.rotation_motor = ctre.WPI_TalonFX(TalonIds.arm_rotation_main)
+        self.rotation_motor.configFactoryDefault()
+        self.rotation_motor.configStatorCurrentLimit(current_limit)
         self.rotation_motor.setInverted(True)
-        self.rotation_motor.setSmartCurrentLimit(80)
         # setup second motor to follow first
-        self._rotation_motor_follower = rev.CANSparkMax(
-            SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
-        )
-        self._rotation_motor_follower.restoreFactoryDefaults()
-        # self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
-        self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self._rotation_motor_follower.setInverted(True)
-        self._rotation_motor_follower.setSmartCurrentLimit(80)
+        self.rotation_motor_follower = ctre.WPI_TalonFX(TalonIds.arm_rotation_follower)
+        self.rotation_motor_follower.configFactoryDefault()
+        self.rotation_motor_follower.configStatorCurrentLimit(current_limit)
+        self.rotation_motor_follower.setInverted(True)
 
-        self.relative_encoder = self.rotation_motor.getEncoder()
-        self.relative_encoder.setPositionConversionFactor(
-            math.tau / self.ROTATE_GEAR_RATIO
-        )
-        self.relative_encoder.setVelocityConversionFactor(
-            1 / self.ROTATE_GEAR_RATIO / 60
-        )
 
         self.absolute_encoder = DutyCycleEncoder(DioChannels.arm_absolute_encoder)
         self.absolute_encoder.setDistancePerRotation(math.tau)
@@ -94,7 +82,7 @@ class Arm:
         self.runtime_offset = 0.0
         self.startup_time = time.monotonic()
 
-        self.rel_enc_pos = self.relative_encoder.getPosition()
+        self.rel_enc_pos = 0.0
         self.rel_enc_pos_old = self.rel_enc_pos
         self.abs_enc_pos = -self.absolute_encoder.getDistance()
         self.abs_enc_pos_old = self.abs_enc_pos
@@ -108,7 +96,7 @@ class Arm:
             maxVelocity=4.0, maxAcceleration=4.0
         )
         self.rotation_controller = ProfiledPIDController(
-            12, 0, 1.0, rotation_constraints
+            12, 0, 2.0, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         # From recalc
@@ -238,12 +226,12 @@ class Arm:
         if self.at_goal_angle() and self.is_angle_still():
             self.brake_rotation()
             self.rotation_motor.setVoltage(0)
-            self._rotation_motor_follower.setVoltage(0)
+            self.rotation_motor_follower.setVoltage(0)
         else:
             self.unbrake_rotation()
             rotation_voltage = clamp(pid_output + ff_output, -12, 12)
             self.rotation_motor.setVoltage(rotation_voltage)
-            self._rotation_motor_follower.setVoltage(rotation_voltage)
+            self.rotation_motor_follower.setVoltage(rotation_voltage)
 
         self.discrete_vel_rel = self.discrete_vel_rel * self.DISCRETE_VEL_EXP_ALPHA + (
             self.rel_enc_pos - self.rel_enc_pos_old
@@ -253,7 +241,7 @@ class Arm:
         ) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
 
         self.rel_enc_pos_old = self.rel_enc_pos
-        self.rel_enc_pos = self.relative_encoder.getPosition()
+        self.rel_enc_pos = 0.0
         self.abs_enc_pos_old = self.abs_enc_pos
         self.abs_enc_pos = -self.absolute_encoder.getDistance()
 
@@ -299,7 +287,7 @@ class Arm:
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
-        return self.relative_encoder.getVelocity()
+        return self.rotation_motor.getSelectedSensorVelocity() / 2048 / 10 / math.tau / self.ROTATE_GEAR_RATIO
 
     @feedback
     def get_extension(self) -> float:
@@ -323,7 +311,7 @@ class Arm:
 
     @feedback
     def is_retracted(self) -> bool:
-        return self.extension_switch_reverse.get()
+        return not self.extension_switch_reverse.get()
 
     def get_voltage(self) -> float:
         """Get the current voltage for the extension motor"""
@@ -428,7 +416,7 @@ class Arm:
 
     @feedback
     def get_rotation_output_follower(self) -> float:
-        return self._rotation_motor_follower.getOutputCurrent()
+        return self.rotation_motor_follower.getStatorCurrent()
 
     @feedback
     def get_extension_output(self) -> float:
