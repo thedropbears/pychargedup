@@ -36,9 +36,9 @@ class Arm:
     ANGLE_ERROR_TOLERANCE = math.radians(2)
     ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(8)
     EXTENSION_ERROR_TOLERANCE = 0.01
-    EXTENSION_BRAKING_ERROR_TOLERANCE = 2.00
+    EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
 
-    STILL_ROTATION_SPEED_TOLERANCE = 0.0003
+    STILL_ROTATION_SPEED_TOLERANCE = 0.06
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (36 / 22)
@@ -58,6 +58,7 @@ class Arm:
     ARM_STARTUP_TIME = 5
 
     BRAKE_TO_MOTOR_DELAY = 0.2
+    BRAKE_UNBRAKE_DELAY = 1.0
 
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
@@ -231,7 +232,7 @@ class Arm:
         )
         ff_output = self.calculate_rotation_feedforwards()
         # Rotation
-        if self.at_goal_angle() and self.is_angle_still():
+        if time.monotonic() - self.braking_time < self.BRAKE_UNBRAKE_DELAY or self.at_goal_angle() and self.is_angle_still():
             self.brake_rotation()
             if not self.did_brake:
                 self.did_brake = True
@@ -304,7 +305,7 @@ class Arm:
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
-        return self.rotation_motor.getSelectedSensorVelocity() / 2048 * 10 / math.tau / self.ROTATE_GEAR_RATIO
+        return self.rotation_motor.getSelectedSensorVelocity() * 10 / 4096 / math.tau / self.ROTATE_GEAR_RATIO
 
     @feedback
     def get_extension(self) -> float:
