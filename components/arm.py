@@ -216,6 +216,8 @@ class Arm:
             self.get_extension(), self.goal_extension
         )
         # Extension
+        if self.is_retracted():
+            self.extension_encoder.setPosition(MIN_EXTENSION)
         if self.at_goal_extension() and self.is_extension_still():
             self.brake_extension()
             self.extension_motor.setVoltage(0)
