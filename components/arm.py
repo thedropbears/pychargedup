@@ -36,7 +36,7 @@ class Arm:
     ANGLE_ERROR_TOLERANCE = math.radians(2)
     ANGLE_BRAKING_ERROR_TOLERANCE = math.radians(8)
     EXTENSION_ERROR_TOLERANCE = 0.01
-    EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
+    EXTENSION_BRAKING_ERROR_TOLERANCE = 2.00
 
     STILL_ROTATION_SPEED_TOLERANCE = 0.0003
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
@@ -304,7 +304,7 @@ class Arm:
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
-        return self.rotation_motor.getSelectedSensorVelocity() / 2048 / 10 / math.tau / self.ROTATE_GEAR_RATIO
+        return self.rotation_motor.getSelectedSensorVelocity() / 2048 * 10 / math.tau / self.ROTATE_GEAR_RATIO
 
     @feedback
     def get_extension(self) -> float:
