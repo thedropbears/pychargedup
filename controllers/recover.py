@@ -3,7 +3,7 @@ from components.intake import Intake
 from components.gripper import Gripper
 import math
 
-from magicbot import StateMachine, state
+from magicbot import StateMachine, state, timed_state
 
 
 class RecoverController(StateMachine):
@@ -33,7 +33,7 @@ class RecoverController(StateMachine):
         if self.intake.is_fully_deployed():
             self.next_state("stowing_arm")
 
-    @state(must_finish=True)
+    @timed_state(next_state="retracting_intake", duration=4.0, must_finish=True)
     def stowing_arm(self) -> None:
         self.arm.go_to_setpoint(Setpoints.STOW)
         if self.arm.at_goal():
