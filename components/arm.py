@@ -38,7 +38,7 @@ class Arm:
     EXTENSION_ERROR_TOLERANCE = 0.01
     EXTENSION_BRAKING_ERROR_TOLERANCE = 0.02
 
-    STILL_ROTATION_SPEED_TOLERANCE = 0.00005
+    STILL_ROTATION_SPEED_TOLERANCE = 0.0003
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
     ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (36 / 22)
@@ -57,7 +57,7 @@ class Arm:
     # time for the arm encoder to start working
     ARM_STARTUP_TIME = 5
 
-    BRAKE_TO_MOTOR_DELAY = 0.5
+    BRAKE_TO_MOTOR_DELAY = 0.2
 
     goal_angle = tunable(0.0)
     goal_extension = tunable(MIN_EXTENSION)
@@ -71,11 +71,13 @@ class Arm:
         self.rotation_motor.configFactoryDefault()
         self.rotation_motor.configStatorCurrentLimit(current_limit)
         self.rotation_motor.setInverted(True)
+        self.rotation_motor.setNeutralMode(ctre.NeutralMode.Brake)
         # setup second motor to follow first
         self.rotation_motor_follower = ctre.WPI_TalonFX(TalonIds.arm_rotation_follower)
         self.rotation_motor_follower.configFactoryDefault()
         self.rotation_motor_follower.configStatorCurrentLimit(current_limit)
         self.rotation_motor_follower.setInverted(True)
+        self.rotation_motor.setNeutralMode(ctre.NeutralMode.Brake)
 
 
         self.absolute_encoder = DutyCycleEncoder(DioChannels.arm_absolute_encoder)
@@ -100,7 +102,7 @@ class Arm:
             maxVelocity=4.0, maxAcceleration=4.0
         )
         self.rotation_controller = ProfiledPIDController(
-            12, 0, 2.0, rotation_constraints
+            14, 0, 1.8, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         # From recalc
