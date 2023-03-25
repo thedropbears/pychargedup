@@ -3,6 +3,7 @@ from magicbot import feedback, tunable
 import wpilib
 from ids import SparkMaxIds, PhChannels, DioChannels
 from wpilib import (
+    DoubleSolenoid,
     Solenoid,
     PneumaticsModuleType,
     DutyCycleEncoder,
@@ -39,7 +40,7 @@ class Arm:
     STILL_ROTATION_SPEED_TOLERANCE = 0.1
     STILL_EXTENSION_SPEED_TOLERANCE = 0.05
 
-    ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (42 / 18)
+    ROTATE_GEAR_RATIO = (74 / 14) * (82 / 26) * (36 / 22)
     SPOOL_CIRCUMFERENCE = 42 * 0.005  # 42t x 5mm
     EXTEND_GEAR_RATIO = (7 / 1) * (4 / 1) * (34 / 18)
     # converts from motor rotations to meters
@@ -47,7 +48,11 @@ class Arm:
     EXTEND_GRAVITY_FEEDFORWARD = 0
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
-    ARM_ENCODER_ANGLE_OFFSET = 0.325  # rotations 0-1
+    ARM_ENCODER_ANGLE_OFFSET = math.tau - 0.672  # radians
+
+    DISCRETE_VEL_EXP_ALPHA = 0.8
+    CURRENT_EXP_ALPHA = 0.8
+
     # time for the arm encoder to start working
     ARM_STARTUP_TIME = 5
 
@@ -64,17 +69,21 @@ class Arm:
         self.rotation_motor.restoreFactoryDefaults()
         self.rotation_motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self.rotation_motor.setInverted(True)
+        self.rotation_motor.setSmartCurrentLimit(80)
         # setup second motor to follow first
         self._rotation_motor_follower = rev.CANSparkMax(
             SparkMaxIds.arm_rotation_follower, rev.CANSparkMax.MotorType.kBrushless
         )
         self._rotation_motor_follower.restoreFactoryDefaults()
-        self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
+        # self._rotation_motor_follower.follow(self.rotation_motor, invert=False)
         self._rotation_motor_follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
         self._rotation_motor_follower.setInverted(True)
+        self._rotation_motor_follower.setSmartCurrentLimit(80)
 
         self.relative_encoder = self.rotation_motor.getEncoder()
-        self.relative_encoder.setPositionConversionFactor(self.ROTATE_GEAR_RATIO)
+        self.relative_encoder.setPositionConversionFactor(
+            math.tau / self.ROTATE_GEAR_RATIO
+        )
         self.relative_encoder.setVelocityConversionFactor(
             1 / self.ROTATE_GEAR_RATIO / 60
         )
@@ -85,10 +94,18 @@ class Arm:
         self.runtime_offset = 0.0
         self.startup_time = time.monotonic()
 
+        self.rel_enc_pos = self.relative_encoder.getPosition()
+        self.rel_enc_pos_old = self.rel_enc_pos
+        self.abs_enc_pos = -self.absolute_encoder.getDistance()
+        self.abs_enc_pos_old = self.abs_enc_pos
+
+        self.discrete_vel_rel = 0.0
+        self.discrete_vel_abs = 0.0
+
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=3, maxAcceleration=5
+            maxVelocity=2, maxAcceleration=3
         )
         self.rotation_controller = ProfiledPIDController(
             10, 0, 1.0, rotation_constraints
@@ -120,8 +137,10 @@ class Arm:
         self.extension_simple_ff = SimpleMotorFeedforwardMeters(kS=0, kV=2, kA=0.2)
         self.extension_last_setpoint_vel = 0
 
-        self.rotation_brake_solenoid = Solenoid(
-            PneumaticsModuleType.REVPH, PhChannels.arm_brake
+        self.rotation_brake_solenoid = DoubleSolenoid(
+            PneumaticsModuleType.REVPH,
+            PhChannels.arm_brake_fwd,
+            PhChannels.arm_brake_rev,
         )
         self.extension_brake_solenoid = Solenoid(
             PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
@@ -167,6 +186,8 @@ class Arm:
 
         self.use_voltage = True
         self.voltage = 0.0
+
+        self.filtered_current = 0.0
 
         wpilib.SmartDashboard.putData("Arm sim", self.arm_mech2d)
 
@@ -220,9 +241,26 @@ class Arm:
         if self.at_goal_angle() and self.is_angle_still():
             self.brake_rotation()
             self.rotation_motor.setVoltage(0)
+            self._rotation_motor_follower.setVoltage(0)
         else:
             self.unbrake_rotation()
-            self.rotation_motor.setVoltage(pid_output + ff_output)
+            rotation_voltage = clamp(pid_output + ff_output, -12, 12)
+            self.rotation_motor.setVoltage(rotation_voltage)
+            self._rotation_motor_follower.setVoltage(rotation_voltage)
+
+        self.discrete_vel_rel = self.discrete_vel_rel * self.DISCRETE_VEL_EXP_ALPHA + (
+            self.rel_enc_pos - self.rel_enc_pos_old
+        ) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
+        self.discrete_vel_abs = self.discrete_vel_abs * self.DISCRETE_VEL_EXP_ALPHA + (
+            self.abs_enc_pos - self.abs_enc_pos_old
+        ) * (1.0 - self.DISCRETE_VEL_EXP_ALPHA)
+
+        self.rel_enc_pos_old = self.rel_enc_pos
+        self.rel_enc_pos = self.relative_encoder.getPosition()
+        self.abs_enc_pos_old = self.abs_enc_pos
+        self.abs_enc_pos = -self.absolute_encoder.getDistance()
+
+        self.filtered_current = self.filtered_current * self.CURRENT_EXP_ALPHA + self.rotation_motor.getOutputCurrent() * (1.0 - self.CURRENT_EXP_ALPHA)
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -247,7 +285,7 @@ class Arm:
     @feedback
     def get_angle(self) -> float:
         """Get the position of the arm in in radians, 0 forwards, CCW down"""
-        return self.absolute_encoder.getDistance() + self.runtime_offset
+        return -self.absolute_encoder.getDistance() + self.runtime_offset
 
     @feedback
     def get_angle_deg(self) -> float:
@@ -349,10 +387,10 @@ class Arm:
         )
 
     def brake_rotation(self) -> None:
-        self.rotation_brake_solenoid.set(False)
+        self.rotation_brake_solenoid.set(DoubleSolenoid.Value.kForward)
 
     def unbrake_rotation(self) -> None:
-        self.rotation_brake_solenoid.set(True)
+        self.rotation_brake_solenoid.set(DoubleSolenoid.Value.kReverse)
 
     def brake_extension(self) -> None:
         self.extension_brake_solenoid.set(False)
@@ -361,14 +399,16 @@ class Arm:
         self.extension_brake_solenoid.set(True)
 
     def is_braking_rotation(self) -> bool:
-        return not self.rotation_brake_solenoid.get()
+        return self.rotation_brake_solenoid.get() == DoubleSolenoid.Value.kForward
 
     def is_braking_extension(self) -> bool:
         return not self.extension_brake_solenoid.get()
 
     def on_enable(self) -> None:
-        if self.get_angle() > math.pi / 2:
-            self.runtime_offset = -math.tau
+        while self.get_angle() < -math.pi:
+            self.runtime_offset += math.tau
+        while self.get_angle() > math.pi:
+            self.runtime_offset -= math.tau
         self.use_voltage = True
         self.reset_controllers()
         self.set_length(self.get_extension())
@@ -388,8 +428,24 @@ class Arm:
 
     @feedback
     def get_rotation_output(self) -> float:
-        return self.rotation_motor.getAppliedOutput()
+        return self.rotation_motor.getOutputCurrent()
+
+    @feedback
+    def get_rotation_output_follower(self) -> float:
+        return self._rotation_motor_follower.getOutputCurrent()
 
     @feedback
     def get_extension_output(self) -> float:
         return self.extension_motor.getAppliedOutput()
+
+    @feedback
+    def get_discrete_vel_rel(self) -> float:
+        return self.discrete_vel_rel
+
+    @feedback
+    def get_discrete_vel_abs(self) -> float:
+        return self.discrete_vel_abs
+
+    @feedback
+    def get_filtered_current(self) -> float:
+        return self.filtered_current

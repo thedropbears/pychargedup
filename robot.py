@@ -239,7 +239,7 @@ class MyRobot(magicbot.MagicRobot):
                 self.arm.go_to_setpoint(Setpoints.SCORE_CONE_HIGH)
             # down
             elif dpad_angle == 180:
-                self.arm.go_to_setpoint(Setpoints.HANDOFF)
+                self.arm.go_to_setpoint(Setpoints.SCORE_CONE_MID)
             # right
             elif dpad_angle == 90:
                 self.arm.go_to_setpoint(Setpoints.PREPARE_PICKUP_CONE)

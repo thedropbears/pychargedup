@@ -1,4 +1,4 @@
-from magicbot.state_machine import AutonomousStateMachine, state
+from magicbot.state_machine import AutonomousStateMachine, state, timed_state
 from wpimath.geometry import Rotation2d, Translation2d, Pose2d
 from dataclasses import dataclass
 from components.arm import Arm
@@ -7,6 +7,7 @@ from components.gripper import Gripper
 from controllers.movement import Movement
 from controllers.recover import RecoverController
 from controllers.score_game_piece import ScoreGamePieceController
+from components.intake import Intake
 
 from utilities.game import (
     Node,
@@ -77,12 +78,13 @@ class AutoBase(AutonomousStateMachine):
     movement: Movement
     score_game_piece: ScoreGamePieceController
     recover: RecoverController
+    intake: Intake
     arm_component: Arm
     gripper: Gripper
 
     SCORE_PRE_TIME = 2.5
 
-    MAX_VEL = 1.5
+    MAX_VEL = 2.0
     MAX_ACCEl = 2.0
 
     def __init__(
@@ -103,6 +105,7 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             self.gripper.close()
             self.recover.engage()
+            self.intake.deploy_without_running()
         elif not self.recover.is_executing:
             self.next_state("score_cone")
 
@@ -110,8 +113,13 @@ class AutoBase(AutonomousStateMachine):
     def score_cone(self, initial_call: bool) -> None:
         if initial_call:
             self.score_game_piece.score_without_moving(self.score_action.node)
+            self.intake.retract()
         elif not self.score_game_piece.is_executing:
-            self.next_state("leave_community")
+            self.next_state("wait_for_arm_to_fold")
+
+    @timed_state(next_state="leave_community", duration=0.5, must_finish=True)
+    def wait_for_arm_to_fold(self, initial_call: bool) -> None:
+        self.recover.engage()
 
     @state
     def leave_community(self, initial_call: bool) -> None:
@@ -148,12 +156,9 @@ class AutoBase(AutonomousStateMachine):
     def balance(self, initial_call: bool, tm: float) -> None:
         if initial_call:
             self.movement.start_balance()
-        elif not self.movement.is_executing or tm > 14.5:
-            self.next_state("lock_wheels")
-
-    @state
-    def lock_wheels(self) -> None:
-        self.movement.chassis.lock_swerve()
+        elif not self.movement.is_executing:
+            self.done()
+            return
 
 
 class ScoreAndBalance(AutoBase):
@@ -164,12 +169,12 @@ class ScoreAndBalance(AutoBase):
         super().__init__(
             ScoreAction(Node(Rows.HIGH, 3), ()),
             FieldPose(
-                Pose2d(6.3, 2.3, Rotation2d.fromDegrees(0)),
+                Pose2d(6.5, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(0),
                 (),
             ),
             FieldPose(
-                Pose2d(5.0, 2.3, Rotation2d.fromDegrees(0)),
+                Pose2d(4.8, 2.3, Rotation2d.fromDegrees(0)),
                 Rotation2d.fromDegrees(180),
                 (),
             ),

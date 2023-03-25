@@ -1,5 +1,4 @@
 from controllers.arm import ArmController, get_setpoint_from_node
-from components.intake import Intake
 from components.gripper import Gripper
 
 from controllers.movement import Movement
@@ -13,7 +12,6 @@ from wpimath.geometry import Translation2d
 
 class ScoreGamePieceController(StateMachine):
     gripper: Gripper
-    intake: Intake
     arm: ArmController
 
     movement: Movement
@@ -38,7 +36,7 @@ class ScoreGamePieceController(StateMachine):
         if not initial_call and self.movement.time_to_goal < self.ARM_PRE_TIME:
             self.arm.go_to_setpoint(get_setpoint_from_node(self.target_node))
 
-    @timed_state(next_state="back_off", duration=0.3, must_finish=True)
+    @timed_state(next_state="deploying_arm", duration=0.3, must_finish=True)
     def hard_up(self) -> None:
         self.movement.inputs_lock = True
         self.movement.set_input(-self.HARD_UP_SPEED, 0, 0, False, override=True)

@@ -88,6 +88,7 @@ class AutoBase(AutonomousStateMachine):
         if initial_call:
             self.gripper.close()
             self.recover.engage()
+            self.intake.deploy_without_running()
         elif not self.recover.is_executing:
             self.next_state("score_cone")
 
@@ -103,6 +104,7 @@ class AutoBase(AutonomousStateMachine):
     @state
     def approach_cube(self, initial_call: bool) -> None:
         if initial_call:
+            self.intake.retract()
             action = self.pickup_actions[self.progress_idx].with_correct_flipped()
             self.movement.set_goal(
                 *get_staged_pickup(action.piece_idx, action.approach_direction),
