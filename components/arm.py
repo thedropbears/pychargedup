@@ -80,7 +80,6 @@ class Arm:
         self.rotation_motor_follower.setInverted(True)
         self.rotation_motor.setNeutralMode(ctre.NeutralMode.Brake)
 
-
         self.absolute_encoder = DutyCycleEncoder(DioChannels.arm_absolute_encoder)
         self.absolute_encoder.setDistancePerRotation(math.tau)
         self.absolute_encoder.setPositionOffset(self.ARM_ENCODER_ANGLE_OFFSET)
@@ -232,7 +231,11 @@ class Arm:
         )
         ff_output = self.calculate_rotation_feedforwards()
         # Rotation
-        if time.monotonic() - self.braking_time < self.BRAKE_UNBRAKE_DELAY or self.at_goal_angle() and self.is_angle_still():
+        if (
+            time.monotonic() - self.braking_time < self.BRAKE_UNBRAKE_DELAY
+            or self.at_goal_angle()
+            and self.is_angle_still()
+        ):
             self.brake_rotation()
             if not self.did_brake:
                 self.did_brake = True
@@ -305,7 +308,13 @@ class Arm:
     def get_arm_speed(self) -> float:
         """Get the speed of the arm in Rotations/s"""
         # uses the relative encoder beacuse the absolute one dosent report velocity
-        return self.rotation_motor.getSelectedSensorVelocity() * 10 / 4096 / math.tau / self.ROTATE_GEAR_RATIO
+        return (
+            self.rotation_motor.getSelectedSensorVelocity()
+            * 10
+            / 4096
+            / math.tau
+            / self.ROTATE_GEAR_RATIO
+        )
 
     @feedback
     def get_extension(self) -> float:
