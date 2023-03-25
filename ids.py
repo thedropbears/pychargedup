@@ -15,6 +15,9 @@ class TalonIds(enum.IntEnum):
     drive_4 = 4
     steer_4 = 8
 
+    arm_rotation_follower = 13
+    arm_rotation_main = 14
+
 
 @enum.unique
 class CancoderIds(enum.IntEnum):
@@ -26,9 +29,6 @@ class CancoderIds(enum.IntEnum):
 
 @enum.unique
 class SparkMaxIds(enum.IntEnum):
-    arm_rotation_main = 14
-    arm_rotation_follower = 13
-
     arm_extension = 15
 
     intake_motor = 3
@@ -64,3 +64,5 @@ class DioChannels(enum.IntEnum):
     arm_absolute_encoder = 1
 
     gripper_cube_break_beam = 3
+
+    extension_switch_reverse = 4

@@ -22,7 +22,7 @@ from wpimath.system.plant import DCMotor
 from components.chassis import SwerveModule
 from components import arm
 from utilities.ctre import FALCON_CPR, VERSA_ENCODER_CPR
-from ids import DioChannels, PhChannels, SparkMaxIds
+from ids import DioChannels, PhChannels, SparkMaxIds, TalonIds
 
 if typing.TYPE_CHECKING:
     from robot import MyRobot
@@ -80,7 +80,7 @@ class PhysicsEngine:
         ]
 
         # Create arm simulation
-        arm_motors_sim = DCMotor.NEO(2)
+        arm_motors_sim = DCMotor.falcon500(2)
         arm_len = (arm.MIN_EXTENSION + arm.MAX_EXTENSION) / 2
         # Since the sim isn't modeling many of the factors affecting the arm
         # masses are adjusted to make sim reach setpoints with PID that work on real robot
@@ -125,9 +125,9 @@ class PhysicsEngine:
             wpilib.PneumaticsModuleType.REVPH, PhChannels.arm_extension_brake
         )
 
-        self.arm_motor = SimDeviceSim("SPARK MAX ", SparkMaxIds.arm_rotation_main)
-        self.arm_motor_pos = self.arm_motor.getDouble("Position")
-        self.arm_motor_vel = self.arm_motor.getDouble("Velocity")
+        self.arm_motor = SimDeviceSim("Talon FX ", TalonIds.arm_rotation_main)
+        self.arm_motor_pos = self.arm_motor.getDouble("position")
+        self.arm_motor_vel = self.arm_motor.getDouble("velocity")
         self.arm_motor_output = self.arm_motor.getDouble("Applied Output")
 
         self.arm_extension = SimDeviceSim("SPARK MAX ", SparkMaxIds.arm_extension)
