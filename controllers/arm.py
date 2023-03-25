@@ -46,8 +46,8 @@ class Setpoint:
 
 
 class Setpoints:
-    PREPARE_PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION)
-    PICKUP_CONE = Setpoint(math.radians(-183), MIN_EXTENSION + 0.15)
+    PREPARE_PICKUP_CONE = Setpoint(math.radians(-177), MIN_EXTENSION)
+    PICKUP_CONE = Setpoint(math.radians(-177), MIN_EXTENSION + 0.15)
     HANDOFF = Setpoint(math.radians(49), 0.94)
     STOW = Setpoint(math.radians(25), MIN_EXTENSION)
     SCORE_CONE_MID = Setpoint(math.radians(-165), MIN_EXTENSION)
@@ -131,7 +131,7 @@ class ArmController(StateMachine):
         if self.arm_component.use_voltage:
             self.arm_component.set_voltage(-2.0)
         self.arm_component.set_length(MIN_EXTENSION)
-        if self.arm_component.at_goal_extension():
+        if self.arm_component.at_goal_extension() or self.arm_component.is_retracted():
             self.next_state("rotating_arm")
 
     @state(must_finish=True)

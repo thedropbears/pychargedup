@@ -144,8 +144,8 @@ class PhysicsEngine:
         self.arm_sim.setInputVoltage(-self.arm_motor_output.get())
         if self.arm_rotation_brake.get() == wpilib.DoubleSolenoid.Value.kReverse:
             self.arm_sim.update(tm_diff)
-        self.arm_abs_encoder.setDistance(-self.arm_sim.getAngle())
-        self.arm_motor_vel.set(-self.arm_sim.getVelocity())
+        self.arm_abs_encoder.setDistance(self.arm_sim.getAngle())
+        self.arm_motor_vel.set(self.arm_sim.getVelocity())
         # Update extension sim
         self.extension_sim.setInputVoltage(self.arm_extension_output.get())
         if self.arm_extension_brake.getOutput():

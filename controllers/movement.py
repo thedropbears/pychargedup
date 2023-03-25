@@ -30,6 +30,8 @@ from utilities.game import is_red
 
 from utilities.functions import clamp
 
+import wpiutil.log
+
 
 class Movement(StateMachine):
     chassis: Chassis
@@ -54,6 +56,8 @@ class Movement(StateMachine):
     BALANCE_TILT_ANGLE_THRESHOLD = math.radians(2)
     BALANCE_TILT_RATE_THRESHOLD = math.radians(2)
 
+    data_log: wpiutil.log.DataLog
+
     def __init__(self) -> None:
         self.drive_local = False
 
@@ -66,6 +70,12 @@ class Movement(StateMachine):
 
     def setup(self):
         self.robot_object = self.field.getObject("auto_trajectory")
+        self.goal_entry = wpiutil.log.DoubleArrayLogEntry(
+            self.data_log, "movement_goal"
+        )
+        self.waypoints_entry = wpiutil.log.DoubleArrayLogEntry(
+            self.data_log, "movement_waypoints"
+        )
         self.set_goal(
             Pose2d(1.5, 6.2, Rotation2d.fromDegrees(180)), Rotation2d.fromDegrees(180)
         )
@@ -158,6 +168,11 @@ class Movement(StateMachine):
             and waypoints == self.waypoints
         ):
             return
+        self.goal_entry.append(
+            [self.goal.x, self.goal.y, float(self.goal.rotation().radians())]
+        )
+        for w in waypoints:
+            self.waypoints_entry.append([w.x, w.y])
         self.goal = goal
         self.goal_approach_dir = approach_direction
 

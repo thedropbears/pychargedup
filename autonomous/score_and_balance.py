@@ -107,10 +107,10 @@ class AutoBase(AutonomousStateMachine):
             self.recover.engage()
             self.intake.deploy_without_running()
         elif not self.recover.is_executing:
-            self.next_state("score_cone")
+            self.next_state("score_piece")
 
     @state
-    def score_cone(self, initial_call: bool) -> None:
+    def score_piece(self, initial_call: bool) -> None:
         if initial_call:
             self.score_game_piece.score_without_moving(self.score_action.node)
             self.intake.retract()
@@ -161,8 +161,8 @@ class AutoBase(AutonomousStateMachine):
             return
 
 
-class ScoreAndBalance(AutoBase):
-    MODE_NAME = "Score and Balance"
+class ScoreAndBalanceCone(AutoBase):
+    MODE_NAME = "Cone Score and Balance"
     DEFAULT = True
 
     def __init__(self) -> None:

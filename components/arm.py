@@ -48,7 +48,7 @@ class Arm:
     EXTEND_GRAVITY_FEEDFORWARD = 0
     ROTATE_GRAVITY_FEEDFORWARDS = 2.5
 
-    ARM_ENCODER_ANGLE_OFFSET = math.tau - 0.672  # radians
+    ARM_ENCODER_ANGLE_OFFSET = -0.672  # radians
 
     DISCRETE_VEL_EXP_ALPHA = 0.8
     CURRENT_EXP_ALPHA = 0.8
@@ -105,10 +105,10 @@ class Arm:
         # running the controller on the rio rather than on the motor controller
         # to allow access to the velocity setpoint for feedforward
         rotation_constraints = TrapezoidProfile.Constraints(
-            maxVelocity=2, maxAcceleration=3
+            maxVelocity=4.0, maxAcceleration=4.0
         )
         self.rotation_controller = ProfiledPIDController(
-            10, 0, 1.0, rotation_constraints
+            12, 0, 1.0, rotation_constraints
         )
         wpilib.SmartDashboard.putData(self.rotation_controller)
         # From recalc
@@ -260,7 +260,10 @@ class Arm:
         self.abs_enc_pos_old = self.abs_enc_pos
         self.abs_enc_pos = -self.absolute_encoder.getDistance()
 
-        self.filtered_current = self.filtered_current * self.CURRENT_EXP_ALPHA + self.rotation_motor.getOutputCurrent() * (1.0 - self.CURRENT_EXP_ALPHA)
+        self.filtered_current = (
+            self.filtered_current * self.CURRENT_EXP_ALPHA
+            + self.rotation_motor.getOutputCurrent() * (1.0 - self.CURRENT_EXP_ALPHA)
+        )
 
     def calculate_rotation_feedforwards(self) -> float:
         """Calculate feedforwards voltage.
@@ -405,10 +408,6 @@ class Arm:
         return not self.extension_brake_solenoid.get()
 
     def on_enable(self) -> None:
-        while self.get_angle() < -math.pi:
-            self.runtime_offset += math.tau
-        while self.get_angle() > math.pi:
-            self.runtime_offset -= math.tau
         self.use_voltage = True
         self.reset_controllers()
         self.set_length(self.get_extension())
@@ -449,3 +448,11 @@ class Arm:
     @feedback
     def get_filtered_current(self) -> float:
         return self.filtered_current
+
+    def attempt_angle_wrap(self) -> None:
+        if self.get_angle() < -math.pi:
+            self.runtime_offset = math.tau
+        if self.get_angle() > math.pi:
+            self.runtime_offset = -math.tau
+        self.set_angle(self.get_angle())
+        self.rotation_controller.reset(self.get_angle())
