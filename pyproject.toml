@@ -10,6 +10,7 @@ exclude_lines = [
 ]
 
 [tool.pytest.ini_options]
+faulthandler_timeout = 15
 pythonpath = '.'
 
 [tool.ruff]
